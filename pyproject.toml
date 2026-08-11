@@ -1,0 +1,93 @@
+# nodal monorepo root — 워크스페이스 앵커. 배포되지 않는다.
+#
+# ⚠️ license 필드는 의도적으로 비어 있다. docs/license.md 참조.
+#    M3 전에 소유자가 결정하기 전까지 어떤 라이선스도 명시하지 않는다.
+
+[project]
+name = "nodal-workspace"
+version = "0.0.0"
+description = "nodal monorepo root (not published)"
+requires-python = ">=3.11"
+dependencies = [
+    "nodal-core",
+    "nodal-nodes-core",
+    "nodal-server",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+nodal-core = { workspace = true }
+nodal-nodes-core = { workspace = true }
+nodal-server = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.13",
+    "jsonschema>=4.26.0",
+]
+
+# ---------------------------------------------------------------- ruff
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["packages/core/src", "packages/server/src", "packages/nodes-core/src"]
+# ruff 0.16+ 는 마크다운 안의 python 코드 블록도 포맷한다. docs/ 는 스펙 문서이므로
+# 손대지 않는다 — 문서의 정렬은 의도된 것이고, 예제 코드는 실행 대상이 아니다.
+extend-exclude = ["docs/**", "*.md"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "ANN",  # flake8-annotations — 타입 힌트 필수 (CLAUDE.md 컨벤션)
+    "TID",  # flake8-tidy-imports
+    "RUF",
+]
+ignore = [
+    "ANN401",  # Any 허용 — 그래프 리터럴은 본질적으로 Any다
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["ANN"]
+"tools/*" = ["ANN"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+# 의존성 규칙 강제 (CLAUDE.md 아키텍처 절). core는 torch를 모른다.
+"torch".msg = "packages/core 와 packages/server 는 torch 를 import 하지 않는다. torch 는 packages/nodes-diffusion 전용."
+
+[tool.ruff.lint.isort]
+known-first-party = ["nodal"]
+
+# ---------------------------------------------------------------- pytest
+
+[tool.pytest.ini_options]
+testpaths = ["packages/core/tests"]
+addopts = "-q --strict-markers"
+asyncio_mode = "auto"
+
+# ---------------------------------------------------------------- mypy
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+mypy_path = "packages/core/src"
+packages = ["nodal"]
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true

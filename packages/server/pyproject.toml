@@ -1,0 +1,22 @@
+# ⚠️ license 필드 없음 — 의도적. docs/license.md 참조.
+
+[project]
+name = "nodal-server"
+version = "0.0.0"
+description = "nodal — FastAPI 서버 (REST + WebSocket)"
+requires-python = ">=3.11"
+dependencies = [
+    "nodal-core",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nodal_server"]
+
+[tool.uv.sources]
+nodal-core = { workspace = true }

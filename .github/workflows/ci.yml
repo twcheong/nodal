@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: python (lint · typecheck · test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: uv 설치
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: uv sync --frozen
+
+      - name: ruff (lint)
+        run: uv run ruff check .
+
+      - name: ruff (format)
+        run: uv run ruff format --check .
+
+      - name: mypy
+        run: uv run mypy
+
+      - name: pytest
+        run: uv run pytest
+
+      - name: JSON Schema drift 검사
+        run: uv run python tools/export_schema.py --check
+
+  web:
+    name: web (lint · typecheck · test · build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: prettier
+        run: pnpm format:check
+
+      - name: eslint
+        run: pnpm -r lint
+
+      - name: tsc
+        run: pnpm -r typecheck
+
+      - name: vitest
+        run: pnpm -r test
+
+      - name: build
+        run: pnpm -r build
+
+  licence-guard:
+    name: 라이선스 가드
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # docs/license.md: LICENSE 파일은 M3 전에 소유자가 직접 결정한다.
+      # 도구나 에이전트가 임의로 만들어 넣는 것을 막는다.
+      - name: LICENSE 파일이 없는지 확인
+        run: |
+          # docs/license.md 는 라이선스 *선택지를 논하는 문서*이지 라이선스 부여가 아니다.
+          found=$(find . -maxdepth 2 \( -iname 'LICENSE*' -o -iname 'COPYING*' \) \
+                    -not -path './node_modules/*' -not -path './.git/*' \
+                    -not -path './docs/*')
+          if [ -n "$found" ]; then
+            echo "::error::LICENSE 파일이 생겼다: $found"
+            echo "::error::docs/license.md 참조 — M3 전까지 라이선스는 미정이다."
+            exit 1
+          fi
+          echo "라이선스 미정 상태 유지 중."
+
+      # CLAUDE.md: GPL/AGPL 의존성을 추가하지 않는다.
+      - name: GPL 의존성이 없는지 확인
+        run: |
+          if grep -rniE '"?(GPL-[23]|AGPL-3|GPL-2\.0)' --include=pyproject.toml --include=package.json . ; then
+            echo "::error::GPL/AGPL 라이선스 표기가 발견됐다. docs/license.md 참조."
+            exit 1
+          fi
+          echo "허용적 라이선스만 사용 중."
+
+  dco:
+    name: DCO (Signed-off-by)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 모든 커밋에 Signed-off-by 가 있는지 확인
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          missing=0
+          while read -r sha; do
+            if ! git show -s --format=%B "$sha" | grep -qiE '^Signed-off-by: .+ <.+@.+>'; then
+              echo "::error::$sha 에 Signed-off-by 가 없다 — git commit -s 를 쓰라."
+              missing=1
+            fi
+          done < <(git rev-list "$base".."$head")
+          exit $missing

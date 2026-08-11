@@ -1,0 +1,151 @@
+{
+  "$defs": {
+    "JsonValue": {},
+    "Link": {
+      "additionalProperties": false,
+      "description": "다른 노드의 출력 소켓에 대한 참조.\n\nJSON에서는 ``{\"$link\": [\"<node_id>\", \"<output_socket>\"]}`` 로 표현된다.",
+      "properties": {
+        "$link": {
+          "description": "[출처 노드 ID, 출처 출력 소켓 이름]",
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "$Link",
+          "type": "array"
+        }
+      },
+      "required": [
+        "$link"
+      ],
+      "title": "Link",
+      "type": "object"
+    },
+    "Node": {
+      "additionalProperties": false,
+      "description": "그래프의 노드 하나. ID는 그래프의 `nodes` 딕셔너리 키다.",
+      "properties": {
+        "inputs": {
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/Link"
+              },
+              {
+                "description": "JSON 리터럴. `$link` 키를 가진 객체는 링크로 해석되므로 리터럴이 될 수 없다.",
+                "not": {
+                  "required": [
+                    "$link"
+                  ],
+                  "type": "object"
+                }
+              }
+            ]
+          },
+          "title": "Inputs",
+          "type": "object"
+        },
+        "meta": {
+          "$ref": "#/$defs/NodeMeta"
+        },
+        "type": {
+          "description": "네임스페이스를 포함한 노드 타입 ID (예: image.Resize)",
+          "pattern": "^[a-z][a-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)+$",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "Node",
+      "type": "object"
+    },
+    "NodeMeta": {
+      "additionalProperties": true,
+      "description": "실행에 영향을 주지 않는 노드 부가 정보.",
+      "properties": {
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        }
+      },
+      "title": "NodeMeta",
+      "type": "object"
+    }
+  },
+  "$id": "https://nodal.local/schemas/graph.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "캐논 그래프 문서.\n\n`ui` 는 프론트엔드 전용이다. 백엔드는 이 필드를 읽지 않으며, 없어도 완전히\n동작한다. 이 격리가 스키마 레벨에서 명시되는 것이 설계의 핵심이다.",
+  "properties": {
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "nodal_version": {
+      "const": "1",
+      "default": "1",
+      "title": "Nodal Version",
+      "type": "string"
+    },
+    "nodes": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,63}$": {
+          "$ref": "#/$defs/Node"
+        }
+      },
+      "title": "Nodes",
+      "type": "object"
+    },
+    "outputs": {
+      "description": "실행을 요청할 노드들. 여기서부터 역방향으로 조상만 수집된다.",
+      "items": {
+        "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,63}$",
+        "type": "string"
+      },
+      "title": "Outputs",
+      "type": "array"
+    },
+    "ui": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "description": "프론트엔드 전용 상태. 백엔드는 읽지 않는다.",
+      "title": "Ui",
+      "type": "object"
+    }
+  },
+  "title": "Graph",
+  "type": "object",
+  "x-generated-by": "tools/export_schema.py — 직접 수정하지 말 것"
+}

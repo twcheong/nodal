@@ -1,0 +1,21 @@
+{
+  "name": "nodal-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "license": "LicenseRef-UNDECIDED",
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "lint": "pnpm -r lint",
+    "format:check": "prettier --check \"apps/**/*.{ts,tsx,json,css,html}\"",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,json,css,html}\"",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "build": "pnpm -r build"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2"
+  }
+}

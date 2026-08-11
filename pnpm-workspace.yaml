@@ -1,0 +1,7 @@
+packages:
+  - "apps/*"
+
+# vite 가 쓰는 esbuild 는 설치 시 네이티브 바이너리를 내려받는 스크립트를 돌린다.
+# pnpm 11 은 빌드 스크립트 실행을 기본 차단하므로 명시적으로 허용한다.
+allowBuilds:
+  esbuild: true
