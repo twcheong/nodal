@@ -75,6 +75,10 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["ANN"]
 "tools/*" = ["ANN"]
+# 노드 팩의 `returns = {"image": Image}` 는 공유 가변 상태가 아니라 **선언**이다
+# (design.md §4.2). RUF012 를 켜 두면 노드 저자가 전부 ClassVar 로 감싸야 하고,
+# "선언형 + 중복 선언 없음"이라는 노드 SDK 의 요점이 사라진다.
+"packages/nodes-*/**" = ["RUF012"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 # 의존성 규칙 강제 (AGENTS.md 아키텍처 절). core는 torch를 모른다.
