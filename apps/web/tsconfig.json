@@ -23,7 +23,8 @@
 
     "baseUrl": ".",
     "paths": {
-      "@nodal/schemas/*": ["../../schemas/*"]
+      "@nodal/schemas/*": ["../../schemas/*"],
+      "@nodal/types": ["../../packages/core/src/nodal/types.json"]
     }
   },
   "include": ["src", "*.config.ts", "eslint.config.js"]

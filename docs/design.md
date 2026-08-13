@@ -211,6 +211,19 @@ class Resize:
 - `async def run`도 지원 (엔진이 코루틴 여부 감지)
 - `NodeResult`가 값과 UI 사이드채널(프리뷰, 텍스트 배지)을 분리
 
+**출력 이름** — §4.1의 링크는 `["n_c3d4", "image"]`처럼 출력 소켓을 **이름**으로 참조한다. 따라서 이름 없는 출력은 존재할 수 없다.
+
+```python
+returns = {"image": Image}                 # 명시 — 이름을 통제하고 싶을 때
+returns = {"model": Model, "clip": CLIP}   # 다중 출력
+returns = Image                            # 축약 → "image"
+returns = (Model, CLIP, VAE)               # 축약 → "model", "clip", "vae"
+```
+
+축약형의 이름은 타입 이름을 소문자로 바꿔 만든다. 같은 타입이 반복되면 `image`, `image_2`. 이름이 중요하면 딕셔너리를 쓴다.
+
+**`ctx`는 이름으로 옵트인한다.** `run` 시그니처에 `ctx` 파라미터가 있을 때만 엔진이 실행 컨텍스트(진행률·취소)를 주입한다. 위 `Resize.run`처럼 `ctx`가 없으면 엔진 없이 그냥 호출할 수 있는 순수 함수다. §9의 `LoadCheckpoint.run(self, ckpt, ctx)`가 옵트인한 예다.
+
 ### 4.3 타입 시스템 — ComfyUI를 이길 지점
 
 ```
@@ -223,19 +236,31 @@ Opaque    : 이름 있는 불투명 핸들 (Model, VAE, Scheduler) + 능력 태�
 
 **호환 규칙**
 
+호환은 항상 방향이 있다: `source`(출력 소켓) → `target`(입력 소켓).
+
 | 규칙 | 예시 |
 |---|---|
 | 정확 일치 | `Image → Image` |
-| 숫자 승격 | `INT → FLOAT` 자동 허용 |
-| 리스트 승격 | `T → List[T]` 자동 (배치 처리 자연스럽게) |
-| Opaque 능력 기반 | `Model[sdxl, unet]`은 `Model[unet]` 요구 소켓에 연결 가능 |
-| `Any`는 명시적 | 와일드카드는 1급 타입이지 해킹이 아님 |
+| 숫자 승격 | `INT → FLOAT` 자동 허용. 역방향은 불허 (정밀도가 조용히 사라짐) |
+| 리스트 승격 | `T → List[T]` 자동 (배치 처리 자연스럽게). 역방향 불허 |
+| 리스트 공변 | `A → B`가 호환이면 `List[A] → List[B]`도 호환 |
+| Union 넓힘 | `A → Union[A, B]` 허용 (대상 멤버 중 하나에 호환이면 됨) |
+| Union 좁힘 | `Union[A, B] → A` 불허. 단 **모든** 멤버가 대상에 호환이면 그건 좁힘이 아니므로 허용 (`Union[INT, FLOAT] → FLOAT`) |
+| Opaque 능력 기반 | `Model[sdxl, unet]`은 `Model[unet]` 요구 소켓에 연결 가능. 핸들 이름이 다르면 불허 |
+| Tensor | 출처 dtype 집합이 대상의 부분집합이고 랭크가 같으면 호환. 라벨(`B`,`H`)과 `null` 차원은 임의 크기, 양쪽이 정수인 차원만 값이 일치해야 함 |
+| `Any`는 명시적 | 와일드카드는 1급 타입이지 해킹이 아님. `Any → T`와 `T → Any` 모두 허용 |
 
 이것만으로 ComfyUI 생태계의 최대 마찰 두 가지 — `"*"` 와일드카드 해킹, "SDXL 모델을 SD1.5 노드에 꽂았는데 런타임 shape 에러" — 를 제거한다.
 
 **검증 시점**: 실행 큐 진입 전 전체 그래프 검증. 프론트는 같은 규칙으로 드래그 중 실시간 피드백(연결 불가 소켓은 흐리게).
 
 > ⚠️ 타입 규칙은 `types.json` **단일 소스**에 정의하고 Python/TS 양쪽에서 로드한다. 규칙을 두 번 쓰지 않는다.
+
+`types.json`은 위 호환 규칙과 **내장 타입 카탈로그**(`INT`·`Image`·`Model`…)를 함께 담는다. 프론트가 드래그 중 실시간 피드백을 하려면 규칙만으로는 부족하고 타입 정의도 필요하기 때문이다.
+
+위치는 `packages/core/src/nodal/types.json` — 패키지 안에 있어야 배포본에서도 로드된다. 로더는 `nodal.types`(Python)와 `apps/web/src/graph/typesystem.ts`(TS) 둘뿐이다.
+
+파일에는 `conformance` 절이 있어 (출처, 대상, 기대 판정) 케이스를 담는다. 양쪽 구현이 **같은 케이스로 같은 답**을 내야 하며, 이것이 두 언어가 규칙 하나를 공유한다는 유일한 증거다. Python은 `tools/check_types.py`, TS는 `typesystem.test.ts`가 돌린다.
 
 ---
 

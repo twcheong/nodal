@@ -38,6 +38,11 @@ jobs:
       - name: JSON Schema drift 검사
         run: uv run python tools/export_schema.py --check
 
+      # types.json 은 Python/TS 공용 계약이다. Python 쪽 판정을 여기서,
+      # TS 쪽 판정을 web 잡의 vitest 가 같은 케이스로 검사한다.
+      - name: types.json 검증 (Python 판정)
+        run: uv run python tools/check_types.py
+
   web:
     name: web (lint · typecheck · test · build)
     runs-on: ubuntu-latest

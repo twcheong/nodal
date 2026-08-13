@@ -27,6 +27,22 @@ class IssueCode(StrEnum):
     #: `outputs`에 같은 노드가 두 번 이상 등장.
     DUPLICATE_OUTPUT = "duplicate_output"
 
+    # --- 아래는 레지스트리를 알아야만 판정할 수 있는 것들 (M1).
+    #     `nodal.executor.validate_for_execution` 이 만든다.
+
+    #: 그래프가 레지스트리에 없는 노드 타입을 참조.
+    UNKNOWN_NODE_TYPE = "unknown_node_type"
+    #: 노드 스키마에 없는 입력 소켓에 값이 들어옴.
+    UNKNOWN_INPUT_SOCKET = "unknown_input_socket"
+    #: 링크가 출처 노드에 없는 출력 소켓을 가리킴.
+    UNKNOWN_OUTPUT_SOCKET = "unknown_output_socket"
+    #: 기본값이 없는 입력이 비어 있음.
+    MISSING_REQUIRED_INPUT = "missing_required_input"
+    #: 소켓 타입이 호환되지 않음 (`types.json` 규칙 기준).
+    TYPE_MISMATCH = "type_mismatch"
+    #: 그래프에 사이클이 있음. 실행 목록이 역방향 용해로 발견한다.
+    CYCLE = "cycle"
+
 
 @dataclass(frozen=True, slots=True)
 class GraphIssue:

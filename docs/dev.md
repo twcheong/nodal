@@ -45,6 +45,21 @@ uv run python tools/export_schema.py
 `--check` 로 drift 를 잡고, `packages/core/tests/test_schema_export.py` 와
 `apps/web/src/graph/schema.test.ts` 가 양쪽 판정이 일치하는지 검사한다.
 
+## 타입 시스템 (`types.json`)
+
+`packages/core/src/nodal/types.json` 이 타입 호환 규칙과 내장 타입 카탈로그의
+**단일 소스**다. 생성물이 아니라 손으로 쓰는 원본이며, 두 에이전트 사이의
+계약이다 — 변경 전 사용자 확인이 필요하다 (`../AGENTS.md` 협업 규칙 7).
+
+읽는 쪽은 둘뿐이다: `nodal.types`(Python), `apps/web/src/graph/typesystem.ts`(TS).
+
+```bash
+uv run python tools/check_types.py     # 구조 + Python 판정
+pnpm --filter @nodal/web test          # TS 판정 (같은 conformance 케이스)
+```
+
+규칙을 고쳤으면 **양쪽을 다 돌린다.** 한쪽만 통과하면 규칙이 하나가 아니라는 뜻이다.
+
 ## 커밋
 
 모든 커밋에 `Signed-off-by` 가 필요하다 (DCO — `../AGENTS.md` 코딩 컨벤션, 근거는 `license.md`).

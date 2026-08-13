@@ -48,6 +48,45 @@
 - **영향 범위**: 저장소 전체 초기 구조
 - **되돌릴 수 있나**: 예
 
+### 2026-08-13 · Claude Code · M1 계약 (사용자 확인 후 확정)
+
+`docs/design.md`가 답을 주지 않는 지점 4개를 **사용자에게 물어 확정**했다. 임의 해석하지 않았다.
+
+- **출력 소켓 이름**: `returns = {"image": Image}` 딕셔너리 + 축약형(`returns = Image`) 병행.
+  §4.1의 링크가 출력을 이름으로 참조하는데 §4.2의 `returns = Image`에는 이름이 없었다.
+  축약형의 이름은 타입 이름을 소문자로 파생(`(Model, CLIP, VAE)` → `model`, `clip`, `vae`).
+- **`types.json` 범위**: 호환 규칙 + 내장 타입 카탈로그. 규칙만 담으면 타입 정의가 Python/TS
+  양쪽에 생겨 "규칙을 두 번 쓰지 않는다"가 무너진다.
+- **§4.3에 없던 호환 규칙**: Union 넓힘/좁힘, List 공변, Tensor dtype·랭크, Any 양방향을
+  확정하고 `design.md` §4.3 표에 행으로 추가했다.
+- **`ctx` 주입**: `run` 시그니처에 `ctx` 파라미터가 있을 때만 주입(이름 옵트인).
+  §4.2의 ctx 없는 예제와 §9의 ctx 있는 예제가 둘 다 그대로 유효하다.
+
+**영향 범위**: `docs/design.md` §4.2·§4.3, `packages/core/src/nodal/types.json`,
+`nodal/{types,schema,registry,executor,cache,events}.py`, `apps/web/src/graph/typesystem.ts`
+**되돌릴 수 있나**: 아니오 — 다른 에이전트가 이 시그니처로 테스트를 작성하면 양쪽이 함께 깨진다.
+바꾸려면 사용자 확인이 필요하다 (AGENTS.md 협업 규칙 7).
+
+### 2026-08-13 · Claude Code · 계약 커밋의 구현 경계
+
+- **결정**: `types.py`(+`types.json`, TS 로더)는 **구현**하고, `schema`·`registry`·`executor`·
+  `cache`·`events`는 시그니처만 두고 본문을 `NotImplementedError`로 남겼다
+- **이유**: 지시는 "본문 구현 금지"였지만 [B]는 "Python 로더와 TS 로더가 같은 파일을 읽고
+  양쪽 판정이 일치하는지 확인하는 테스트"를 요구했다. 판정을 내지 못하는 스텁 로더로는
+  일치를 검증할 수 없다. 그래서 타입 시스템만 동작하게 하고 나머지는 계약으로 남겼다
+- **영향 범위**: `packages/core/src/nodal/types.py`, `apps/web/src/graph/typesystem.ts`
+- **되돌릴 수 있나**: 예
+
+### 2026-08-13 · Claude Code · errors.py 에 IssueCode 추가
+
+- **결정**: 완성된 `errors.py`에 `IssueCode` 멤버 6개를 **추가만** 했다
+  (`UNKNOWN_NODE_TYPE`, `UNKNOWN_INPUT_SOCKET`, `UNKNOWN_OUTPUT_SOCKET`,
+  `MISSING_REQUIRED_INPUT`, `TYPE_MISMATCH`, `CYCLE`). 기존 이름·시그니처는 건드리지 않았다
+- **이유**: 레지스트리를 알아야 판정할 수 있는 문제들(타입 불일치 등)에 두 번째 이슈 체계를
+  만들면 프론트가 두 가지 에러 모양을 다뤄야 한다. 이슈 어휘는 하나여야 한다
+- **영향 범위**: `packages/core/src/nodal/errors.py`
+- **되돌릴 수 있나**: 예
+
 ### 2026-08-13 · Claude Code · 문서 동기화
 - **결정**: 코드·문서에 남아 있던 `CLAUDE.md` 규칙 참조를 전부 `AGENTS.md` 참조로 교체하고,
   `docs/dev.md`가 복사해 두었던 규칙 문구(요구 버전 표 · 의존성 방향)를 삭제해 참조로 대체
