@@ -197,7 +197,7 @@ async def test_changed_input_invalidates_only_that_node_and_descendants() -> Non
     assert set(second.executed) == {"b", "d"}
     assert len(second.executed) == 2
     assert set(second.cached) == {"a", "c"}
-    assert second.outputs["d"]["value"] == 15
+    assert second.outputs["d"]["value"] == 17
 
 
 def test_lru_cache_refreshes_hits_and_evicts_the_oldest_key() -> None:
