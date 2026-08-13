@@ -1,7 +1,5 @@
 """입력 시그니처 캐시 (docs/design.md §5.3).
 
-> **계약 파일.** 본문은 M1 에서 채운다.
-
 캐시 키는 **노드 ID 가 아니라 입력의 내용**으로 만든다. 그래서 노드를 복사하거나
 순서를 바꿔도 캐시가 산다. 사용 경험의 절반이 여기서 나온다::
 
@@ -18,11 +16,15 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+from collections import OrderedDict
 from collections.abc import Iterator, Mapping
 from enum import StrEnum
 from typing import Any, Protocol, runtime_checkable
 
-from .graph import Graph
+from .errors import GraphIssue, GraphValidationError, IssueCode
+from .graph import Graph, Link
 from .schema import NodeSchema
 
 __all__ = [
@@ -85,49 +87,63 @@ class NullCache:
     """아무것도 저장하지 않는다. `CachePolicy.NONE` 의 구현이자 디버깅용."""
 
     def get(self, key: str) -> Any:
-        raise NotImplementedError
+        return MISS
 
     def set(self, key: str, value: Mapping[str, Any]) -> None:
-        raise NotImplementedError
+        return None
 
     def __contains__(self, key: object) -> bool:
-        raise NotImplementedError
+        return False
 
     def __len__(self) -> int:
-        raise NotImplementedError
+        return 0
 
     def clear(self) -> None:
-        raise NotImplementedError
+        return None
 
 
 class LRUCache:
     """최근 사용 순서로 축출하는 인메모리 캐시. M1 의 기본 구현."""
 
     def __init__(self, maxsize: int = 128) -> None:
-        raise NotImplementedError
+        if maxsize < 0:
+            raise ValueError(f"maxsize 는 음수일 수 없다: {maxsize}")
+        self._maxsize = maxsize
+        self._entries: OrderedDict[str, Mapping[str, Any]] = OrderedDict()
 
     @property
     def maxsize(self) -> int:
-        raise NotImplementedError
+        return self._maxsize
 
     def get(self, key: str) -> Any:
-        raise NotImplementedError
+        if key not in self._entries:
+            return MISS
+        self._entries.move_to_end(key)
+        return self._entries[key]
 
     def set(self, key: str, value: Mapping[str, Any]) -> None:
-        raise NotImplementedError
+        if self._maxsize == 0:
+            return
+        self._entries[key] = value
+        self._entries.move_to_end(key)
+        while len(self._entries) > self._maxsize:
+            self._entries.popitem(last=False)
 
     def __contains__(self, key: object) -> bool:
-        raise NotImplementedError
+        return key in self._entries
 
     def __len__(self) -> int:
-        raise NotImplementedError
+        return len(self._entries)
 
     def __iter__(self) -> Iterator[str]:
         """오래된 것부터 최근 것 순서로 키를 순회한다. 축출 순서를 테스트할 수 있게."""
-        raise NotImplementedError
+        return iter(list(self._entries))
 
     def clear(self) -> None:
-        raise NotImplementedError
+        self._entries.clear()
+
+    def __repr__(self) -> str:
+        return f"LRUCache({len(self._entries)}/{self._maxsize})"
 
 
 def cache_key(
@@ -153,7 +169,15 @@ def cache_key(
     Returns:
         16진수 다이제스트 문자열.
     """
-    raise NotImplementedError
+    payload = {
+        "type": node_type,
+        "version": schema_version,
+        # 소켓 이름으로 정렬한다. 같은 내용이면 선언 순서와 무관하게 같은 키다.
+        "inputs": {name: _stable(inputs[name]) for name in sorted(inputs)},
+        "is_changed": is_changed_token,
+    }
+    encoded = json.dumps(payload, sort_keys=True, ensure_ascii=False, default=_stable_repr)
+    return hashlib.blake2b(encoded.encode("utf-8"), digest_size=16).hexdigest()
 
 
 def graph_cache_keys(
@@ -176,4 +200,80 @@ def graph_cache_keys(
         NodeTypeNotFoundError: 그래프가 등록되지 않은 타입을 참조할 때.
         GraphValidationError: 그래프에 사이클이 있어 키를 확정할 수 없을 때.
     """
-    raise NotImplementedError
+    tokens = is_changed_tokens or {}
+    keys: dict[str, str] = {}
+    #: 재귀 중인 노드. 다시 들어오면 사이클이다.
+    visiting: list[str] = []
+
+    def key_for(node_id: str) -> str:
+        if node_id in keys:
+            return keys[node_id]
+        if node_id in visiting:
+            cycle = [*visiting[visiting.index(node_id) :], node_id]
+            raise GraphValidationError(
+                [
+                    GraphIssue(
+                        code=IssueCode.CYCLE,
+                        message=f"사이클이라 캐시 키를 확정할 수 없다: {' → '.join(cycle)}",
+                        node_id=node_id,
+                    )
+                ]
+            )
+
+        visiting.append(node_id)
+        try:
+            node = graph.nodes[node_id]
+            schema = schemas.get(node.type)
+            version = schema.version if schema else "?"
+            resolved: dict[str, Any] = {}
+            for socket, value in node.inputs.items():
+                resolved[socket] = (
+                    key_for(value.source_node) + "#" + value.source_socket
+                    if isinstance(value, Link)
+                    else value
+                )
+            computed = cache_key(
+                node.type,
+                version,
+                resolved,
+                is_changed_token=tokens.get(node_id),
+            )
+        finally:
+            visiting.pop()
+
+        keys[node_id] = computed
+        return computed
+
+    for node_id in graph.nodes:
+        key_for(node_id)
+    return keys
+
+
+def _stable(value: Any) -> Any:
+    """캐시 키에 넣을 수 있는 안정적인 형태로 바꾼다.
+
+    같은 값이면 프로세스를 다시 띄워도 같은 키가 나와야 한다. 그래서 `id()` 나
+    기본 `repr` 에 기대지 않는다.
+    """
+    if isinstance(value, str | int | float | bool | type(None)):
+        return value
+    if isinstance(value, Mapping):
+        return {str(k): _stable(v) for k, v in sorted(value.items(), key=lambda kv: str(kv[0]))}
+    if isinstance(value, list | tuple):
+        return [_stable(item) for item in value]
+    if isinstance(value, set | frozenset):
+        return sorted(_stable(item) for item in value)
+    return _stable_repr(value)
+
+
+def _stable_repr(value: Any) -> str:
+    """JSON 으로 표현할 수 없는 값의 최후 수단.
+
+    노드가 불투명 핸들(Model 등)을 출력하면 여기로 온다. 그런 값은 캐시 키에
+    직접 들어가지 않고 **출처 노드의 캐시 키**로 대신 표현되므로, 이 경로는
+    리터럴 입력에 이상한 객체가 들어온 경우에만 쓰인다.
+    """
+    marker = getattr(value, "cache_token", None)
+    if isinstance(marker, str):
+        return marker
+    return f"{type(value).__module__}.{type(value).__qualname__}"
