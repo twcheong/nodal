@@ -1,7 +1,7 @@
 """실행 엔진 — 용해 방식 위상 정렬과 실행 루프 (docs/design.md §5).
 
-> **계약 파일.** 본문은 M1 에서 채운다. 이 파일의 시그니처가 M1 테스트가
-> 기대는 표면 전체다 (AGENTS.md 협업 규칙 7).
+> 이 파일의 시그니처가 M1 테스트가 기대는 표면 전체다. 사용자 확인 없이
+> 바꾸지 않는다 (AGENTS.md 협업 규칙 7).
 
 실행 전에 전체 순서를 확정하지 않는다. 매 스텝마다 "지금 실행 가능한 노드
 집합"을 계산하고 하나를 고른다 — 노드가 실행 도중 그래프를 확장해도 대응된다.
@@ -57,15 +57,33 @@
 
 from __future__ import annotations
 
+import asyncio
+import time
+import traceback
+import uuid
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from .cache import Cache
-from .events import CancelToken, EventSink, NodeContext
-from .graph import Graph, Node
-from .registry import NodeRegistry
-from .schema import NodeSchema
+from .cache import MISS, Cache, cache_key
+from .errors import GraphIssue, GraphValidationError, IssueCode
+from .events import (
+    Cancelled,
+    CancelToken,
+    EventSink,
+    NodeCached,
+    NodeContext,
+    NodeDone,
+    NodeError,
+    NodeStarted,
+    RunCancelled,
+    RunDone,
+    RunStarted,
+)
+from .graph import Graph, Link, Node
+from .registry import NodeRegistry, NodeTypeNotFoundError
+from .schema import NodeResult, NodeSchema
+from .types import is_compatible
 
 __all__ = [
     "Blocked",
@@ -123,11 +141,14 @@ class ExecutionBlocker:
     """
 
     def __init__(self, reason: str | None = None) -> None:
-        raise NotImplementedError
+        self._reason = reason
 
     @property
     def reason(self) -> str | None:
-        raise NotImplementedError
+        return self._reason
+
+    def __repr__(self) -> str:
+        return f"ExecutionBlocker({self._reason!r})" if self._reason else "ExecutionBlocker()"
 
 
 # --------------------------------------------------------------- 실행 결과
@@ -219,12 +240,15 @@ class DynamicGraph:
     """
 
     def __init__(self, graph: Graph) -> None:
-        raise NotImplementedError
+        self._base = graph
+        self._ephemeral: dict[str, Node] = {}
+        self._parents: dict[str, str] = {}
+        self._dependents: dict[str, set[str]] | None = None
 
     @property
     def base(self) -> Graph:
         """원본 캐논 그래프. 변경되지 않는다."""
-        raise NotImplementedError
+        return self._base
 
     def node(self, node_id: str) -> Node:
         """노드를 꺼낸다. ephemeral 노드도 포함한다.
@@ -232,21 +256,36 @@ class DynamicGraph:
         Raises:
             KeyError: 뷰에 없는 노드 ID 일 때.
         """
-        raise NotImplementedError
+        if node_id in self._ephemeral:
+            return self._ephemeral[node_id]
+        try:
+            return self._base.nodes[node_id]
+        except KeyError:
+            raise KeyError(f"그래프에 없는 노드: {node_id!r}") from None
 
     def __contains__(self, node_id: object) -> bool:
-        raise NotImplementedError
+        return node_id in self._ephemeral or node_id in self._base.nodes
 
     def __iter__(self) -> Iterator[str]:
-        raise NotImplementedError
+        yield from self._base.nodes
+        yield from self._ephemeral
 
     def dependencies(self, node_id: str) -> Mapping[str, tuple[str, str]]:
         """입력 소켓 이름 → (출처 노드 ID, 출처 소켓). 리터럴 입력은 빠진다."""
-        raise NotImplementedError
+        return {
+            socket: (link.source_node, link.source_socket)
+            for socket, link in self.node(node_id).links()
+        }
 
     def dependents(self, node_id: str) -> frozenset[str]:
         """이 노드의 출력을 소비하는 노드들."""
-        raise NotImplementedError
+        if self._dependents is None:
+            index: dict[str, set[str]] = {}
+            for consumer in self:
+                for source, _ in self.dependencies(consumer).values():
+                    index.setdefault(source, set()).add(consumer)
+            self._dependents = index
+        return frozenset(self._dependents.get(node_id, ()))
 
     def splice(self, node_id: str, subgraph: Graph) -> Sequence[str]:
         """확장된 서브그래프를 `node_id` 자리에 삽입한다.
@@ -256,11 +295,29 @@ class DynamicGraph:
         Returns:
             삽입된 ephemeral 노드 ID 들.
         """
-        raise NotImplementedError
+        prefix = f"{node_id}:{uuid.uuid4().hex[:8]}"
+        renamed = {inner: f"{prefix}:{inner}" for inner in subgraph.nodes}
+
+        inserted: list[str] = []
+        for inner, node in subgraph.nodes.items():
+            inputs: dict[str, Any] = {}
+            for socket, value in node.inputs.items():
+                if isinstance(value, Link) and value.source_node in renamed:
+                    # 서브그래프 안쪽 링크는 새 ID 로 다시 건다.
+                    inputs[socket] = Link.to(renamed[value.source_node], value.source_socket)
+                else:
+                    inputs[socket] = value
+            new_id = renamed[inner]
+            self._ephemeral[new_id] = Node(type=node.type, inputs=inputs, meta=node.meta)
+            self._parents[new_id] = node_id
+            inserted.append(new_id)
+
+        self._dependents = None
+        return inserted
 
     def parent_of(self, node_id: str) -> str | None:
         """ephemeral 노드의 부모. 원본 노드면 `None`."""
-        raise NotImplementedError
+        return self._parents.get(node_id)
 
     def visible_id(self, node_id: str) -> str:
         """사용자가 캔버스에서 보는 노드 ID.
@@ -268,10 +325,21 @@ class DynamicGraph:
         ephemeral 노드면 부모를 따라 올라간다. 이벤트와 에러는 전부 이 ID 로
         보고한다 — "존재하지 않는 노드에서 에러가 발생"을 막는 장치다.
         """
-        raise NotImplementedError
+        seen: set[str] = set()
+        current = node_id
+        while current in self._parents and current not in seen:
+            seen.add(current)
+            current = self._parents[current]
+        return current
 
     def is_ephemeral(self, node_id: str) -> bool:
-        raise NotImplementedError
+        return node_id in self._ephemeral
+
+    def __repr__(self) -> str:
+        return (
+            f"DynamicGraph({len(self._base.nodes)}개 원본"
+            f"{f' + {len(self._ephemeral)}개 확장' if self._ephemeral else ''})"
+        )
 
 
 # ------------------------------------------------------------ 위상 정렬
@@ -291,41 +359,96 @@ class TopologicalSort:
     """
 
     def __init__(self, dyn: DynamicGraph) -> None:
-        raise NotImplementedError
+        self._dyn = dyn
+        self._pending: set[str] = set()
+        self._block_count: dict[str, int] = {}
+        self._blocking: dict[str, set[str]] = {}
 
     def add_node(self, node_id: str) -> None:
         """노드와 **그 조상들만** 실행 대상에 넣는다. 그래프 전체를 넣지 않는다."""
-        raise NotImplementedError
+        if node_id in self._pending:
+            return
+        if node_id not in self._dyn:
+            raise GraphValidationError(
+                [
+                    GraphIssue(
+                        code=IssueCode.UNKNOWN_OUTPUT,
+                        message="실행을 요청한 노드가 그래프에 없다",
+                        node_id=node_id,
+                    )
+                ]
+            )
+
+        self._pending.add(node_id)
+        self._block_count.setdefault(node_id, 0)
+        self._blocking.setdefault(node_id, set())
+
+        for source, _ in self._dyn.dependencies(node_id).values():
+            if source not in self._dyn:
+                # 끊어진 링크. 검증에서 이미 잡혔어야 하지만 여기서도 멈춘다.
+                raise GraphValidationError(
+                    [
+                        GraphIssue(
+                            code=IssueCode.UNKNOWN_LINK_TARGET,
+                            message=f"존재하지 않는 노드를 가리킨다: {source!r}",
+                            node_id=node_id,
+                        )
+                    ]
+                )
+            self.add_node(source)
+            self.add_dependency(node_id, source)
 
     def add_dependency(self, blocked: str, blocker: str) -> None:
         """`blocked` 가 `blocker` 를 기다리게 한다."""
-        raise NotImplementedError
+        blocking = self._blocking.setdefault(blocker, set())
+        if blocked in blocking:
+            return
+        blocking.add(blocked)
+        self._block_count[blocked] = self._block_count.get(blocked, 0) + 1
 
     def is_ready(self, node_id: str) -> bool:
         """막는 노드가 하나도 없으면 참."""
-        raise NotImplementedError
+        return node_id in self._pending and self._block_count.get(node_id, 0) == 0
 
     def ready_nodes(self) -> Sequence[str]:
         """지금 실행 가능한 노드들."""
-        raise NotImplementedError
+        return [node_id for node_id in self._pending if self._block_count.get(node_id, 0) == 0]
 
     def pop(self, node_id: str) -> None:
         """완료 처리하고 이 노드가 막고 있던 노드들의 `block_count` 를 줄인다."""
-        raise NotImplementedError
+        self._pending.discard(node_id)
+        for blocked in self._blocking.pop(node_id, set()):
+            self._block_count[blocked] = max(0, self._block_count.get(blocked, 0) - 1)
+        self._block_count.pop(node_id, None)
 
     def is_empty(self) -> bool:
-        raise NotImplementedError
+        return not self._pending
 
     def pending(self) -> frozenset[str]:
-        raise NotImplementedError
+        return frozenset(self._pending)
 
     def detect_cycle(self) -> Sequence[str] | None:
         """사이클에 속한 노드 ID 들, 없으면 `None`.
 
         준비된 노드가 없는데 pending 이 남았을 때 호출한다. 에러 메시지가 어느
         노드들이 서로를 물고 있는지 지목할 수 있어야 한다.
+
+        역방향 용해: 남은 노드 중 아무도 기다리지 않는 것부터 걷어낸다. 더 걷어낼
+        것이 없는데 남아 있으면 그것이 사이클이다.
         """
-        raise NotImplementedError
+        remaining = set(self._pending)
+        while True:
+            removable = {
+                node_id
+                for node_id in remaining
+                if not any(
+                    source in remaining for source, _ in self._dyn.dependencies(node_id).values()
+                )
+            }
+            if not removable:
+                break
+            remaining -= removable
+        return sorted(remaining) if remaining else None
 
 
 class ExecutionList(TopologicalSort):
@@ -335,12 +458,26 @@ class ExecutionList(TopologicalSort):
     """
 
     def __init__(self, dyn: DynamicGraph, cache: Cache, registry: NodeRegistry) -> None:
-        raise NotImplementedError
+        super().__init__(dyn)
+        self._cache = cache
+        self._registry = registry
+        self._staged: str | None = None
+        self._requested: set[str] = set()
+        self._blocked: dict[str, ExecutionBlocker] = {}
+        self._key_cache: dict[str, str] = {}
 
     @property
     def staged(self) -> str | None:
         """현재 꺼내져 있는 노드. 없으면 `None`."""
-        raise NotImplementedError
+        return self._staged
+
+    def add_node(self, node_id: str) -> None:
+        """실행 대상에 넣는다. 최초로 요청된 노드는 '출력 노드'로 기억해 둔다."""
+        first = node_id not in self._pending
+        super().add_node(node_id)
+        if first and self._staged is None:
+            # execute() 가 요청한 출력 노드를 우선순위 계산에 쓴다.
+            self._requested.add(node_id)
 
     async def stage(self) -> str:
         """준비된 노드 중 하나를 골라 꺼낸다.
@@ -357,33 +494,109 @@ class ExecutionList(TopologicalSort):
             GraphValidationError: 준비된 노드가 없는데 pending 이 남았을 때
                 (사이클). 어느 노드들이 사이클을 이루는지 지목한다.
         """
-        raise NotImplementedError
+        ready = self.ready_nodes()
+        if not ready:
+            cycle = self.detect_cycle()
+            raise GraphValidationError(
+                [
+                    GraphIssue(
+                        code=IssueCode.CYCLE,
+                        message=(
+                            f"사이클이라 실행할 수 없다: {' → '.join(cycle)}"
+                            if cycle
+                            else "실행 가능한 노드가 없다"
+                        ),
+                        node_id=cycle[0] if cycle else None,
+                    )
+                ]
+            )
+
+        chosen = min(ready, key=lambda node_id: (self._priority(node_id), node_id))
+        self._staged = chosen
+        return chosen
 
     def complete(self) -> None:
         """staged 노드를 완료 처리한다."""
-        raise NotImplementedError
+        if self._staged is None:
+            raise RuntimeError("staged 노드가 없는데 complete() 가 호출됐다")
+        self.pop(self._staged)
+        self._staged = None
 
     def unstage(self) -> None:
         """staged 노드를 실행 목록에 되돌린다.
 
         노드 확장과 lazy 평가가 둘 다 여기에 기댄다 (design.md §5.1).
         """
-        raise NotImplementedError
+        self._staged = None
 
     def add_deps(self, node_id: str, sockets: Sequence[str]) -> None:
         """`node_id` 의 특정 입력 소켓들의 upstream 을 실행 대상에 추가한다.
 
         lazy 노드가 "지금 나는 A 만 필요하다"고 말했을 때 쓴다.
         """
-        raise NotImplementedError
+        dependencies = self._dyn.dependencies(node_id)
+        for socket in sockets:
+            if socket not in dependencies:
+                continue
+            source, _ = dependencies[socket]
+            self.add_node(source)
+            self.add_dependency(node_id, source)
 
     def mark_blocked(self, node_id: str, blocker: ExecutionBlocker) -> None:
         """이 노드를 블로커 상태로 표시한다. 하위 노드도 따라 막힌다."""
-        raise NotImplementedError
+        self._blocked[node_id] = blocker
+
+    def blocker_for(self, node_id: str) -> ExecutionBlocker | None:
+        """이 노드에 걸린 블로커. 없으면 `None`."""
+        return self._blocked.get(node_id)
 
     def cache_key_for(self, node_id: str) -> str:
         """이 노드의 현재 캐시 키."""
-        raise NotImplementedError
+        if node_id in self._key_cache:
+            return self._key_cache[node_id]
+
+        node = self._dyn.node(node_id)
+        try:
+            version = self._registry.get(node.type, node_id=node_id).version
+        except NodeTypeNotFoundError:
+            version = "?"
+
+        resolved: dict[str, Any] = {}
+        for socket, value in node.inputs.items():
+            if isinstance(value, Link):
+                resolved[socket] = self.cache_key_for(value.source_node) + "#" + value.source_socket
+            else:
+                resolved[socket] = value
+
+        key = cache_key(node.type, version, resolved)
+        self._key_cache[node_id] = key
+        return key
+
+    def invalidate_keys(self) -> None:
+        """캐시 키 메모를 버린다. 그래프가 확장으로 바뀌었을 때 부른다."""
+        self._key_cache.clear()
+
+    def _priority(self, node_id: str) -> int:
+        """작을수록 먼저 실행된다. design.md §1.1 ② 의 4단계."""
+        schema = self._schema_for(node_id)
+        if (schema is not None and (schema.output_node or schema.is_async)) or (
+            node_id in self._requested
+        ):
+            return 0
+
+        blocking = self._blocking.get(node_id, set())
+        if blocking & self._requested:
+            return 1
+        for blocked in blocking:
+            if self._blocking.get(blocked, set()) & self._requested:
+                return 2
+        return 3
+
+    def _schema_for(self, node_id: str) -> NodeSchema | None:
+        try:
+            return self._registry.get(self._dyn.node(node_id).type, node_id=node_id)
+        except (NodeTypeNotFoundError, KeyError):
+            return None
 
 
 # ---------------------------------------------------------------- 실행 루프
@@ -426,7 +639,124 @@ async def execute(
         NodeExecutionError: 노드가 실패했을 때. 어느 노드인지 지목한다.
         Cancelled: 실행 중 취소됐을 때.
     """
-    raise NotImplementedError
+    issues = validate_for_execution(graph, registry, requested_outputs)
+    if issues:
+        raise GraphValidationError(list(issues))
+
+    identifier = run_id or uuid.uuid4().hex
+    started_at = time.perf_counter()
+
+    dyn = DynamicGraph(graph)
+    plan = ExecutionList(dyn, cache, registry)
+    for out_id in requested_outputs:
+        plan.add_node(out_id)
+
+    results: dict[str, Mapping[str, Any]] = {}
+    executed: list[str] = []
+    cached: list[str] = []
+    blocked: list[str] = []
+
+    events.emit(RunStarted(t="run.started", run_id=identifier, node_count=len(plan.pending())))
+
+    def elapsed_ms() -> int:
+        return int((time.perf_counter() - started_at) * 1000)
+
+    try:
+        while not plan.is_empty():
+            cancel_token.raise_if_cancelled()
+
+            node_id = await plan.stage()
+            visible = dyn.visible_id(node_id)
+            schema = registry.get(dyn.node(node_id).type, node_id=node_id)
+
+            # 상위에서 블로커가 내려왔으면 실행하지 않고 그대로 전파한다.
+            inherited = _inherited_blocker(node_id, dyn, plan)
+            if inherited is not None:
+                plan.mark_blocked(node_id, inherited)
+                blocked.append(node_id)
+                plan.complete()
+                continue
+
+            key = plan.cache_key_for(node_id)
+            if schema.cacheable:
+                hit = cache.get(key)
+                if hit is not MISS:
+                    results[node_id] = hit
+                    cached.append(node_id)
+                    events.emit(NodeCached(t="node.cached", node_id=visible))
+                    plan.complete()
+                    continue
+
+            events.emit(NodeStarted(t="node.started", run_id=identifier, node_id=visible))
+
+            inputs = resolve_inputs(node_id, dyn, schema, results)
+            ctx = NodeContext(visible, identifier, events, cancel_token)
+            outcome = await run_node(node_id, dyn, schema, inputs, ctx)
+
+            match outcome:
+                case Success():
+                    results[node_id] = outcome.outputs
+                    executed.append(node_id)
+                    if schema.cacheable:
+                        cache.set(key, outcome.outputs)
+                    events.emit(NodeDone(t="node.done", node_id=visible, outputs=outcome.outputs))
+                    plan.complete()
+
+                case Expanded(subgraph):
+                    dyn.splice(node_id, subgraph)
+                    plan.invalidate_keys()
+                    plan.unstage()
+
+                case NeedsLazy(deps):
+                    plan.add_deps(node_id, deps)
+                    plan.unstage()
+
+                case Blocked(blocker):
+                    plan.mark_blocked(node_id, blocker)
+                    blocked.extend(propagate_blocker(node_id, plan, blocker))
+                    blocked.append(node_id)
+                    plan.complete()
+
+                case Failure(error, socket):
+                    events.emit(
+                        NodeError(
+                            t="node.error",
+                            node_id=visible,
+                            message=str(error),
+                            traceback=tuple(
+                                traceback.format_exception(type(error), error, error.__traceback__)
+                            ),
+                            socket=socket,
+                        )
+                    )
+                    raise NodeExecutionError(
+                        visible,
+                        error,
+                        socket=socket,
+                        ephemeral_id=node_id if dyn.is_ephemeral(node_id) else None,
+                    ) from error
+
+                case _:  # pragma: no cover — NodeOutcome 은 위 다섯 가지가 전부다
+                    raise NodeExecutionError(
+                        visible, TypeError(f"알 수 없는 실행 결과: {outcome!r}")
+                    )
+
+    except Cancelled:
+        events.emit(RunCancelled(t="run.cancelled", run_id=identifier, elapsed_ms=elapsed_ms()))
+        raise
+
+    events.emit(RunDone(t="run.done", run_id=identifier, elapsed_ms=elapsed_ms()))
+
+    return RunResult(
+        run_id=identifier,
+        outputs={
+            out_id: results.get(out_id, {}) for out_id in requested_outputs if out_id in results
+        },
+        executed=tuple(executed),
+        cached=tuple(cached),
+        blocked=tuple(dict.fromkeys(blocked)),
+        elapsed_ms=elapsed_ms(),
+    )
 
 
 async def run_node(
@@ -445,7 +775,40 @@ async def run_node(
     예외를 밖으로 던지지 않고 `Failure` 로 감싸 돌려준다 — 실행 루프가 어느
     노드였는지 붙여서 `NodeExecutionError` 를 만든다.
     """
-    raise NotImplementedError
+    call_kwargs = dict(inputs)
+    if schema.wants_ctx:
+        call_kwargs["ctx"] = ctx
+
+    instance = schema.node_class()
+    try:
+        if schema.is_async:
+            raw = await instance.run(**call_kwargs)
+        else:
+            # 동기 노드가 이벤트 루프를 막지 않게 스레드로 보낸다.
+            raw = await asyncio.to_thread(instance.run, **call_kwargs)
+    except Cancelled:
+        raise
+    except Exception as exc:
+        return Failure(exc)
+
+    return _classify(raw, schema)
+
+
+def _classify(raw: Any, schema: NodeSchema) -> NodeOutcome:
+    """`run` 의 반환값을 실행 결과 타입으로 분류한다."""
+    if isinstance(raw, NodeOutcome):
+        # 노드가 직접 Expanded/NeedsLazy 등을 돌려준 경우 (M5).
+        return raw
+    if isinstance(raw, ExecutionBlocker):
+        return Blocked(raw)
+    if isinstance(raw, Graph):
+        return Expanded(raw)
+
+    result = raw if isinstance(raw, NodeResult) else NodeResult(raw)
+    try:
+        return Success(result.as_outputs(schema))
+    except Exception as exc:
+        return Failure(exc)
 
 
 def propagate_blocker(
@@ -458,7 +821,38 @@ def propagate_blocker(
     Returns:
         블로커 때문에 실행되지 않게 된 노드 ID 들.
     """
-    raise NotImplementedError
+    dyn = plan._dyn
+    marked: list[str] = []
+    frontier = [node_id]
+    seen = {node_id}
+
+    while frontier:
+        current = frontier.pop()
+        for consumer in dyn.dependents(current):
+            if consumer in seen or consumer not in plan.pending():
+                continue
+            seen.add(consumer)
+            plan.mark_blocked(consumer, blocker)
+            marked.append(consumer)
+            frontier.append(consumer)
+
+    return marked
+
+
+def _inherited_blocker(
+    node_id: str,
+    dyn: DynamicGraph,
+    plan: ExecutionList,
+) -> ExecutionBlocker | None:
+    """입력 중 하나라도 블로커에서 왔으면 그 블로커를 돌려준다."""
+    own = plan.blocker_for(node_id)
+    if own is not None:
+        return own
+    for source, _ in dyn.dependencies(node_id).values():
+        upstream = plan.blocker_for(source)
+        if upstream is not None:
+            return upstream
+    return None
 
 
 def resolve_inputs(
@@ -476,7 +870,47 @@ def resolve_inputs(
         NodeExecutionError: 필수 입력이 비어 있거나, 링크가 존재하지 않는 출력
             소켓을 가리킬 때. 어느 소켓인지 지목한다.
     """
-    raise NotImplementedError
+    visible = dyn.visible_id(node_id)
+    node = dyn.node(node_id)
+    resolved: dict[str, Any] = {}
+
+    for name, spec in schema.inputs.items():
+        value = node.inputs.get(name)
+
+        if isinstance(value, Link):
+            upstream = results.get(value.source_node)
+            if upstream is None:
+                raise NodeExecutionError(
+                    visible,
+                    RuntimeError(f"출처 노드 {value.source_node!r} 의 결과가 아직 없다"),
+                    socket=name,
+                )
+            if value.source_socket not in upstream:
+                available = ", ".join(upstream) or "(출력 없음)"
+                raise NodeExecutionError(
+                    visible,
+                    KeyError(
+                        f"출처 노드 {value.source_node!r} 에 출력 소켓 "
+                        f"{value.source_socket!r} 이 없다. 있는 것: {available}"
+                    ),
+                    socket=name,
+                )
+            resolved[name] = upstream[value.source_socket]
+            continue
+
+        if value is not None:
+            resolved[name] = value
+            continue
+
+        if spec.required:
+            raise NodeExecutionError(
+                visible,
+                ValueError("필수 입력이 비어 있다"),
+                socket=name,
+            )
+        resolved[name] = spec.default
+
+    return resolved
 
 
 def validate_for_execution(
@@ -496,4 +930,96 @@ def validate_for_execution(
     Returns:
         `GraphIssue` 목록. 비어 있으면 실행 가능하다.
     """
-    raise NotImplementedError
+    from .graph import validate_graph
+
+    issues: list[GraphIssue] = list(validate_graph(graph))
+
+    schemas: dict[str, NodeSchema] = {}
+    for node_id, node in graph.nodes.items():
+        try:
+            schemas[node_id] = registry.get(node.type, node_id=node_id)
+        except NodeTypeNotFoundError:
+            issues.append(
+                GraphIssue(
+                    code=IssueCode.UNKNOWN_NODE_TYPE,
+                    message=f"등록되지 않은 노드 타입: {node.type!r}",
+                    node_id=node_id,
+                )
+            )
+
+    for out_id in requested_outputs:
+        if out_id not in graph.nodes:
+            issues.append(
+                GraphIssue(
+                    code=IssueCode.UNKNOWN_OUTPUT,
+                    message="실행을 요청한 노드가 그래프에 없다",
+                    node_id=out_id,
+                )
+            )
+
+    for node_id, schema in schemas.items():
+        node = graph.nodes[node_id]
+
+        for socket, value in node.inputs.items():
+            if socket not in schema.inputs:
+                known = ", ".join(schema.inputs) or "(입력 없음)"
+                issues.append(
+                    GraphIssue(
+                        code=IssueCode.UNKNOWN_INPUT_SOCKET,
+                        message=f"{schema.id} 에 없는 입력 소켓이다. 있는 것: {known}",
+                        node_id=node_id,
+                        socket=socket,
+                    )
+                )
+                continue
+
+            if not isinstance(value, Link):
+                continue
+
+            source_schema = schemas.get(value.source_node)
+            if source_schema is None:
+                continue
+
+            if value.source_socket not in source_schema.outputs:
+                known = ", ".join(source_schema.outputs) or "(출력 없음)"
+                issues.append(
+                    GraphIssue(
+                        code=IssueCode.UNKNOWN_OUTPUT_SOCKET,
+                        message=(
+                            f"{source_schema.id} 에 출력 소켓 {value.source_socket!r} 이 "
+                            f"없다. 있는 것: {known}"
+                        ),
+                        node_id=node_id,
+                        socket=socket,
+                    )
+                )
+                continue
+
+            source_type = source_schema.outputs[value.source_socket].type
+            target_type = schema.inputs[socket].type
+            if not is_compatible(source_type, target_type):
+                issues.append(
+                    GraphIssue(
+                        code=IssueCode.TYPE_MISMATCH,
+                        message=(
+                            f"{value.source_node}.{value.source_socket} "
+                            f"({source_type.describe()}) 를 이 소켓"
+                            f"({target_type.describe()})에 연결할 수 없다"
+                        ),
+                        node_id=node_id,
+                        socket=socket,
+                    )
+                )
+
+        for name, spec in schema.inputs.items():
+            if spec.required and name not in node.inputs:
+                issues.append(
+                    GraphIssue(
+                        code=IssueCode.MISSING_REQUIRED_INPUT,
+                        message="필수 입력이 비어 있다",
+                        node_id=node_id,
+                        socket=name,
+                    )
+                )
+
+    return issues
