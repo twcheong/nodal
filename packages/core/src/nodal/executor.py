@@ -395,7 +395,7 @@ class TopologicalSort:
                         )
                     ]
                 )
-            self.add_node(source)
+            TopologicalSort.add_node(self, source)
             self.add_dependency(node_id, source)
 
     def add_dependency(self, blocked: str, blocker: str) -> None:
