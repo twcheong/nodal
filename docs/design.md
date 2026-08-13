@@ -3,7 +3,7 @@
 이 문서는 **구현 스펙**이다. ComfyUI 소스를 열어보는 대신 이 문서를 보고 구현한다.
 
 - 스택: Python 백엔드(FastAPI + WebSocket) + 웹 프론트엔드(React + TypeScript)
-- 참조 대상: ComfyUI (GPL-3.0) — **아키텍처만 참조. 코드 복사 금지.** `../CLAUDE.md` 참조.
+- 참조 대상: ComfyUI (GPL-3.0) — **아키텍처만 참조. 코드 복사 금지.** `../AGENTS.md` 참조.
 
 ---
 
@@ -420,7 +420,7 @@ class LoadCheckpoint:
 
 지원 범위 1차: SD1.5, SDXL, SD3, FLUX (전부 `diffusers` 커버).
 
-> 오프로딩 오버헤드가 참을 수 없어지면 레이어 단위 부분 오프로드를 직접 구현한다. **단 ComfyUI 코드 복사 금지 — `../CLAUDE.md` 참조.**
+> 오프로딩 오버헤드가 참을 수 없어지면 레이어 단위 부분 오프로드를 직접 구현한다. **단 ComfyUI 코드 복사 금지 — `../AGENTS.md` 참조.**
 
 ---
 

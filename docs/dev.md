@@ -1,15 +1,18 @@
 # 개발 환경
 
-저장소는 비공개 전제다 (`../CLAUDE.md`). 이 문서는 로컬 작업용이다.
+이 문서는 **로컬에서 무엇을 실행하는지**만 다룬다.
+규칙과 기술 스택은 `../AGENTS.md`에 있다 — 여기에 복사하지 않는다.
 
 ## 요구 사항
 
-| 도구 | 버전 |
+버전은 저장소가 스스로 선언한다. 여기에 옮겨 적지 않는다 — 옮겨 적는 순간 어긋난다.
+
+| 도구 | 어디에 선언되어 있나 |
 |---|---|
-| Python | 3.11+ (`uv` 가 알아서 받아온다) |
-| `uv` | 0.5+ |
-| Node | 20+ |
-| `pnpm` | 10+ |
+| Python | `pyproject.toml` 의 `requires-python` (`uv` 가 알아서 받아온다) |
+| Node | `package.json` 의 `engines.node` |
+| `pnpm` | `package.json` 의 `packageManager` (`corepack` 이 맞춰준다) |
+| `uv` | 최신 안정판 |
 
 ## 설치
 
@@ -44,24 +47,27 @@ uv run python tools/export_schema.py
 
 ## 커밋
 
-모든 커밋에 `Signed-off-by` 가 필요하다 (DCO). 근거는 `license.md`.
+모든 커밋에 `Signed-off-by` 가 필요하다 (DCO — `../AGENTS.md` 코딩 컨벤션, 근거는 `license.md`).
+저장소를 새로 clone 했다면 커밋 템플릿을 한 번 걸어둔다.
 
 ```bash
 git config commit.template .gitmessage
 git commit -s
 ```
 
-## 구조
+## 디렉토리 ↔ 임포트 이름
 
-```
-packages/core          nodal          그래프 엔진 (torch 없음)
-packages/server        nodal_server   FastAPI (M2)
-packages/nodes-core    nodal_nodes_core  기본 노드 팩 (M1)
-apps/web               @nodal/web     Vite + React 캔버스 (M2)
-schemas/               생성된 JSON Schema — 프론트가 소비
-tools/                 개발 스크립트
-```
+의존성 **규칙**은 `../AGENTS.md` "아키텍처 — 의존성 규칙"에 있다. 아래는 그 규칙이
+이 저장소에서 어떤 이름으로 나타나는지에 대한 대응표일 뿐이다.
 
-의존성 방향은 한쪽뿐이다: `web → server → core`, `nodes-* → core`.
-`core` 는 그 누구도 import 하지 않는다. ruff 가 `core`/`server` 의 torch
-import 를 차단한다 (`pyproject.toml` 의 `banned-api`).
+| 디렉토리 | 임포트 이름 | 상태 |
+|---|---|---|
+| `packages/core` | `nodal` | M0 완료 |
+| `packages/server` | `nodal_server` | M2 |
+| `packages/nodes-core` | `nodal_nodes_core` | M1 |
+| `apps/web` | `@nodal/web` | M2 |
+| `schemas/` | — | 생성된 JSON Schema, 프론트가 소비 |
+| `tools/` | — | 개발 스크립트 |
+
+규칙 위반은 사람이 아니라 도구가 잡는다: ruff `banned-api` 가 `core`/`server` 의
+torch import 를 거부한다 (`pyproject.toml`).

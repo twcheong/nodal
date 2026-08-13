@@ -89,7 +89,7 @@ jobs:
           fi
           echo "라이선스 미정 상태 유지 중."
 
-      # CLAUDE.md: GPL/AGPL 의존성을 추가하지 않는다.
+      # AGENTS.md 기술 스택: GPL/AGPL 의존성을 추가하지 않는다.
       - name: GPL 의존성이 없는지 확인
         run: |
           if grep -rniE '"?(GPL-[23]|AGPL-3|GPL-2\.0)' --include=pyproject.toml --include=package.json . ; then

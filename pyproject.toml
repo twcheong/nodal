@@ -52,7 +52,7 @@ select = [
     "UP",   # pyupgrade
     "B",    # flake8-bugbear
     "SIM",  # flake8-simplify
-    "ANN",  # flake8-annotations — 타입 힌트 필수 (CLAUDE.md 컨벤션)
+    "ANN",  # flake8-annotations — 타입 힌트 필수 (AGENTS.md 코딩 컨벤션)
     "TID",  # flake8-tidy-imports
     "RUF",
 ]
@@ -65,7 +65,7 @@ ignore = [
 "tools/*" = ["ANN"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
-# 의존성 규칙 강제 (CLAUDE.md 아키텍처 절). core는 torch를 모른다.
+# 의존성 규칙 강제 (AGENTS.md 아키텍처 절). core는 torch를 모른다.
 "torch".msg = "packages/core 와 packages/server 는 torch 를 import 하지 않는다. torch 는 packages/nodes-diffusion 전용."
 
 [tool.ruff.lint.isort]
