@@ -1,7 +1,7 @@
 """노드 스키마 — `@node` 데코레이터와 리플렉션 (docs/design.md §4.2).
 
-> **계약 파일.** 본문은 M1 에서 채운다. 시그니처는 다른 에이전트가 테스트를
-> 작성하는 근거이므로 사용자 확인 없이 바꾸지 않는다 (AGENTS.md 협업 규칙 7).
+> 시그니처는 다른 에이전트가 테스트를 작성하는 근거다. 사용자 확인 없이
+> 바꾸지 않는다 (AGENTS.md 협업 규칙 7).
 
 클래스 어노테이션이 곧 입력 스키마다. 딕셔너리-튜플 스키마를 쓰지 않는다::
 
@@ -42,12 +42,14 @@
 
 from __future__ import annotations
 
+import inspect
+import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any as TypingAny
 from typing import ClassVar, Self, TypeVar
 
-from .types import Type
+from .types import BOOL, FLOAT, INT, STRING, Type
 
 __all__ = [
     "Bool",
@@ -63,9 +65,11 @@ __all__ = [
     "SchemaError",
     "Socket",
     "Str",
+    "get_schema",
     "node",
     "output_names_for",
     "reflect_node",
+    "register_combo_provider",
 ]
 
 NodeClass = TypeVar("NodeClass", bound=type)
@@ -126,7 +130,7 @@ class InputDescriptor:
     @property
     def required(self) -> bool:
         """기본값이 없으면 필수다."""
-        raise NotImplementedError
+        return self.default is InputDescriptor.MISSING
 
 
 @dataclass(frozen=True)
@@ -141,7 +145,7 @@ class Socket(InputDescriptor):
         lazy: bool = False,
         doc: str = "",
     ) -> None:
-        raise NotImplementedError
+        super().__init__(type=type, default=default, lazy=lazy, doc=doc, widget={})
 
 
 @dataclass(frozen=True)
@@ -158,7 +162,13 @@ class Int(InputDescriptor):
         lazy: bool = False,
         doc: str = "",
     ) -> None:
-        raise NotImplementedError
+        super().__init__(
+            type=INT,
+            default=default,
+            lazy=lazy,
+            doc=doc,
+            widget=_widget(min=min, max=max, step=step),
+        )
 
 
 @dataclass(frozen=True)
@@ -175,7 +185,13 @@ class Float(InputDescriptor):
         lazy: bool = False,
         doc: str = "",
     ) -> None:
-        raise NotImplementedError
+        super().__init__(
+            type=FLOAT,
+            default=default,
+            lazy=lazy,
+            doc=doc,
+            widget=_widget(min=min, max=max, step=step),
+        )
 
 
 @dataclass(frozen=True)
@@ -191,7 +207,13 @@ class Str(InputDescriptor):
         lazy: bool = False,
         doc: str = "",
     ) -> None:
-        raise NotImplementedError
+        super().__init__(
+            type=STRING,
+            default=default,
+            lazy=lazy,
+            doc=doc,
+            widget=_widget(multiline=multiline or None, placeholder=placeholder or None),
+        )
 
 
 @dataclass(frozen=True)
@@ -205,7 +227,7 @@ class Bool(InputDescriptor):
         lazy: bool = False,
         doc: str = "",
     ) -> None:
-        raise NotImplementedError
+        super().__init__(type=BOOL, default=default, lazy=lazy, doc=doc, widget={})
 
 
 @dataclass(frozen=True)
@@ -224,7 +246,13 @@ class Combo(InputDescriptor):
         lazy: bool = False,
         doc: str = "",
     ) -> None:
-        raise NotImplementedError
+        super().__init__(
+            type=STRING,
+            default=default,
+            lazy=lazy,
+            doc=doc,
+            widget=_widget(options=tuple(options) or None),
+        )
 
     @classmethod
     def from_provider(
@@ -239,11 +267,22 @@ class Combo(InputDescriptor):
 
         공급자 자체는 core 밖에서 등록된다 — core 는 체크포인트가 무엇인지 모른다.
         """
-        raise NotImplementedError
+        combo = cls(default, lazy=lazy, doc=doc)
+        object.__setattr__(combo, "widget", _widget(provider=provider))
+        return combo
 
     def options(self) -> Sequence[str]:
         """현재 유효한 옵션 목록. 공급자 기반이면 매번 새로 묻는다."""
-        raise NotImplementedError
+        provider = self.widget.get("provider")
+        if provider is None:
+            return tuple(self.widget.get("options", ()))
+        try:
+            return tuple(_COMBO_PROVIDERS[provider]())
+        except KeyError:
+            known = ", ".join(sorted(_COMBO_PROVIDERS)) or "(등록된 공급자 없음)"
+            raise SchemaError(
+                f"등록되지 않은 Combo 공급자: {provider!r}. 등록된 것: {known}"
+            ) from None
 
 
 # ------------------------------------------------------------ 리플렉션 결과
@@ -304,11 +343,23 @@ class NodeSchema:
 
     def input(self, name: str) -> InputSpec:
         """입력 소켓 하나. 없으면 `SchemaError`."""
-        raise NotImplementedError
+        try:
+            return self.inputs[name]
+        except KeyError:
+            known = ", ".join(self.inputs) or "(입력 없음)"
+            raise SchemaError(
+                f"그런 입력 소켓이 없다. 있는 것: {known}", node_id=self.id, socket=name
+            ) from None
 
     def output(self, name: str) -> OutputSpec:
         """출력 소켓 하나. 없으면 `SchemaError`."""
-        raise NotImplementedError
+        try:
+            return self.outputs[name]
+        except KeyError:
+            known = ", ".join(self.outputs) or "(출력 없음)"
+            raise SchemaError(
+                f"그런 출력 소켓이 없다. 있는 것: {known}", node_id=self.id, socket=name
+            ) from None
 
 
 # ------------------------------------------------------------ 실행 결과 값
@@ -334,12 +385,15 @@ class NodeResult:
         text: str | None = None,
         ui: Mapping[str, TypingAny] | None = None,
     ) -> None:
-        raise NotImplementedError
+        self._values = values
+        self.preview = preview
+        self.text = text
+        self.ui: Mapping[str, TypingAny] = dict(ui) if ui else {}
 
     @property
     def values(self) -> tuple[TypingAny, ...]:
         """선언 순서대로의 출력 값들."""
-        raise NotImplementedError
+        return self._values
 
     def as_outputs(self, schema: NodeSchema) -> Mapping[str, TypingAny]:
         """값을 출력 소켓 이름에 맞춰 딕셔너리로 만든다.
@@ -347,7 +401,22 @@ class NodeResult:
         Raises:
             SchemaError: 값 개수가 `returns` 선언과 다를 때.
         """
-        raise NotImplementedError
+        names = tuple(schema.outputs)
+        if len(self._values) != len(names):
+            raise SchemaError(
+                f"run 이 값 {len(self._values)}개를 돌려줬는데 returns 는 "
+                f"{len(names)}개를 선언했다 ({', '.join(names) or '없음'})",
+                node_id=schema.id,
+            )
+        return dict(zip(names, self._values, strict=True))
+
+    def __repr__(self) -> str:
+        extra = ""
+        if self.preview is not None:
+            extra += ", preview=..."
+        if self.text is not None:
+            extra += f", text={self.text!r}"
+        return f"NodeResult({', '.join(repr(v) for v in self._values)}{extra})"
 
 
 # -------------------------------------------------------------- 데코레이터
@@ -384,7 +453,27 @@ def node(
     Raises:
         SchemaError: 어노테이션·`returns`·`run` 이 규칙을 만족하지 않을 때.
     """
-    raise NotImplementedError
+    options = _NodeOptions(
+        id=id,
+        title=title,
+        category=category,
+        aliases=tuple(aliases),
+        version=version,
+        output_node=output_node,
+        cacheable=cacheable,
+    )
+
+    def decorate(node_class: NodeClass) -> NodeClass:
+        if not _NODE_TYPE_ID_RE.match(id):
+            raise SchemaError(
+                f"노드 타입 ID 는 네임스페이스를 포함해야 한다 (예: image.Resize): {id!r}",
+                node_id=id,
+            )
+        node_class.__nodal_options__ = options  # type: ignore[attr-defined]
+        node_class.__nodal_schema__ = reflect_node(node_class)  # type: ignore[attr-defined]
+        return node_class
+
+    return decorate
 
 
 def reflect_node(node_class: type) -> NodeSchema:
@@ -394,7 +483,47 @@ def reflect_node(node_class: type) -> NodeSchema:
         SchemaError: 어노테이션을 타입으로 해석할 수 없거나, `returns` 가
             없거나, `run` 이 없을 때.
     """
-    raise NotImplementedError
+    options = node_class.__dict__.get("__nodal_options__") or _NodeOptions(
+        # `@node` 없이 부를 때의 기본값. 모듈 이름을 네임스페이스로 쓴다.
+        id=f"{node_class.__module__.rsplit('.', 1)[-1]}.{node_class.__name__}"
+    )
+    node_id = options.id
+
+    inputs = _reflect_inputs(node_class, node_id)
+
+    returns = getattr(node_class, "returns", None)
+    if returns is None:
+        raise SchemaError(
+            "`returns` 선언이 없다. 출력이 없는 노드도 `returns = {}` 를 명시해야 한다",
+            node_id=node_id,
+        )
+    outputs = {
+        name: OutputSpec(name=name, type=socket_type)
+        for name, socket_type in output_names_for(returns).items()
+    }
+
+    run = getattr(node_class, "run", None)
+    if run is None or not callable(run):
+        raise SchemaError("`run` 메서드가 없다", node_id=node_id)
+
+    params = _run_parameters(run)
+    _check_run_signature(node_id, run, params, inputs)
+
+    return NodeSchema(
+        id=node_id,
+        title=options.title or _title_from_class_name(node_class.__name__),
+        category=options.category,
+        aliases=options.aliases,
+        version=options.version,
+        output_node=options.output_node,
+        cacheable=options.cacheable,
+        inputs=inputs,
+        outputs=outputs,
+        node_class=node_class,
+        is_async=inspect.iscoroutinefunction(run),
+        wants_ctx=_CTX_PARAM in params,
+        doc=inspect.cleandoc(node_class.__doc__ or ""),
+    )
 
 
 def output_names_for(returns: TypingAny) -> Mapping[str, Type]:
@@ -406,7 +535,31 @@ def output_names_for(returns: TypingAny) -> Mapping[str, Type]:
     Raises:
         SchemaError: `returns` 를 해석할 수 없거나 이름이 중복될 때.
     """
-    raise NotImplementedError
+    if isinstance(returns, Mapping):
+        out: dict[str, Type] = {}
+        for name, socket_type in returns.items():
+            resolved = _as_socket_type(socket_type)
+            if resolved is None:
+                raise SchemaError(
+                    f"출력 타입으로 해석할 수 없다: {socket_type!r}", socket=str(name)
+                )
+            out[str(name)] = resolved
+        return out
+
+    declared = returns if isinstance(returns, tuple) else (returns,)
+
+    named: dict[str, Type] = {}
+    for entry in declared:
+        resolved = _as_socket_type(entry)
+        if resolved is None:
+            raise SchemaError(f"출력 타입으로 해석할 수 없다: {entry!r}")
+        base = _output_name_for_type(resolved)
+        name, index = base, 1
+        while name in named:
+            index += 1
+            name = f"{base}_{index}"
+        named[name] = resolved
+    return named
 
 
 def get_schema(node_class: type) -> NodeSchema:
@@ -415,4 +568,176 @@ def get_schema(node_class: type) -> NodeSchema:
     Raises:
         SchemaError: `@node` 가 붙지 않은 클래스일 때.
     """
-    raise NotImplementedError
+    schema = getattr(node_class, "__nodal_schema__", None)
+    if not isinstance(schema, NodeSchema):
+        raise SchemaError(f"`@node` 가 붙지 않은 클래스다: {node_class.__name__}")
+    return schema
+
+
+def register_combo_provider(name: str, provider: ComboProvider) -> None:
+    """`Combo.from_provider(name)` 이 호출할 옵션 공급자를 등록한다.
+
+    core 는 공급자가 무엇을 세는지 모른다 — 체크포인트 디렉토리를 스캔하는 것은
+    노드 패키지의 일이다.
+    """
+    _COMBO_PROVIDERS[name] = provider
+
+
+# ------------------------------------------------------------------ 내부
+
+
+#: `@node(id=...)` 가 요구하는 네임스페이스 형태. 캐논 그래프의 `node.type` 과 같다.
+_NODE_TYPE_ID_RE = re.compile(r"^[a-z][a-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+$")
+
+#: 이 이름의 파라미터가 `run` 에 있으면 엔진이 실행 컨텍스트를 주입한다.
+_CTX_PARAM = "ctx"
+
+_COMBO_PROVIDERS: dict[str, ComboProvider] = {}
+
+
+@dataclass(frozen=True, slots=True)
+class _NodeOptions:
+    """`@node` 인자를 담아 클래스에 붙여 두는 상자."""
+
+    id: str
+    title: str | None = None
+    category: str = ""
+    aliases: tuple[str, ...] = ()
+    version: str = "1"
+    output_node: bool = False
+    cacheable: bool = True
+
+
+def _widget(**hints: TypingAny) -> Mapping[str, TypingAny]:
+    """`None` 인 힌트를 걸러낸 위젯 딕셔너리. 안 쓴 제약은 스키마에 남기지 않는다."""
+    return {key: value for key, value in hints.items() if value is not None}
+
+
+def _title_from_class_name(name: str) -> str:
+    """`LoadCheckpoint` → `Load Checkpoint`."""
+    out: list[str] = []
+    for index, char in enumerate(name):
+        if char.isupper() and index and not name[index - 1].isupper():
+            out.append(" ")
+        out.append(char)
+    return "".join(out)
+
+
+def _output_name_for_type(socket_type: Type) -> str:
+    """축약형 `returns` 의 이름을 타입에서 만든다. `Image` → `image`."""
+    return socket_type.describe().split("[", 1)[0].lower()
+
+
+def _as_socket_type(value: TypingAny) -> Type | None:
+    """어노테이션이나 `returns` 항목을 소켓 타입으로 푼다. 해석 못 하면 `None`."""
+    if isinstance(value, Type):
+        return value
+    if isinstance(value, InputDescriptor):
+        return value.type
+    if isinstance(value, type) and issubclass(value, InputDescriptor):
+        if value is InputDescriptor:
+            # 기반 클래스는 타입을 모른다. `Socket(Image)` 나 하위 서술자를 써야 한다.
+            return None
+        # `Int` 처럼 클래스로 쓴 경우. 하위 서술자는 인자 없이 만들 수 있고 자기
+        # 타입을 안다. (기반 클래스는 `type` 이 필수라 mypy 가 여기서 항의한다.)
+        return value().type  # type: ignore[call-arg]
+    return None
+
+
+def _reflect_inputs(node_class: type, node_id: str) -> Mapping[str, InputSpec]:
+    """클래스 어노테이션을 입력 스키마로 바꾼다. 선언 순서를 유지한다."""
+    specs: dict[str, InputSpec] = {}
+
+    # 상위 클래스부터 훑어 하위 클래스가 덮어쓸 수 있게 한다.
+    for klass in reversed(node_class.__mro__):
+        if klass is object:
+            continue
+        try:
+            annotations = inspect.get_annotations(klass, eval_str=True)
+        except (NameError, AttributeError) as exc:
+            raise SchemaError(f"어노테이션을 평가할 수 없다: {exc}", node_id=node_id) from exc
+
+        for name, annotation in annotations.items():
+            if name.startswith("_") or name in _RESERVED_ATTRS:
+                continue
+            specs[name] = _input_spec(node_id, name, annotation, getattr(klass, name, None))
+
+    return specs
+
+
+#: 입력 소켓이 아닌 클래스 속성 이름.
+_RESERVED_ATTRS = frozenset({"returns", "run"})
+
+
+def _input_spec(
+    node_id: str,
+    name: str,
+    annotation: TypingAny,
+    declared_default: TypingAny,
+) -> InputSpec:
+    """어노테이션 + 기본값 한 쌍을 `InputSpec` 으로 확정한다."""
+    if isinstance(declared_default, InputDescriptor):
+        # 기본값이 서술자면 그것이 최종 권위를 갖는다.
+        descriptor = declared_default
+    else:
+        socket_type = _as_socket_type(annotation)
+        if socket_type is None:
+            raise SchemaError(
+                f"어노테이션을 소켓 타입으로 해석할 수 없다: {annotation!r}. "
+                "카탈로그 타입(Image, Model, Any) 이거나 입력 서술자(Int, Combo) 여야 한다",
+                node_id=node_id,
+                socket=name,
+            )
+        descriptor = InputDescriptor(
+            type=socket_type,
+            default=(InputDescriptor.MISSING if declared_default is None else declared_default),
+        )
+
+    return InputSpec(
+        name=name,
+        type=descriptor.type,
+        default=descriptor.default,
+        required=descriptor.required,
+        lazy=descriptor.lazy,
+        doc=descriptor.doc,
+        widget=descriptor.widget,
+    )
+
+
+def _run_parameters(run: TypingAny) -> Mapping[str, inspect.Parameter]:
+    """`run` 의 파라미터. `self` 는 뺀다."""
+    params = dict(inspect.signature(run).parameters)
+    params.pop("self", None)
+    return params
+
+
+def _check_run_signature(
+    node_id: str,
+    run: TypingAny,
+    params: Mapping[str, inspect.Parameter],
+    inputs: Mapping[str, InputSpec],
+) -> None:
+    """입력 소켓과 `run` 파라미터가 맞는지 본다.
+
+    오타를 런타임이 아니라 노드 정의 시점에 잡는 것이 목적이다.
+    """
+    accepts_kwargs = any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
+    if accepts_kwargs:
+        return
+
+    for socket in inputs:
+        if socket not in params:
+            raise SchemaError(
+                f"입력 소켓이 `run` 시그니처에 없다. run({', '.join(params) or ''}) 를 확인하라",
+                node_id=node_id,
+                socket=socket,
+            )
+
+    for param in params:
+        if param != _CTX_PARAM and param not in inputs:
+            raise SchemaError(
+                f"`run` 파라미터에 대응하는 입력 소켓이 없다. "
+                f"클래스 어노테이션에 {param!r} 을 선언하거나 파라미터를 지워라",
+                node_id=node_id,
+                socket=param,
+            )
