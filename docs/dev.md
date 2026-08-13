@@ -60,6 +60,23 @@ pnpm --filter @nodal/web test          # TS 판정 (같은 conformance 케이스
 
 규칙을 고쳤으면 **양쪽을 다 돌린다.** 한쪽만 통과하면 규칙이 하나가 아니라는 뜻이다.
 
+## API 계약 (`schemas/openapi.json`)
+
+`packages/server` 의 pydantic 모델이 단일 소스다. 산출물을 손으로 고치지 않는다.
+
+```bash
+uv run python tools/export_openapi.py          # 백엔드에서 산출물 재생성
+pnpm --filter @nodal/web gen:api               # 프론트 타입 재생성
+uv run python tools/export_openapi.py --check  # drift 검사
+pnpm --filter @nodal/web gen:api:check         # 프론트 쪽 drift 검사
+```
+
+모델을 고쳤으면 **둘 다 재생성해서 함께 커밋한다.** 한쪽만 하면 CI 가 잡는다.
+
+WS 이벤트는 OpenAPI 가 다루지 않으므로 `tools/export_openapi.py` 가
+`components.schemas` 에 주입한다. core 의 dataclass 와 서버 pydantic 미러가
+어긋나지 않는지는 `packages/server/tests/test_openapi_export.py` 가 검사한다.
+
 ## 그래프 실행 (M1)
 
 ```bash

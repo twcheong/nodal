@@ -43,6 +43,11 @@ jobs:
       - name: types.json 검증 (Python 판정)
         run: uv run python tools/check_types.py
 
+      # M2 API 계약. 프론트가 이 산출물에서 타입을 생성하므로 drift 는 곧
+      # 프론트 빌드 실패다.
+      - name: OpenAPI drift 검사
+        run: uv run python tools/export_openapi.py --check
+
   web:
     name: web (lint · typecheck · test · build)
     runs-on: ubuntu-latest
@@ -66,6 +71,11 @@ jobs:
 
       - name: tsc
         run: pnpm -r typecheck
+
+      # 생성된 타입이 커밋된 것과 같은지. 백엔드가 스키마를 바꾸고 프론트
+      # 타입 재생성을 잊으면 여기서 잡힌다.
+      - name: 생성된 API 타입 drift 검사
+        run: pnpm --filter @nodal/web gen:api:check
 
       - name: vitest
         run: pnpm -r test

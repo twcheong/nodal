@@ -67,6 +67,51 @@
 **되돌릴 수 있나**: 아니오 — 다른 에이전트가 이 시그니처로 테스트를 작성하면 양쪽이 함께 깨진다.
 바꾸려면 사용자 확인이 필요하다 (AGENTS.md 협업 규칙 7).
 
+### 2026-08-13 · Claude Code · M2 API 계약 (사용자 확인 후 확정)
+
+`docs/design.md` §6 이 답을 주지 않는 지점 4개를 **사용자에게 물어 확정**했다. 임의 해석하지 않았다.
+확정 내용은 `design.md` §6 에 반영했고 `schemas/openapi.json` 이 산출물이다.
+
+- **`OutputRef` 도입**: §6 이 `node.done`의 `outputs: OutputRef[]`를 약속했지만 `OutputRef`가
+  문서 어디에도 정의된 적이 없었다. `{socket, type, inline?, asset?}`로 확정 — 값이 아니라
+  참조다. M3에서 이미지가 오면 WS로 메가바이트를 흘릴 수 없기 때문이다.
+- **모든 이벤트에 `run_id`**: §6의 TS 정의는 `run.started`·`node.started`에만 `run_id`가
+  있었다. `/ws`가 전역 스트림이므로 나머지도 필요하다 (`queue`만 예외 — 실행에 속하지 않는다).
+- **에러 응답 형식**: §6에 아예 없었다. HTTP 상태 + `{error: {code, message, issues[]}}`.
+  `issues[]`는 M1 `GraphIssue`를 그대로 직렬화해 에러 어휘를 하나로 유지한다.
+  단 `POST /api/graph/validate`는 무효한 그래프도 200 — 검증은 질의이지 명령이 아니다.
+- **실행 상태 5개**: `queued`·`running`·`succeeded`·`failed`·`cancelled`.
+  `GET /api/runs` → `{running, queued[], history[], limit}`.
+
+**영향 범위**: `docs/design.md` §6, `packages/server/src/nodal_server/{schemas,app}.py`,
+`packages/core/src/nodal/events.py`(M1 이벤트 변경), `tools/export_openapi.py`,
+`schemas/openapi.json`, `apps/web/src/api/*`
+**되돌릴 수 있나**: 아니오 — M2 프론트를 다른 에이전트가 이 산출물로 작성한다.
+바꾸려면 사용자 확인이 필요하다 (AGENTS.md 협업 규칙 7).
+
+### 2026-08-13 · Claude Code · M1 이벤트를 M2 계약에 맞춰 변경
+
+- **결정**: 완성된 `nodal/events.py`의 이벤트에 `run_id`를 추가하고 `NodeDone.outputs`를
+  `Mapping[str, Any]` → `tuple[OutputRef, ...]`로 바꿨다. M1 시그니처 동결의 예외다
+- **이유**: 위 M2 계약 결정이 요구한다. 서버가 core 이벤트를 번역하지 않고 직렬화만 하므로
+  (변환 레이어 없음), 전송 형태가 바뀌면 core 이벤트도 바뀌어야 한다. 서버에서만 변환하는
+  선택지도 사용자에게 제시했으나 채택되지 않았다
+- **확인**: Codex의 M1 테스트 80개는 `node_ids(NodeDone)`와 `RunResult.outputs`만 보므로
+  영향이 없었다. 변경 후 80개 전부 통과를 확인했다. `RunResult`는 **바꾸지 않았다** —
+  엔진 내부 결과이지 전송 형태가 아니다
+- **영향 범위**: `packages/core/src/nodal/{events,executor}.py`,
+  `packages/nodes-core/src/nodal_nodes_core/cli.py`
+- **되돌릴 수 있나**: 예 — 다만 M2 계약과 함께 되돌려야 한다
+
+### 2026-08-13 · Claude Code · mypy 검사 범위를 전 패키지로 확대
+
+- **결정**: `packages = ["nodal"]` → `["nodal", "nodal_server", "nodal_nodes_core"]`
+- **이유**: 위 이벤트 변경이 CLI를 깨뜨렸는데 (`event.outputs.items()`) 테스트가 CLI를
+  다루지 않아 아무도 잡지 못했다. 범위를 넓히자마자 mypy가 즉시 지목했다.
+  계약 파일이 늘어날수록 타입 검사 범위가 좁은 것이 위험해진다
+- **영향 범위**: `pyproject.toml`
+- **되돌릴 수 있나**: 예
+
 ### 2026-08-13 · Claude Code · 캐시 해시를 blake3 대신 blake2b 로
 
 - **결정**: `design.md` §5.3 은 `blake3(...)` 라고 적혀 있지만 표준 라이브러리의

@@ -7,12 +7,16 @@
 `node.cached` 를 명시적 이벤트로 두는 것이 포인트다. 어느 노드가 재실행됐고
 어느 노드가 캐시로 스킵됐는지 보이면, 캐시가 마법이 아니라 이해 가능한 도구가
 된다.
+
+**모든 이벤트가 `run_id` 를 갖는다.** `/ws` 는 전역 스트림이고 프론트는 히스토리와
+여러 탭을 동시에 본다 — 어느 실행의 이벤트인지 봉투 없이 알 수 있어야 한다.
+(§6 의 TS 정의는 일부 이벤트에만 `run_id` 가 있었다. M2 계약에서 통일했다.)
 """
 
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol, runtime_checkable
 
@@ -29,6 +33,7 @@ __all__ = [
     "NodeProgress",
     "NodeStarted",
     "NullEventSink",
+    "OutputRef",
     "QueueStatus",
     "RecordingEventSink",
     "RunCancelled",
@@ -78,6 +83,32 @@ class CancelToken:
 # ----------------------------------------------------------------- 이벤트
 #
 # `t` 판별자는 design.md §6 의 WebSocket 이벤트 이름과 정확히 같다.
+# 서버는 번역하지 않고 그대로 직렬화한다.
+
+
+@dataclass(frozen=True, slots=True)
+class OutputRef:
+    """노드 출력 하나에 대한 **참조**. 값 자체가 아니다 (design.md §6).
+
+    이미지나 텐서를 WS 로 그대로 흘리면 메가바이트가 소켓을 타고 나간다. 그래서
+    작은 값만 `inline` 에 싣고 큰 값은 content-addressed 해시로 가리킨다.
+
+    Attributes:
+        socket: 출력 소켓 이름. 캐논 그래프의 링크가 이 이름으로 참조한다.
+        type: `types.json` 카탈로그의 타입 이름 (`INT`, `Image` ...).
+        inline: JSON 으로 표현되는 작은 값. 아니면 `None`.
+        asset: `AssetStore` 의 content-addressed 해시 (M3). 아직 없으면 `None`.
+
+    Note:
+        M3 이전에는 JSON 으로 표현되지 않는 값의 `inline` 과 `asset` 이 **둘 다**
+        비어 있다. 그 값은 아직 전송 수단이 없다는 뜻이다 — `AssetStore` 가
+        들어오면 `asset` 이 채워진다.
+    """
+
+    socket: str
+    type: str
+    inline: Any = None
+    asset: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,6 +128,7 @@ class NodeStarted:
 @dataclass(frozen=True, slots=True)
 class NodeProgress:
     t: Literal["node.progress"]
+    run_id: str
     node_id: str
     step: int
     total: int
@@ -107,6 +139,7 @@ class NodePreview:
     """`image` 는 base64 이거나 에셋 참조다. core 는 어느 쪽인지 해석하지 않는다."""
 
     t: Literal["node.preview"]
+    run_id: str
     node_id: str
     image: str
 
@@ -116,14 +149,16 @@ class NodeCached:
     """캐시 히트로 실행을 건너뛴 노드. UI 가 색으로 표시한다."""
 
     t: Literal["node.cached"]
+    run_id: str
     node_id: str
 
 
 @dataclass(frozen=True, slots=True)
 class NodeDone:
     t: Literal["node.done"]
+    run_id: str
     node_id: str
-    outputs: Mapping[str, Any]
+    outputs: tuple[OutputRef, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,6 +169,7 @@ class NodeError:
     """
 
     t: Literal["node.error"]
+    run_id: str
     node_id: str
     message: str
     traceback: tuple[str, ...] = ()
@@ -156,6 +192,8 @@ class RunCancelled:
 
 @dataclass(frozen=True, slots=True)
 class QueueStatus:
+    """큐 상태. 특정 실행에 속하지 않으므로 `run_id` 가 없다."""
+
     t: Literal["queue"]
     pending: int
     running: str | None
@@ -256,10 +294,23 @@ class NodeContext:
     def progress(self, step: int, total: int, *, preview: Any = None) -> None:
         """진행률을 보고한다. 서버가 WS 로 중계한다."""
         self._events.emit(
-            NodeProgress(t="node.progress", node_id=self._node_id, step=step, total=total)
+            NodeProgress(
+                t="node.progress",
+                run_id=self._run_id,
+                node_id=self._node_id,
+                step=step,
+                total=total,
+            )
         )
         if preview is not None:
-            self._events.emit(NodePreview(t="node.preview", node_id=self._node_id, image=preview))
+            self._events.emit(
+                NodePreview(
+                    t="node.preview",
+                    run_id=self._run_id,
+                    node_id=self._node_id,
+                    image=preview,
+                )
+            )
 
     def raise_if_cancelled(self) -> None:
         """`cancel_token.raise_if_cancelled()` 의 축약. 장기 루프가 매 스텝 호출한다."""

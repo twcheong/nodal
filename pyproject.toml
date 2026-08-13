@@ -85,12 +85,14 @@ ignore = [
 "torch".msg = "packages/core 와 packages/server 는 torch 를 import 하지 않는다. torch 는 packages/nodes-diffusion 전용."
 
 [tool.ruff.lint.isort]
-known-first-party = ["nodal"]
+known-first-party = ["nodal", "nodal_server", "nodal_nodes_core"]
 
 # ---------------------------------------------------------------- pytest
 
 [tool.pytest.ini_options]
-testpaths = ["packages/core/tests"]
+# packages/core/tests 는 M1 에서 다른 에이전트가 소유한다.
+# packages/server/tests 는 M2 API 계약 검사다.
+testpaths = ["packages/core/tests", "packages/server/tests"]
 addopts = "-q --strict-markers"
 asyncio_mode = "auto"
 
@@ -99,8 +101,8 @@ asyncio_mode = "auto"
 [tool.mypy]
 python_version = "3.11"
 strict = true
-mypy_path = "packages/core/src"
-packages = ["nodal"]
+mypy_path = "packages/core/src:packages/server/src:packages/nodes-core/src"
+packages = ["nodal", "nodal_server", "nodal_nodes_core"]
 plugins = ["pydantic.mypy"]
 
 [tool.pydantic-mypy]

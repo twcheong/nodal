@@ -1,3 +1,6 @@
 schemas/
 dist/
 node_modules/
+
+# openapi-typescript 산출물. prettier 가 손대면 drift 검사가 항상 실패한다.
+apps/web/src/api/generated.ts

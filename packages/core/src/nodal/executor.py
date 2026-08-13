@@ -76,6 +76,7 @@ from .events import (
     NodeDone,
     NodeError,
     NodeStarted,
+    OutputRef,
     RunCancelled,
     RunDone,
     RunStarted,
@@ -683,7 +684,7 @@ async def execute(
                 if hit is not MISS:
                     results[node_id] = hit
                     cached.append(node_id)
-                    events.emit(NodeCached(t="node.cached", node_id=visible))
+                    events.emit(NodeCached(t="node.cached", run_id=identifier, node_id=visible))
                     plan.complete()
                     continue
 
@@ -699,7 +700,14 @@ async def execute(
                     executed.append(node_id)
                     if schema.cacheable:
                         cache.set(key, outcome.outputs)
-                    events.emit(NodeDone(t="node.done", node_id=visible, outputs=outcome.outputs))
+                    events.emit(
+                        NodeDone(
+                            t="node.done",
+                            run_id=identifier,
+                            node_id=visible,
+                            outputs=_output_refs(outcome.outputs, schema),
+                        )
+                    )
                     plan.complete()
 
                 case Expanded(subgraph):
@@ -721,6 +729,7 @@ async def execute(
                     events.emit(
                         NodeError(
                             t="node.error",
+                            run_id=identifier,
                             node_id=visible,
                             message=str(error),
                             traceback=tuple(
@@ -792,6 +801,40 @@ async def run_node(
         return Failure(exc)
 
     return _classify(raw, schema)
+
+
+def _output_refs(
+    outputs: Mapping[str, Any],
+    schema: NodeSchema,
+) -> tuple[OutputRef, ...]:
+    """노드 출력을 WS 로 내보낼 참조로 바꾼다 (design.md §6).
+
+    JSON 으로 표현되는 값만 `inline` 에 싣는다. 그렇지 않은 값(M3 의 이미지,
+    M4 의 모델 핸들)은 `asset` 이 채워질 때까지 둘 다 비어 있다 — 소켓 이름과
+    타입은 언제나 실려 나가므로 UI 는 무엇이 나왔는지는 안다.
+    """
+    refs: list[OutputRef] = []
+    for socket, value in outputs.items():
+        spec = schema.outputs.get(socket)
+        refs.append(
+            OutputRef(
+                socket=socket,
+                type=spec.type.describe() if spec else "Any",
+                inline=value if _is_json_safe(value) else None,
+            )
+        )
+    return tuple(refs)
+
+
+def _is_json_safe(value: Any) -> bool:
+    """WS 로 그대로 실어 보낼 수 있는 값인지."""
+    if isinstance(value, str | int | float | bool | type(None)):
+        return True
+    if isinstance(value, Mapping):
+        return all(isinstance(k, str) and _is_json_safe(v) for k, v in value.items())
+    if isinstance(value, list | tuple):
+        return all(_is_json_safe(item) for item in value)
+    return False
 
 
 def _classify(raw: Any, schema: NodeSchema) -> NodeOutcome:

@@ -368,6 +368,50 @@ type Event =
   | { t: "queue";        pending: number; running: string | null };
 ```
 
+**M2 계약에서 확정한 것** — 위 정의에 빠져 있던 부분이다. 생성된 산출물은 `schemas/openapi.json`이고 프론트는 거기서 타입을 만든다.
+
+`OutputRef`는 값이 아니라 **참조**다. 이미지나 텐서를 WS로 그대로 흘리면 메가바이트가 소켓을 타고 나간다.
+
+```typescript
+type OutputRef = {
+  socket: string        // 출력 소켓 이름 — 캐논 그래프의 링크가 참조하는 그 이름
+  type: string          // types.json 카탈로그 표기 (INT, Image, List[Image])
+  inline?: JsonValue    // JSON으로 표현되는 작은 값
+  asset?: string        // content-addressed 해시. GET /api/assets/{hash} (M3)
+}
+```
+
+**모든 이벤트가 `run_id`를 싣는다** (`queue` 제외 — 특정 실행에 속하지 않는다). `/ws`는 전역 스트림이고 프론트는 히스토리와 여러 탭을 동시에 본다.
+
+**에러 응답은 하나의 모양이다.** HTTP 상태로 분기하고 본문은 언제나 아래와 같다. `issues[]`는 M1의 `GraphIssue`를 그대로 직렬화한 것이라 에러 어휘가 하나로 유지된다.
+
+```jsonc
+// 422 — 그래프 검증 실패
+{
+  "error": {
+    "code": "graph_invalid",
+    "message": "그래프 검증 실패 (1건)",
+    "issues": [{
+      "code": "type_mismatch",
+      "message": "c.value (INT) 를 이 소켓(STRING)에 연결할 수 없다",
+      "node_id": "f", "socket": "template",
+      "location": "nodes.f.inputs.template"   // 프론트가 이걸로 소켓을 지목한다
+    }]
+  }
+}
+```
+
+단 `POST /api/graph/validate`는 **무효한 그래프도 200**이다. 검증은 질의이지 명령이므로 "이 그래프는 무효다"가 성공적인 답이다.
+
+**실행 상태는 5개**: `queued` · `running` · `succeeded` · `failed` · `cancelled`.
+
+| 엔드포인트 | 응답 |
+|---|---|
+| `GET /api/runs/{id}` | 상태 + `outputs`(노드별 `OutputRef[]`) + `executed`·`cached`·`blocked` + 타임스탬프 |
+| `GET /api/runs` | `{running, queued[], history[], limit}` |
+
+`executed`와 `cached`를 REST에도 두는 이유는 WS를 놓친 클라이언트(새로고침·늦은 접속)도 무엇이 재실행됐는지 알아야 하기 때문이다.
+
 `node.cached`를 명시적 이벤트로 두는 게 포인트. 어느 노드가 재실행됐고 어느 노드가 스킵됐는지 색으로 보이면 캐시가 마법이 아니라 이해 가능한 도구가 된다. ComfyUI에는 이게 없어서 사용자가 캐시 동작을 추측한다.
 
 ---

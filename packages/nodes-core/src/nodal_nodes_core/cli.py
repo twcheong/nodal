@@ -100,7 +100,14 @@ class ConsoleEventSink:
                     print(self._paint(f"    {event.node_id} {event.step}/{event.total}", _DIM))
             case NodeDone():
                 if self._verbose:
-                    values = ", ".join(f"{k}={v!r}" for k, v in event.outputs.items())
+                    # 출력은 값이 아니라 참조다 (design.md §6). 인라인이 없으면
+                    # 아직 전송 수단이 없는 값이므로 타입만 보여준다.
+                    values = ", ".join(
+                        f"{ref.socket}={ref.inline!r}"
+                        if ref.inline is not None
+                        else f"{ref.socket}: {ref.type}"
+                        for ref in event.outputs
+                    )
                     print(self._paint(f"    → {values}", _DIM))
             case NodeError():
                 print(f"  {self._paint('✗', _RED)} {event.node_id}: {event.message}")

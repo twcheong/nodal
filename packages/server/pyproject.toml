@@ -9,6 +9,7 @@ dependencies = [
     "nodal-core",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
+    "python-multipart>=0.0.32",
 ]
 
 [build-system]

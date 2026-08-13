@@ -1,0 +1,1908 @@
+{
+  "components": {
+    "schemas": {
+      "AssetInfo": {
+        "additionalProperties": false,
+        "description": "`POST /api/assets` 의 응답. content-addressed 이므로 같은 파일은 같은 해시다.",
+        "properties": {
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "hash": {
+            "description": "내용 해시. `GET /api/assets/{hash}` 의 키",
+            "title": "Hash",
+            "type": "string"
+          },
+          "media_type": {
+            "title": "Media Type",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hash",
+          "size_bytes",
+          "media_type"
+        ],
+        "title": "AssetInfo",
+        "type": "object"
+      },
+      "Body_upload_asset_api_assets_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "업로드할 파일",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_asset_api_assets_post",
+        "type": "object"
+      },
+      "CancelRunResponse": {
+        "additionalProperties": false,
+        "description": "`DELETE /api/runs/{id}` — 협조적 취소를 요청한다.\n\n이미 끝난 실행이면 `cancelled` 가 아니라 그때의 상태가 그대로 돌아온다.",
+        "properties": {
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          }
+        },
+        "required": [
+          "run_id",
+          "status"
+        ],
+        "title": "CancelRunResponse",
+        "type": "object"
+      },
+      "CreateRunRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "graph": {
+            "$ref": "#/components/schemas/Graph"
+          },
+          "outputs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "실행할 출력 노드. 생략하면 그래프의 `outputs`",
+            "title": "Outputs"
+          },
+          "priority": {
+            "default": 0,
+            "description": "클수록 먼저. 같으면 등록 순서",
+            "title": "Priority",
+            "type": "integer"
+          },
+          "use_cache": {
+            "default": true,
+            "description": "거짓이면 캐시를 무시하고 전부 재실행한다 (Ctrl+Shift+Enter)",
+            "title": "Use Cache",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "graph"
+        ],
+        "title": "CreateRunRequest",
+        "type": "object"
+      },
+      "CreateRunResponse": {
+        "additionalProperties": false,
+        "description": "`POST /api/runs` — 큐에 넣고 즉시 돌아온다. 진행은 `/ws` 로 본다.",
+        "properties": {
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          }
+        },
+        "required": [
+          "run_id",
+          "status"
+        ],
+        "title": "CreateRunResponse",
+        "type": "object"
+      },
+      "ErrorBody": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "description": "`graph_invalid` · `run_not_found` · `node_failed` 등",
+            "title": "Code",
+            "type": "string"
+          },
+          "issues": {
+            "description": "문제를 전부 담는다. 첫 번째에서 멈추지 않는다",
+            "items": {
+              "$ref": "#/components/schemas/IssueModel"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "additionalProperties": false,
+        "description": "모든 4xx·5xx 응답의 본문. 상태 코드로 분기하고 본문은 항상 이 모양이다.",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "ExtensionInfo": {
+        "additionalProperties": false,
+        "description": "로드된, 또는 로드에 실패한 확장 하나 (design.md §8, M6).",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "로드 실패 사유",
+            "title": "Error"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "loaded": {
+            "title": "Loaded",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nodal_api": {
+            "description": "확장이 선언한 API 버전 범위",
+            "title": "Nodal Api",
+            "type": "string"
+          },
+          "node_count": {
+            "default": 0,
+            "title": "Node Count",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "version",
+          "nodal_api",
+          "loaded"
+        ],
+        "title": "ExtensionInfo",
+        "type": "object"
+      },
+      "ExtensionsResponse": {
+        "additionalProperties": false,
+        "description": "`GET /api/extensions` — 실패한 확장도 함께 보고한다.\n\n확장 하나가 예외를 던져도 나머지는 로드된다. 실패는 숨기지 않고 UI 배너로\n올라간다 (design.md §8).",
+        "properties": {
+          "failed": {
+            "items": {
+              "$ref": "#/components/schemas/ExtensionInfo"
+            },
+            "title": "Failed",
+            "type": "array"
+          },
+          "loaded": {
+            "items": {
+              "$ref": "#/components/schemas/ExtensionInfo"
+            },
+            "title": "Loaded",
+            "type": "array"
+          }
+        },
+        "title": "ExtensionsResponse",
+        "type": "object"
+      },
+      "Graph": {
+        "additionalProperties": false,
+        "description": "캐논 그래프 문서.\n\n`ui` 는 프론트엔드 전용이다. 백엔드는 이 필드를 읽지 않으며, 없어도 완전히\n동작한다. 이 격리가 스키마 레벨에서 명시되는 것이 설계의 핵심이다.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "nodal_version": {
+            "const": "1",
+            "default": "1",
+            "title": "Nodal Version",
+            "type": "string"
+          },
+          "nodes": {
+            "additionalProperties": false,
+            "patternProperties": {
+              "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,63}$": {
+                "$ref": "#/components/schemas/Node"
+              }
+            },
+            "title": "Nodes",
+            "type": "object"
+          },
+          "outputs": {
+            "description": "실행을 요청할 노드들. 여기서부터 역방향으로 조상만 수집된다.",
+            "items": {
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,63}$",
+              "type": "string"
+            },
+            "title": "Outputs",
+            "type": "array"
+          },
+          "ui": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "description": "프론트엔드 전용 상태. 백엔드는 읽지 않는다.",
+            "title": "Ui",
+            "type": "object"
+          }
+        },
+        "title": "Graph",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "InputSocketModel": {
+        "additionalProperties": false,
+        "description": "팔레트와 노드 본문이 그리는 입력 소켓 하나.",
+        "properties": {
+          "default": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JsonValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "doc": {
+            "default": "",
+            "title": "Doc",
+            "type": "string"
+          },
+          "lazy": {
+            "default": false,
+            "title": "Lazy",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          },
+          "type": {
+            "description": "`types.json` 카탈로그 표기 (`INT`, `Image`, `List[Image]`)",
+            "title": "Type",
+            "type": "string"
+          },
+          "widget": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "description": "min·max·step·options 등 위젯 힌트. 백엔드는 검증에만 쓴다",
+            "title": "Widget",
+            "type": "object"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "required"
+        ],
+        "title": "InputSocketModel",
+        "type": "object"
+      },
+      "IssueModel": {
+        "additionalProperties": false,
+        "description": "`nodal.GraphIssue` 의 전송 형태. 필드 이름을 그대로 유지한다.\n\n`location` 은 `nodes.<id>.inputs.<socket>` 경로다. 프론트는 이것만으로\n캔버스의 해당 소켓을 찾아 빨갛게 칠할 수 있다.",
+        "properties": {
+          "code": {
+            "description": "안정적인 기계 판독용 코드 (`type_mismatch` 등)",
+            "title": "Code",
+            "type": "string"
+          },
+          "location": {
+            "description": "캐논 문서 안의 경로. 그래프 전역이면 `graph`",
+            "title": "Location",
+            "type": "string"
+          },
+          "message": {
+            "description": "사람이 읽는 설명",
+            "title": "Message",
+            "type": "string"
+          },
+          "node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "문제가 귀속되는 노드",
+            "title": "Node Id"
+          },
+          "socket": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "문제가 귀속되는 소켓",
+            "title": "Socket"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "location"
+        ],
+        "title": "IssueModel",
+        "type": "object"
+      },
+      "JsonValue": {},
+      "Link": {
+        "additionalProperties": false,
+        "description": "다른 노드의 출력 소켓에 대한 참조.\n\nJSON에서는 ``{\"$link\": [\"<node_id>\", \"<output_socket>\"]}`` 로 표현된다.",
+        "properties": {
+          "$link": {
+            "description": "[출처 노드 ID, 출처 출력 소켓 이름]",
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,63}$",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "$Link",
+            "type": "array"
+          }
+        },
+        "required": [
+          "$link"
+        ],
+        "title": "Link",
+        "type": "object"
+      },
+      "ModelEntry": {
+        "additionalProperties": false,
+        "description": "발견된 모델 파일 하나. M4 에서 채워진다.",
+        "properties": {
+          "kind": {
+            "description": "`checkpoints` · `loras` · `vae` 등 디렉토리 종류",
+            "title": "Kind",
+            "type": "string"
+          },
+          "modified_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modified At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "size_bytes"
+        ],
+        "title": "ModelEntry",
+        "type": "object"
+      },
+      "ModelsResponse": {
+        "additionalProperties": false,
+        "description": "`GET /api/models` — M4 까지는 비어 있다. 형태만 먼저 고정한다.",
+        "properties": {
+          "kinds": {
+            "description": "스캔 대상 종류",
+            "items": {
+              "type": "string"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ModelEntry"
+            },
+            "title": "Models",
+            "type": "array"
+          }
+        },
+        "title": "ModelsResponse",
+        "type": "object"
+      },
+      "Node": {
+        "additionalProperties": false,
+        "description": "그래프의 노드 하나. ID는 그래프의 `nodes` 딕셔너리 키다.",
+        "properties": {
+          "inputs": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Link"
+                },
+                {
+                  "description": "JSON 리터럴. `$link` 키를 가진 객체는 링크로 해석되므로 리터럴이 될 수 없다.",
+                  "not": {
+                    "required": [
+                      "$link"
+                    ],
+                    "type": "object"
+                  }
+                }
+              ]
+            },
+            "title": "Inputs",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/NodeMeta"
+          },
+          "type": {
+            "description": "네임스페이스를 포함한 노드 타입 ID (예: image.Resize)",
+            "pattern": "^[a-z][a-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)+$",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "Node",
+        "type": "object"
+      },
+      "NodeMeta": {
+        "additionalProperties": true,
+        "description": "실행에 영향을 주지 않는 노드 부가 정보.",
+        "properties": {
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "NodeMeta",
+        "type": "object"
+      },
+      "NodeSchemaModel": {
+        "additionalProperties": false,
+        "description": "`nodal.NodeSchema` 의 전송 형태.\n\n입력·출력을 딕셔너리가 아니라 **리스트**로 보낸다. 선언 순서가 UI 의 소켓\n순서이고, 리스트가 그 순서를 잃지 않는 유일한 표현이다.",
+        "properties": {
+          "aliases": {
+            "description": "퍼지 검색용. 한글 포함",
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "cacheable": {
+            "title": "Cacheable",
+            "type": "boolean"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "doc": {
+            "default": "",
+            "title": "Doc",
+            "type": "string"
+          },
+          "id": {
+            "description": "네임스페이스를 포함한 타입 ID. 캐논 그래프의 `node.type`",
+            "title": "Id",
+            "type": "string"
+          },
+          "inputs": {
+            "items": {
+              "$ref": "#/components/schemas/InputSocketModel"
+            },
+            "title": "Inputs",
+            "type": "array"
+          },
+          "output_node": {
+            "title": "Output Node",
+            "type": "boolean"
+          },
+          "outputs": {
+            "items": {
+              "$ref": "#/components/schemas/OutputSocketModel"
+            },
+            "title": "Outputs",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "category",
+          "version",
+          "output_node",
+          "cacheable"
+        ],
+        "title": "NodeSchemaModel",
+        "type": "object"
+      },
+      "NodesResponse": {
+        "additionalProperties": false,
+        "description": "`GET /api/nodes` — 프론트 팔레트의 유일한 소스.",
+        "properties": {
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/NodeSchemaModel"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "types_version": {
+            "description": "`types.json` 의 `types_version`. 프론트가 로드한 타입 규칙과 대조한다",
+            "title": "Types Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nodes",
+          "types_version"
+        ],
+        "title": "NodesResponse",
+        "type": "object"
+      },
+      "OutputRefModel": {
+        "additionalProperties": false,
+        "description": "`nodal.OutputRef` 의 전송 형태 — 값이 아니라 **참조**다 (design.md §6).\n\n이미지나 텐서를 그대로 실으면 메가바이트가 나간다. 작은 값만 `inline` 에\n싣고 큰 값은 `asset` 해시로 가리킨다.",
+        "properties": {
+          "asset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "content-addressed 해시. `GET /api/assets/{hash}` 로 받는다 (M3)",
+            "title": "Asset"
+          },
+          "inline": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JsonValue"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "JSON 으로 표현되는 작은 값"
+          },
+          "socket": {
+            "title": "Socket",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "socket",
+          "type"
+        ],
+        "title": "OutputRefModel",
+        "type": "object"
+      },
+      "OutputSocketModel": {
+        "additionalProperties": false,
+        "properties": {
+          "doc": {
+            "default": "",
+            "title": "Doc",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "OutputSocketModel",
+        "type": "object"
+      },
+      "RunDetail": {
+        "additionalProperties": false,
+        "description": "`GET /api/runs/{id}` — 상태와 결과.\n\n`executed` 와 `cached` 를 나눠 두는 것이 요점이다. WS 를 놓친 클라이언트도\n무엇이 재실행되고 무엇이 캐시였는지 알 수 있다 (design.md §6).",
+        "properties": {
+          "blocked": {
+            "description": "블로커로 막힌 노드 (M5)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Blocked",
+            "type": "array"
+          },
+          "cached": {
+            "description": "캐시 히트로 건너뛴 노드",
+            "items": {
+              "type": "string"
+            },
+            "title": "Cached",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "elapsed_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elapsed Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`status` 가 `failed` 일 때만 채워진다"
+          },
+          "executed": {
+            "description": "실제로 실행된 노드",
+            "items": {
+              "type": "string"
+            },
+            "title": "Executed",
+            "type": "array"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "outputs": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/OutputRefModel"
+              },
+              "type": "array"
+            },
+            "description": "출력 노드 ID → 그 노드의 출력 참조들",
+            "title": "Outputs",
+            "type": "object"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          }
+        },
+        "required": [
+          "run_id",
+          "status",
+          "created_at"
+        ],
+        "title": "RunDetail",
+        "type": "object"
+      },
+      "RunListResponse": {
+        "additionalProperties": false,
+        "description": "`GET /api/runs` — 큐와 히스토리.",
+        "properties": {
+          "history": {
+            "description": "최근 완료분. 최신이 먼저",
+            "items": {
+              "$ref": "#/components/schemas/RunSummary"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "limit": {
+            "description": "히스토리 보관 상한",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "queued": {
+            "items": {
+              "$ref": "#/components/schemas/RunSummary"
+            },
+            "title": "Queued",
+            "type": "array"
+          },
+          "running": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "limit"
+        ],
+        "title": "RunListResponse",
+        "type": "object"
+      },
+      "RunStatus": {
+        "description": "실행 상태. 프론트가 이 값으로 화면을 분기한다.",
+        "enum": [
+          "queued",
+          "running",
+          "succeeded",
+          "failed",
+          "cancelled"
+        ],
+        "title": "RunStatus",
+        "type": "string"
+      },
+      "RunSummary": {
+        "additionalProperties": false,
+        "description": "큐·히스토리 목록용 경량 표현. 출력값을 담지 않는다.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "elapsed_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elapsed Ms"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "node_count": {
+            "title": "Node Count",
+            "type": "integer"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          }
+        },
+        "required": [
+          "run_id",
+          "status",
+          "node_count",
+          "created_at"
+        ],
+        "title": "RunSummary",
+        "type": "object"
+      },
+      "ValidateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "graph": {
+            "$ref": "#/components/schemas/Graph",
+            "description": "캐논 그래프 문서 그대로. 서버는 변환하지 않는다"
+          },
+          "outputs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "검증할 출력 노드. 생략하면 그래프의 `outputs`",
+            "title": "Outputs"
+          }
+        },
+        "required": [
+          "graph"
+        ],
+        "title": "ValidateRequest",
+        "type": "object"
+      },
+      "ValidateResponse": {
+        "additionalProperties": false,
+        "description": "`POST /api/graph/validate` — 실행 없이 검증만 한다.\n\n무효한 그래프도 **200** 이다. 검증은 질의이지 명령이 아니므로, \"이 그래프는\n무효다\"는 성공적인 답이다. 4xx 는 요청 자체가 잘못됐을 때만 나간다.",
+        "properties": {
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/IssueModel"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valid"
+        ],
+        "title": "ValidateResponse",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "WsEvent": {
+        "discriminator": {
+          "mapping": {
+            "node.cached": "#/components/schemas/WsNodeCached",
+            "node.done": "#/components/schemas/WsNodeDone",
+            "node.error": "#/components/schemas/WsNodeError",
+            "node.preview": "#/components/schemas/WsNodePreview",
+            "node.progress": "#/components/schemas/WsNodeProgress",
+            "node.started": "#/components/schemas/WsNodeStarted",
+            "queue": "#/components/schemas/WsQueueStatus",
+            "run.cancelled": "#/components/schemas/WsRunCancelled",
+            "run.done": "#/components/schemas/WsRunDone",
+            "run.started": "#/components/schemas/WsRunStarted"
+          },
+          "propertyName": "t"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/WsRunStarted"
+          },
+          {
+            "$ref": "#/components/schemas/WsNodeStarted"
+          },
+          {
+            "$ref": "#/components/schemas/WsNodeProgress"
+          },
+          {
+            "$ref": "#/components/schemas/WsNodePreview"
+          },
+          {
+            "$ref": "#/components/schemas/WsNodeCached"
+          },
+          {
+            "$ref": "#/components/schemas/WsNodeDone"
+          },
+          {
+            "$ref": "#/components/schemas/WsNodeError"
+          },
+          {
+            "$ref": "#/components/schemas/WsRunDone"
+          },
+          {
+            "$ref": "#/components/schemas/WsRunCancelled"
+          },
+          {
+            "$ref": "#/components/schemas/WsQueueStatus"
+          }
+        ]
+      },
+      "WsNodeCached": {
+        "additionalProperties": false,
+        "properties": {
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "t": {
+            "const": "node.cached",
+            "title": "T",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t",
+          "run_id",
+          "node_id"
+        ],
+        "title": "WsNodeCached",
+        "type": "object"
+      },
+      "WsNodeDone": {
+        "additionalProperties": false,
+        "properties": {
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "outputs": {
+            "items": {
+              "$ref": "#/components/schemas/OutputRefModel"
+            },
+            "title": "Outputs",
+            "type": "array"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "t": {
+            "const": "node.done",
+            "title": "T",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t",
+          "run_id",
+          "node_id"
+        ],
+        "title": "WsNodeDone",
+        "type": "object"
+      },
+      "WsNodeError": {
+        "additionalProperties": false,
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "socket": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Socket"
+          },
+          "t": {
+            "const": "node.error",
+            "title": "T",
+            "type": "string"
+          },
+          "traceback": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Traceback",
+            "type": "array"
+          }
+        },
+        "required": [
+          "t",
+          "run_id",
+          "node_id",
+          "message"
+        ],
+        "title": "WsNodeError",
+        "type": "object"
+      },
+      "WsNodePreview": {
+        "additionalProperties": false,
+        "properties": {
+          "image": {
+            "description": "base64 데이터 URI 이거나 에셋 해시",
+            "title": "Image",
+            "type": "string"
+          },
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "t": {
+            "const": "node.preview",
+            "title": "T",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t",
+          "run_id",
+          "node_id",
+          "image"
+        ],
+        "title": "WsNodePreview",
+        "type": "object"
+      },
+      "WsNodeProgress": {
+        "additionalProperties": false,
+        "properties": {
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "step": {
+            "title": "Step",
+            "type": "integer"
+          },
+          "t": {
+            "const": "node.progress",
+            "title": "T",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "t",
+          "run_id",
+          "node_id",
+          "step",
+          "total"
+        ],
+        "title": "WsNodeProgress",
+        "type": "object"
+      },
+      "WsNodeStarted": {
+        "additionalProperties": false,
+        "properties": {
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "t": {
+            "const": "node.started",
+            "title": "T",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t",
+          "run_id",
+          "node_id"
+        ],
+        "title": "WsNodeStarted",
+        "type": "object"
+      },
+      "WsQueueStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          },
+          "running": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Running"
+          },
+          "t": {
+            "const": "queue",
+            "title": "T",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t",
+          "pending"
+        ],
+        "title": "WsQueueStatus",
+        "type": "object"
+      },
+      "WsRunCancelled": {
+        "additionalProperties": false,
+        "properties": {
+          "elapsed_ms": {
+            "title": "Elapsed Ms",
+            "type": "integer"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "t": {
+            "const": "run.cancelled",
+            "title": "T",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t",
+          "run_id",
+          "elapsed_ms"
+        ],
+        "title": "WsRunCancelled",
+        "type": "object"
+      },
+      "WsRunDone": {
+        "additionalProperties": false,
+        "properties": {
+          "elapsed_ms": {
+            "title": "Elapsed Ms",
+            "type": "integer"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "t": {
+            "const": "run.done",
+            "title": "T",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t",
+          "run_id",
+          "elapsed_ms"
+        ],
+        "title": "WsRunDone",
+        "type": "object"
+      },
+      "WsRunStarted": {
+        "additionalProperties": false,
+        "properties": {
+          "node_count": {
+            "title": "Node Count",
+            "type": "integer"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "t": {
+            "const": "run.started",
+            "title": "T",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t",
+          "run_id",
+          "node_count"
+        ],
+        "title": "WsRunStarted",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "캐논 그래프를 그대로 주고받는다. 변환 레이어가 없다.\n\n모든 실패 응답의 본문은 `ErrorResponse` 이고, `issues[].location` 이 `nodes.<id>.inputs.<socket>` 경로를 준다 — 프론트는 이것으로 캔버스의 해당 소켓을 지목한다.",
+    "summary": "노드 그래프 실행 서버",
+    "title": "nodal API",
+    "version": "1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/assets": {
+      "post": {
+        "description": "content-addressed 로 저장한다. 같은 내용이면 같은 해시가 돌아온다.",
+        "operationId": "upload_asset_api_assets_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_asset_api_assets_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청이 잘못됐다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "대상이 없다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "그래프 검증 실패. `issues` 가 어느 노드·어느 소켓인지 지목한다"
+          }
+        },
+        "summary": "입력 파일 업로드",
+        "tags": [
+          "assets"
+        ]
+      }
+    },
+    "/api/assets/{asset_hash}": {
+      "get": {
+        "operationId": "get_asset_api_assets__asset_hash__get",
+        "parameters": [
+          {
+            "description": "내용 해시",
+            "in": "path",
+            "name": "asset_hash",
+            "required": true,
+            "schema": {
+              "description": "내용 해시",
+              "title": "Asset Hash",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "파일 내용 그대로. `Content-Type` 은 업로드 시 판별된 것"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청이 잘못됐다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "대상이 없다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "그래프 검증 실패. `issues` 가 어느 노드·어느 소켓인지 지목한다"
+          }
+        },
+        "summary": "content-addressed 조회",
+        "tags": [
+          "assets"
+        ]
+      }
+    },
+    "/api/extensions": {
+      "get": {
+        "description": "M6 까지는 빈 목록이 나간다. 실패한 확장을 숨기지 않는 것이 요점이다.",
+        "operationId": "list_extensions_api_extensions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "로드된 확장 · 실패한 확장",
+        "tags": [
+          "extensions"
+        ]
+      }
+    },
+    "/api/graph/validate": {
+      "post": {
+        "description": "구조 · 노드 타입 · 소켓 타입 호환성을 검사한다. **무효한 그래프도 200** 이다 — 검증은 질의이지 명령이 아니므로 `valid: false` 가 성공적인 답이다.",
+        "operationId": "validate_graph_endpoint_api_graph_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청이 잘못됐다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "대상이 없다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "그래프 검증 실패. `issues` 가 어느 노드·어느 소켓인지 지목한다"
+          }
+        },
+        "summary": "실행 없이 검증만",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/api/models": {
+      "get": {
+        "description": "M4 까지는 빈 목록이 나간다. 형태만 먼저 고정한다.",
+        "operationId": "list_models_api_models_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "발견된 모델 목록",
+        "tags": [
+          "models"
+        ]
+      }
+    },
+    "/api/nodes": {
+      "get": {
+        "description": "프론트 팔레트의 유일한 소스. 등록된 모든 노드의 입출력 소켓을 준다.",
+        "operationId": "list_nodes_api_nodes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "전체 노드 스키마",
+        "tags": [
+          "nodes"
+        ]
+      }
+    },
+    "/api/runs": {
+      "get": {
+        "operationId": "list_runs_api_runs_get",
+        "parameters": [
+          {
+            "description": "히스토리 최대 개수",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "히스토리 최대 개수",
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "큐와 히스토리",
+        "tags": [
+          "runs"
+        ]
+      },
+      "post": {
+        "description": "큐에 넣고 즉시 돌아온다. 진행 상황은 `/ws` 로 본다.\n\n큐 진입 전에 전체 검증을 통과해야 한다 — 실패하면 422 와 `issues`.",
+        "operationId": "create_run_api_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateRunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청이 잘못됐다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "대상이 없다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "그래프 검증 실패. `issues` 가 어느 노드·어느 소켓인지 지목한다"
+          }
+        },
+        "summary": "실행 큐에 등록",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/runs/{run_id}": {
+      "delete": {
+        "description": "협조적 취소를 요청한다. 이미 끝난 실행이면 그때의 상태가 그대로 돌아온다.",
+        "operationId": "cancel_run_api_runs__run_id__delete",
+        "parameters": [
+          {
+            "description": "실행 ID",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "description": "실행 ID",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelRunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청이 잘못됐다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "대상이 없다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "그래프 검증 실패. `issues` 가 어느 노드·어느 소켓인지 지목한다"
+          }
+        },
+        "summary": "취소",
+        "tags": [
+          "runs"
+        ]
+      },
+      "get": {
+        "operationId": "get_run_api_runs__run_id__get",
+        "parameters": [
+          {
+            "description": "실행 ID",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "description": "실행 ID",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청이 잘못됐다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "대상이 없다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "그래프 검증 실패. `issues` 가 어느 노드·어느 소켓인지 지목한다"
+          }
+        },
+        "summary": "상태와 결과",
+        "tags": [
+          "runs"
+        ]
+      }
+    }
+  },
+  "x-nodal-types-version": "1",
+  "x-nodal-ws-events": {
+    "description": "전역 이벤트 스트림. 모든 메시지는 WsEvent 유니온의 한 항목이고 `t` 로 판별한다.",
+    "path": "/ws",
+    "schema": "#/components/schemas/WsEvent"
+  }
+}
