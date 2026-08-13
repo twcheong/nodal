@@ -3,9 +3,8 @@
 이 패키지는 torch 를 import 하지 않는다. 그래프 문서, 타입 시스템, 실행 루프만
 안다. 이미지도 모델도 모른다 (AGENTS.md 아키텍처 절).
 
-**상태**: `graph` · `errors` · `types` 는 구현되어 있다. `schema` · `registry` ·
-`executor` · `cache` · `events` 는 M1 계약(시그니처)이며 본문은 아직 없다 —
-호출하면 `NotImplementedError` 가 난다.
+**상태**: M1 그래프 실행 엔진까지 구현되어 있다. 노드 확장 · lazy 입력 ·
+`ExecutionBlocker`의 완전한 동작은 M5 범위다.
 
 노드를 정의해서 실행하기까지의 경로는 `nodal.executor` 모듈 문서에 있다.
 """
@@ -93,6 +92,7 @@ from .schema import (
     node,
     output_names_for,
     reflect_node,
+    register_combo_provider,
 )
 from .types import (
     BOOL,
@@ -186,6 +186,7 @@ __all__ = [  # noqa: RUF022
     "node",
     "output_names_for",
     "reflect_node",
+    "register_combo_provider",
     # --- 레지스트리 (M1 계약)
     "DuplicateNodeTypeError",
     "NodeRegistry",

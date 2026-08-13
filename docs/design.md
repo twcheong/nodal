@@ -211,6 +211,11 @@ class Resize:
 - `async def run`도 지원 (엔진이 코루틴 여부 감지)
 - `NodeResult`가 값과 UI 사이드채널(프리뷰, 텍스트 배지)을 분리
 
+`Combo.from_provider("checkpoints")`처럼 실행 시점에 옵션을 조회하는 입력은
+`register_combo_provider("checkpoints", provider)`로 공급자를 먼저 등록한다.
+공급자는 인자 없이 문자열 시퀀스를 반환하며, `Combo.options()`를 호출할 때마다
+다시 평가된다.
+
 **출력 이름** — §4.1의 링크는 `["n_c3d4", "image"]`처럼 출력 소켓을 **이름**으로 참조한다. 따라서 이름 없는 출력은 존재할 수 없다.
 
 ```python
@@ -299,7 +304,7 @@ async def execute(graph, requested_outputs, cache, events, cancel_token):
 ### 5.3 캐시
 
 ```
-cache_key(node) = blake3(
+cache_key(node) = blake2b-128(
     node.type,
     node.schema_version,
     { name: (cache_key(src) if link else literal_value)
@@ -307,6 +312,10 @@ cache_key(node) = blake3(
     node.is_changed_token,      # IS_CHANGED 훅 결과
 )
 ```
+
+해시는 표준 라이브러리 `hashlib.blake2b(digest_size=16)`를 사용한다. 캐시 키에
+필요한 것은 암호학적 보증이 아니라 결정성과 충분한 충돌 저항이며, core에 별도
+네이티브 확장 의존성을 추가하지 않는다. 결정 근거는 `docs/decisions.md`에 기록한다.
 
 **정책** (설정 가능, 기본 = `MEMORY_PRESSURE`)
 

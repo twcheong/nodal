@@ -169,3 +169,12 @@
   입력 하나가 원인일 때만 `socket`을 채운다. 일반 예외에 근거 없는 소켓을 붙일 수는 없다.
 - **영향 범위**: `packages/core/tests/test_execution_errors.py`
 - **되돌릴 수 있나**: 예 — 런타임 예외가 소켓 정보를 전달하는 별도 계약이 생기면 강화할 수 있다.
+
+### 2026-08-13 · Codex · M1 통합 — Combo 공급자 공개 API
+- **결정**: 사용자가 M1 통합 진행을 확인한 뒤 `register_combo_provider()`를 최상위 `nodal`
+  공개 API로 노출하고 계약 테스트를 추가했다.
+- **이유**: `Combo.from_provider()`가 공개 API인데 공급자를 등록할 경로가 `nodal.schema` 내부에만
+  있으면 노드 패키지가 내부 모듈 경로에 의존한다. 등록과 사용을 같은 공개 표면에 둔다.
+- **영향 범위**: `packages/core/src/nodal/__init__.py`, `packages/core/tests/test_schema.py`,
+  `docs/design.md` §4.2
+- **되돌릴 수 있나**: 예 — M6 확장 생태계가 이 API를 쓰기 전까지는 이름을 바꿀 수 있다.
