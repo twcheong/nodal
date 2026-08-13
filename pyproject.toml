@@ -48,6 +48,8 @@ extend-exclude = ["docs/**", "*.md"]
 select = [
     "E",    # pycodestyle
     "F",    # pyflakes
+    "F403", # star import 금지 — 아래 주석 참조. "F" 에 포함되지만 명시해 둔다
+    "F405", # star import 에서 온 이름 사용 금지
     "I",    # isort
     "UP",   # pyupgrade
     "B",    # flake8-bugbear
@@ -56,6 +58,16 @@ select = [
     "TID",  # flake8-tidy-imports
     "RUF",
 ]
+
+# F403/F405 를 따로 적어 두는 이유:
+#
+# `nodal.Any` 는 design.md §4.3 이 규정한 1급 와일드카드 타입이라 이름을 유지한다.
+# 이 이름이 실제로 위험해지는 경우는 하나뿐이다 — 노드 저자가 `from nodal import *`
+# 를 하면 `typing.Any` 가 조용히 가려진다. star import 를 막으면 그 경우가 사라진다.
+#
+# 지금은 "F" 가 이미 둘 다 잡지만, 나중에 select 를 좁힐 때 함께 사라지면 방어가
+# 조용히 없어진다. 그래서 이 두 코드는 이름으로 남겨 둔다.
+# per-file-ignores 어디에서도 이 둘을 면제하지 말 것 — 특히 노드 패키지에서.
 ignore = [
     "ANN401",  # Any 허용 — 그래프 리터럴은 본질적으로 Any다
 ]

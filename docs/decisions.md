@@ -67,6 +67,26 @@
 **되돌릴 수 있나**: 아니오 — 다른 에이전트가 이 시그니처로 테스트를 작성하면 양쪽이 함께 깨진다.
 바꾸려면 사용자 확인이 필요하다 (AGENTS.md 협업 규칙 7).
 
+### 2026-08-13 · Claude Code · `nodal.Any` 이름 유지 + star import 금지
+
+- **결정**: `nodal.Any` 이름을 그대로 둔다 (`design.md` §4.3 이 규정한 1급 와일드카드 타입).
+  대신 `pyproject.toml` 의 ruff select 에 `F403`·`F405` 를 이름으로 명시해 star import 를 막는다
+- **이유**: 이 이름의 실제 위험은 하나뿐이다 — 노드 저자가 `from nodal import *` 를 하면
+  `typing.Any` 가 조용히 가려진다. star import 를 막으면 그 경우가 사라지므로, 이름을
+  바꾸는 것보다 싼 방어다. (`F403`/`F405` 는 원래 `"F"` 에 포함돼 이미 동작하고 있었다.
+  나중에 select 를 좁힐 때 방어가 조용히 사라지지 않도록 이름으로 남긴 것이다.)
+- **영향 범위**: `pyproject.toml` ruff 설정. 코드 변경 없음
+- **되돌릴 수 있나**: **예 — M6 전까지는 순수 rename 이다.**
+  지금 `nodal.Any` 를 쓰는 곳은 이 저장소 안뿐이라, 이름을 바꾸려면 저장소 전체를
+  한 번 치환하면 끝난다. 되돌릴 수 없게 되는 시점은 **외부 확장이 등장하는 M6** 이다 —
+  그때부터는 남의 노드 팩이 이 이름을 import 하고 있으므로 rename 이 파괴적 변경이 된다.
+  **즉 지금 확정할 필요가 없다.** M6 전에 다시 판단하면 된다
+
+- **📌 노드 저작 가이드(M6)에 넣을 항목**: "`nodal.Any` 와 `typing.Any` 가 둘 다 필요하면
+  둘 중 하나를 별칭으로 import 한다 (`from typing import Any as TypingAny`).
+  `from nodal import *` 는 쓰지 않는다 — 린트가 거부한다."
+  core 내부는 이미 이 방식을 쓰고 있다 (`nodal/types.py`, `nodal/schema.py`)
+
 ### 2026-08-13 · Claude Code · 계약 커밋의 구현 경계
 
 - **결정**: `types.py`(+`types.json`, TS 로더)는 **구현**하고, `schema`·`registry`·`executor`·
