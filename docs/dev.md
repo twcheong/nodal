@@ -60,6 +60,19 @@ pnpm --filter @nodal/web test          # TS 판정 (같은 conformance 케이스
 
 규칙을 고쳤으면 **양쪽을 다 돌린다.** 한쪽만 통과하면 규칙이 하나가 아니라는 뜻이다.
 
+## 그래프 실행 (M1)
+
+```bash
+uv run nodal run examples/arithmetic.nodal.json          # 실행
+uv run nodal run examples/arithmetic.nodal.json --twice  # 두 번 — 2회차는 전부 캐시
+uv run nodal run examples/arithmetic.nodal.json --twice --set offset.value=10
+uv run nodal validate examples/arithmetic.nodal.json     # 실행 없이 검증만
+uv run nodal nodes 곱하기                                 # 노드 검색 (별칭·한글)
+```
+
+`--twice --set` 이 M1 완료 기준을 보여준다. 1회차는 전부 실행하고, 2회차는
+바꾼 입력의 **하위만** 재실행한다. `◌` 가 캐시 히트, `●` 가 실행이다.
+
 ## 커밋
 
 모든 커밋에 `Signed-off-by` 가 필요하다 (DCO — `../AGENTS.md` 코딩 컨벤션, 근거는 `license.md`).

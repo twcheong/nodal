@@ -9,6 +9,11 @@ dependencies = [
     "nodal-core",
 ]
 
+[project.scripts]
+# M1 의 유일한 사용자 인터페이스. core 가 아니라 여기 있는 이유는 core 가
+# 노드를 하나도 모르기 때문이다 — 실행하려면 레지스트리를 채울 팩이 필요하다.
+nodal = "nodal_nodes_core.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

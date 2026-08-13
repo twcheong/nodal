@@ -1,0 +1,105 @@
+{
+  "nodal_version": "1",
+  "id": "018f2c00-0000-7000-8000-0000000a0001",
+  "nodes": {
+    "seed": {
+      "type": "math.Const",
+      "inputs": { "value": 4 },
+      "meta": { "title": "씨앗 값", "notes": "이 값을 바꿔 캐시 무효화 전파를 관찰한다" }
+    },
+    "offset": {
+      "type": "math.Const",
+      "inputs": { "value": 3 },
+      "meta": { "title": "오프셋" }
+    },
+
+    "squared": {
+      "type": "math.Power",
+      "inputs": { "base": { "$link": ["seed", "value"] }, "exponent": 2 },
+      "meta": { "title": "seed 제곱" }
+    },
+    "doubled": {
+      "type": "math.Multiply",
+      "inputs": { "a": { "$link": ["seed", "value"] }, "b": 2 },
+      "meta": { "title": "seed 두 배", "notes": "squared 와 함께 다이아몬드를 이룬다" }
+    },
+
+    "shifted": {
+      "type": "math.Add",
+      "inputs": {
+        "a": { "$link": ["doubled", "product"] },
+        "b": { "$link": ["offset", "value"] }
+      },
+      "meta": { "title": "두 배 + 오프셋" }
+    },
+    "gap": {
+      "type": "math.Subtract",
+      "inputs": {
+        "a": { "$link": ["squared", "value"] },
+        "b": { "$link": ["shifted", "sum"] }
+      },
+      "meta": { "title": "제곱 - 시프트" }
+    },
+    "flipped": {
+      "type": "math.Negate",
+      "inputs": { "value": { "$link": ["gap", "difference"] } },
+      "meta": { "title": "부호 반전" }
+    },
+
+    "total": {
+      "type": "math.Sum3",
+      "inputs": {
+        "a": { "$link": ["squared", "value"] },
+        "b": { "$link": ["shifted", "sum"] },
+        "c": { "$link": ["flipped", "value"] }
+      },
+      "meta": { "title": "세 갈래 합류", "notes": "squared 는 여기서 두 번째로 소비된다" }
+    },
+    "bounded": {
+      "type": "math.Clamp",
+      "inputs": { "value": { "$link": ["total", "sum"] }, "low": 0, "high": 100 },
+      "meta": { "title": "0~100 으로 제한" }
+    },
+
+    "label": {
+      "type": "text.Format",
+      "inputs": {
+        "template": "최종 결과: {value}",
+        "value": { "$link": ["bounded", "value"] }
+      },
+      "meta": { "title": "문자열 조립" }
+    },
+    "report": {
+      "type": "text.Print",
+      "inputs": { "text": { "$link": ["label", "text"] }, "enabled": true },
+      "meta": { "title": "출력" }
+    },
+
+    "unused": {
+      "type": "math.Const",
+      "inputs": { "value": 999 },
+      "meta": {
+        "title": "실행되지 않는 노드",
+        "notes": "outputs 에 기여하지 않으므로 엔진이 건드리지 않는다"
+      }
+    }
+  },
+
+  "outputs": ["report"],
+
+  "ui": {
+    "seed": { "pos": [40, 40] },
+    "offset": { "pos": [40, 160] },
+    "squared": { "pos": [240, 20] },
+    "doubled": { "pos": [240, 140] },
+    "shifted": { "pos": [440, 160] },
+    "gap": { "pos": [440, 40] },
+    "flipped": { "pos": [640, 40] },
+    "total": { "pos": [840, 100] },
+    "bounded": { "pos": [1040, 100] },
+    "label": { "pos": [1240, 100] },
+    "report": { "pos": [1440, 100] },
+    "unused": { "pos": [40, 300] },
+    "viewport": { "x": 0, "y": 0, "zoom": 0.8 }
+  }
+}
