@@ -54,6 +54,7 @@ WS_EVENT_PAIRS = [
     (core_events.NodeDone, schemas.WsNodeDone),
     (core_events.NodeError, schemas.WsNodeError),
     (core_events.RunDone, schemas.WsRunDone),
+    (core_events.RunFailed, schemas.WsRunFailed),
     (core_events.RunCancelled, schemas.WsRunCancelled),
     (core_events.QueueStatus, schemas.WsQueueStatus),
 ]
@@ -183,3 +184,56 @@ def test_issue_model_matches_core_graph_issue() -> None:
     wire_fields = set(schemas.IssueModel.model_fields)
     assert core_fields <= wire_fields
     assert wire_fields - core_fields == {"location"}
+
+
+# ------------------------------------------------------- 타입 표현식 계약
+
+
+def test_socket_types_are_type_expressions_not_rendered_strings(
+    document: dict[str, Any],
+) -> None:
+    """소켓 타입은 `types.json` 의 표현식으로 나간다.
+
+    `describe()` 같은 렌더링 문자열을 보내면 프론트가 복원할 수 없다 —
+    `Tensor[float32, (?, 3)]` 은 `?` 가 라벨이었는지 `None` 이었는지 지운다.
+    """
+    schemas_section = document["components"]["schemas"]
+    for name in ("ListTypeExpr", "UnionTypeExpr", "OpaqueTypeExpr", "TensorTypeExpr"):
+        assert name in schemas_section, f"{name} 이 계약에 없다"
+
+    for model in ("InputSocketModel", "OutputSocketModel", "OutputRefModel"):
+        field = schemas_section[model]["properties"]["type"]
+        assert "anyOf" in field, f"{model}.type 이 단순 문자열로 남아 있다"
+        refs = {option.get("$ref", "").rsplit("/", 1)[-1] for option in field["anyOf"]}
+        assert "ListTypeExpr" in refs and "UnionTypeExpr" in refs
+
+
+def test_type_expressions_round_trip_through_core() -> None:
+    """`to_type_expr` 는 `parse_type_expr` 의 역함수여야 한다.
+
+    깨지면 프론트가 받은 타입이 백엔드가 보낸 타입과 달라진다.
+    """
+    from nodal.types import (
+        FLOAT,
+        INT,
+        Image,
+        ListType,
+        Mask,
+        OpaqueType,
+        TensorType,
+        UnionType,
+        parse_type_expr,
+        to_type_expr,
+    )
+
+    cases = [
+        Image,
+        INT,
+        ListType(Image),
+        UnionType((INT, FLOAT)),
+        ListType(UnionType((Image, Mask))),
+        TensorType(frozenset({"float32"}), (None, 3)),
+        OpaqueType("Model", frozenset({"sdxl", "unet"})),
+    ]
+    for socket_type in cases:
+        assert parse_type_expr(to_type_expr(socket_type)) == socket_type, socket_type.describe()

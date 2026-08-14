@@ -163,10 +163,53 @@ def test_node_error_names_the_node(client: TestClient) -> None:
         client.post("/api/runs", json={"graph": graph})
         messages = drain(socket, until="node.error", timeout=3.0)
 
-    error = messages[-1]
+    error = next(m for m in messages if m["t"] == "node.error")
     assert error["node_id"] == "boom"
     assert "의도적 실패" in error["message"]
     assert error["traceback"], "인라인 에러에 스택트레이스가 필요하다 (design.md §7 UX 4)"
+
+
+def test_failure_emits_a_terminal_run_event(client: TestClient) -> None:
+    """실패에도 run 레벨 종료 이벤트가 나온다.
+
+    없으면 프론트의 run 상태 머신이 종료 신호를 영원히 기다린다. `node.error` 는
+    노드 단위라 그 역할을 대신할 수 없다.
+    """
+    graph = {
+        "nodal_version": "1",
+        "nodes": {"boom": {"type": "test.Boom", "inputs": {}}},
+        "outputs": ["boom"],
+    }
+    with client.websocket_connect("/ws") as socket:
+        run_id = client.post("/api/runs", json={"graph": graph}).json()["run_id"]
+        messages = drain(socket, until="run.failed", timeout=3.0)
+
+    failed = messages[-1]
+    assert failed["run_id"] == run_id
+    assert failed["code"] == "node_failed"
+    assert "boom" in failed["message"], "어느 노드인지 지목해야 한다"
+    assert not [m for m in messages if m["t"] == "run.done"], "성공 이벤트가 나오면 안 된다"
+    _EVENTS.validate_python(failed)
+
+
+def test_every_run_ends_with_exactly_one_terminal_event(client: TestClient) -> None:
+    """종료 이벤트 3종이 RunStatus 의 종료 상태 3종과 짝을 이룬다."""
+    terminal = {"run.done", "run.failed", "run.cancelled"}
+
+    with client.websocket_connect("/ws") as socket:
+        client.post("/api/runs", json={"graph": simple_graph(1, 1)})
+        ok = drain(socket, until="run.done")
+    assert len([m for m in ok if m["t"] in terminal]) == 1
+
+    bad = {
+        "nodal_version": "1",
+        "nodes": {"boom": {"type": "test.Boom", "inputs": {}}},
+        "outputs": ["boom"],
+    }
+    with client.websocket_connect("/ws") as socket:
+        client.post("/api/runs", json={"graph": bad})
+        failed = drain(socket, until="run.failed", timeout=3.0)
+    assert len([m for m in failed if m["t"] in terminal]) == 1
 
 
 # ------------------------------------------------------- 여러 클라이언트

@@ -46,6 +46,7 @@ __all__ = [
     "RunListResponse",
     "RunStatus",
     "RunSummary",
+    "TypeExpr",
     "ValidateRequest",
     "ValidateResponse",
     "WsEvent",
@@ -92,6 +93,46 @@ class ErrorResponse(_Model):
     error: ErrorBody
 
 
+# ------------------------------------------------------------------ 타입 표현식
+#
+# `types.json` 의 `type_expression` 문법을 그대로 전송한다. 프론트의
+# `parseTypeExpr()` 가 이것을 먹고 `isCompatible()` 로 드래그 중 호환 소켓을
+# 계산한다 (design.md §7 UX 1).
+#
+# 사람이 읽는 문자열(`describe()`)을 보내지 않는 이유: 그것은 **렌더링**이라
+# 복원할 수 없다. `Tensor[float32, (?, 3)]` 은 `?` 가 라벨이었는지 `None` 이었는지
+# 지운다. 표시용 문자열은 프론트가 `describeType()` 으로 직접 만든다 — 렌더러가
+# 양쪽에 생기지 않는다.
+
+
+class ListTypeExpr(_Model):
+    list: TypeExpr
+
+
+class UnionTypeExpr(_Model):
+    union: list[TypeExpr]
+
+
+class OpaqueTypeExpr(_Model):
+    opaque: str = Field(description="핸들 이름 (`Model`, `VAE` ...)")
+    capabilities: list[str] = Field(default_factory=list, description="능력 태그")
+
+
+class TensorBodyExpr(_Model):
+    dtypes: list[str]
+    shape: list[int | str | None] = Field(
+        description="정수는 고정 크기, 문자열 라벨과 null 은 임의 크기"
+    )
+
+
+class TensorTypeExpr(_Model):
+    tensor: TensorBodyExpr
+
+
+#: 소켓 타입. 카탈로그 이름이면 문자열, 합성 타입이면 객체다.
+TypeExpr = str | ListTypeExpr | UnionTypeExpr | OpaqueTypeExpr | TensorTypeExpr
+
+
 # ------------------------------------------------------------------ 노드 스키마
 
 
@@ -99,7 +140,7 @@ class InputSocketModel(_Model):
     """팔레트와 노드 본문이 그리는 입력 소켓 하나."""
 
     name: str
-    type: str = Field(description="`types.json` 카탈로그 표기 (`INT`, `Image`, `List[Image]`)")
+    type: TypeExpr = Field(description="`types.json` 의 타입 표현식")
     required: bool
     default: JsonValue | None = None
     lazy: bool = False
@@ -112,7 +153,7 @@ class InputSocketModel(_Model):
 
 class OutputSocketModel(_Model):
     name: str
-    type: str
+    type: TypeExpr
     doc: str = ""
 
 
@@ -187,7 +228,7 @@ class OutputRefModel(_Model):
     """
 
     socket: str
-    type: str
+    type: TypeExpr
     inline: JsonValue | None = Field(default=None, description="JSON 으로 표현되는 작은 값")
     asset: str | None = Field(
         default=None,
@@ -385,6 +426,20 @@ class WsRunDone(_Model):
     elapsed_ms: int
 
 
+class WsRunFailed(_Model):
+    """실행이 실패했다. `run.done`·`run.cancelled` 와 대칭인 종료 이벤트다.
+
+    `node.error` 만으로는 부족하다 — 사이클처럼 어느 노드에도 귀속되지 않는
+    실패가 있고, 그때 사유를 아는 통로가 여기뿐이다.
+    """
+
+    t: Literal["run.failed"]
+    run_id: str
+    elapsed_ms: int
+    code: str = Field(description="`node_failed` · `graph_invalid` · `internal_error`")
+    message: str
+
+
 class WsRunCancelled(_Model):
     t: Literal["run.cancelled"]
     run_id: str
@@ -407,6 +462,7 @@ WsEvent = Annotated[
     | WsNodeDone
     | WsNodeError
     | WsRunDone
+    | WsRunFailed
     | WsRunCancelled
     | WsQueueStatus,
     Field(discriminator="t"),

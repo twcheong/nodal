@@ -383,6 +383,28 @@ type OutputRef = {
 
 **모든 이벤트가 `run_id`를 싣는다** (`queue` 제외 — 특정 실행에 속하지 않는다). `/ws`는 전역 스트림이고 프론트는 히스토리와 여러 탭을 동시에 본다.
 
+**종료 이벤트는 셋이고 `RunStatus`의 종료 상태와 짝을 이룬다.** 위 정의에는 `run.failed`가 없었는데, 그러면 실패한 실행에 run 레벨 종료 신호가 **아예 없어서** 프론트 상태 머신이 걸린다. `node.error`는 노드 단위라 그 역할을 못 한다 — 실행 도중 발견된 사이클처럼 어느 노드에도 귀속되지 않는 실패도 있다.
+
+```typescript
+| { t: "run.failed"; run_id: string; elapsed_ms: number; code: string; message: string }
+```
+
+| 종료 이벤트 | `RunStatus` |
+|---|---|
+| `run.done` | `succeeded` |
+| `run.failed` | `failed` |
+| `run.cancelled` | `cancelled` |
+
+**소켓 타입은 `types.json`의 타입 표현식으로 전송한다.** 사람이 읽는 렌더링(`describe()`)이 아니다 — 그것은 복원할 수 없다. `Tensor[float32, (?, 3)]`는 `?`가 라벨(`B`)이었는지 `null`이었는지 지운다.
+
+```jsonc
+{ "name": "img",    "type": "Image" }                    // 카탈로그 이름은 문자열
+{ "name": "images", "type": { "list": "Image" } }
+{ "name": "scale",  "type": { "union": ["INT", "FLOAT"] } }
+```
+
+프론트는 이미 `parseTypeExpr()`·`isCompatible()`·`describeType()`을 갖고 있으므로(§4.3의 `types.json` 로더), 표시용 문자열은 자기가 만든다. 렌더러가 양쪽에 생기지 않는다.
+
 **에러 응답은 하나의 모양이다.** HTTP 상태로 분기하고 본문은 언제나 아래와 같다. `issues[]`는 M1의 `GraphIssue`를 그대로 직렬화한 것이라 에러 어휘가 하나로 유지된다.
 
 ```jsonc

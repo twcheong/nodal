@@ -67,6 +67,33 @@
 **되돌릴 수 있나**: 아니오 — 다른 에이전트가 이 시그니처로 테스트를 작성하면 양쪽이 함께 깨진다.
 바꾸려면 사용자 확인이 필요하다 (AGENTS.md 협업 규칙 7).
 
+### 2026-08-13 · Claude Code · M2 계약 보완 (프론트 지적 → 사용자 확인 후 확정)
+
+프론트 담당 에이전트가 두 가지를 지적했고, 검증 결과 **둘 다 사실**이었다. 계약 변경이라
+사용자에게 물어 확정했다.
+
+- **소켓 타입을 `TypeExpr`로 전송**: `type: str` 은 `describe()` 결과였는데 그것은 사람이
+  읽는 **렌더링**이라 복원할 수 없다 (`Tensor[float32, (?, 3)]` 은 `?` 가 라벨이었는지
+  `None` 이었는지 지운다). `types.json` 의 `type_expression` 문법을 그대로 보낸다 —
+  프론트의 `parseTypeExpr()` 가 이미 그것을 먹는다. `to_type_expr()` 를 `nodal.types` 에
+  추가했고 `parse_type_expr` 의 역함수임을 테스트로 고정했다.
+  표시용 문자열은 프론트가 `describeType()` 으로 만든다 — 렌더러를 두 번 쓰지 않는다.
+- **`run.failed` 이벤트 추가**: 지적은 "`node.error` 이후 `run.done` 이 와도 실패 상태를
+  유지한다" 였지만, 실측하니 **`run.done` 조차 오지 않았다** — `execute()` 가 예외로 나가며
+  emit 지점을 건너뛰어 run 레벨 종료 이벤트가 아예 없었다. 지적보다 심각한 문제였다.
+  종료 이벤트 셋(`run.done`·`run.failed`·`run.cancelled`)이 `RunStatus` 의 종료 상태 셋과
+  짝을 이루도록 확정했다. `code`·`message` 를 싣는 이유는 사이클처럼 어느 노드에도
+  귀속되지 않는 실패가 있어서다 — 그때는 이 이벤트가 사유를 아는 유일한 통로다.
+
+**영향 범위**: `docs/design.md` §6, `packages/core/src/nodal/{types,events,executor}.py`,
+`packages/server/src/nodal_server/{schemas,wire}.py`, `schemas/openapi.json`
+**되돌릴 수 있나**: 아니오 — 프론트가 이 산출물로 작업 중이다. 변경 시 사용자 확인.
+
+> ⚠️ **프론트 담당에게**: `schemas/openapi.json` 이 바뀌었다.
+> `pnpm --filter @nodal/web gen:api` 를 돌려 `generated.ts` 를 재생성해야 한다.
+> 그 전까지 CI 의 "생성된 API 타입 drift 검사" 단계가 실패한다.
+> `apps/web/` 은 이 커밋에서 건드리지 않았다.
+
 ### 2026-08-13 · Claude Code · M2 서버 구현 — 합성 지점과 인메모리 에셋
 
 - **결정 1 (합성 지점)**: `create_app(registry)` 로 레지스트리를 **주입받는다.**

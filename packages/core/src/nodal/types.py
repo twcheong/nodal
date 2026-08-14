@@ -52,6 +52,7 @@ __all__ = [
     "iter_named_types",
     "load_catalog",
     "parse_type_expr",
+    "to_type_expr",
     "type_names",
 ]
 
@@ -406,6 +407,51 @@ def check_conformance(catalog: TypeCatalog | None = None) -> list[str]:
                 f"기대 {expected}, 실제 {actual} (rule={case.get('rule')})"
             )
     return failures
+
+
+def to_type_expr(socket_type: Type, catalog: TypeCatalog | None = None) -> TypingAny:
+    """`Type` → `types.json` 의 타입 표현식. `parse_type_expr` 의 역함수다.
+
+    전송용이다. `describe()` 는 **사람이 읽는 렌더링**이라 복원할 수 없다
+    (`Tensor[float32, (?, 3)]` 은 `?` 가 라벨이었는지 `None` 이었는지 지운다).
+    이 함수는 프론트의 `parseTypeExpr()` 가 그대로 먹는 구조를 돌려준다.
+
+    카탈로그에 있는 타입은 **이름 문자열**로 짧게 나간다 — `Image`, `INT`.
+    """
+    cat = catalog or load_catalog()
+
+    if isinstance(socket_type, AnyType):
+        return "Any"
+
+    if isinstance(socket_type, ListType):
+        return {"list": to_type_expr(socket_type.item, cat)}
+
+    if isinstance(socket_type, UnionType):
+        return {"union": [to_type_expr(member, cat) for member in socket_type.members]}
+
+    # 카탈로그와 정확히 같으면 이름 하나로 줄인다.
+    for name, known in cat.named.items():
+        if known == socket_type:
+            return name
+
+    if isinstance(socket_type, OpaqueType):
+        return {
+            "opaque": socket_type.name,
+            "capabilities": sorted(socket_type.capabilities),
+        }
+
+    if isinstance(socket_type, TensorType):
+        return {
+            "tensor": {
+                "dtypes": sorted(socket_type.dtypes),
+                "shape": list(socket_type.shape),
+            }
+        }
+
+    if isinstance(socket_type, PrimitiveType):
+        return socket_type.name
+
+    raise TypeSpecError(f"타입 표현식으로 되돌릴 수 없다: {socket_type!r}")
 
 
 def builtin(name: str) -> Type:

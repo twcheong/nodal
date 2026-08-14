@@ -19,6 +19,7 @@ from nodal import Event, GraphIssue, NodeSchema
 # `OutputRef` 는 아직 nodal 최상위로 export 되지 않았다. M2 계약에서 core 이벤트를
 # 동결했으므로 여기서는 서브모듈에서 직접 가져온다 — core 를 건드리지 않는다.
 from nodal.events import OutputRef
+from nodal.types import to_type_expr
 
 from .schemas import (
     ErrorBody,
@@ -88,7 +89,7 @@ def refs_from_values(
         refs.append(
             OutputRefModel(
                 socket=socket,
-                type=spec.type.describe() if spec else "Any",
+                type=to_type_expr(spec.type) if spec else "Any",
                 inline=value if _is_json_safe(value) else None,
             )
         )
@@ -112,7 +113,7 @@ def node_schema_model(schema: NodeSchema) -> NodeSchemaModel:
         inputs=[
             InputSocketModel(
                 name=spec.name,
-                type=spec.type.describe(),
+                type=to_type_expr(spec.type),
                 required=spec.required,
                 default=spec.default if _is_json_safe(spec.default) else None,
                 lazy=spec.lazy,
@@ -122,7 +123,7 @@ def node_schema_model(schema: NodeSchema) -> NodeSchemaModel:
             for spec in schema.inputs.values()
         ],
         outputs=[
-            OutputSocketModel(name=spec.name, type=spec.type.describe(), doc=spec.doc)
+            OutputSocketModel(name=spec.name, type=to_type_expr(spec.type), doc=spec.doc)
             for spec in schema.outputs.values()
         ],
     )

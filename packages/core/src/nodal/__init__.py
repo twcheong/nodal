@@ -36,6 +36,7 @@ from .events import (
     RecordingEventSink,
     RunCancelled,
     RunDone,
+    RunFailed,
     RunStarted,
 )
 from .executor import (
@@ -235,6 +236,7 @@ __all__ = [  # noqa: RUF022
     "RecordingEventSink",
     "RunCancelled",
     "RunDone",
+    "RunFailed",
     "RunStarted",
 ]
 

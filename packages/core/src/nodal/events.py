@@ -38,6 +38,7 @@ __all__ = [
     "RecordingEventSink",
     "RunCancelled",
     "RunDone",
+    "RunFailed",
     "RunStarted",
 ]
 
@@ -184,6 +185,23 @@ class RunDone:
 
 
 @dataclass(frozen=True, slots=True)
+class RunFailed:
+    """실행이 실패했다. `run.done` 과 대칭인 종료 이벤트다.
+
+    `node.error` 만으로는 부족하다 — 실행 도중 발견된 사이클처럼 **어느 노드에도
+    귀속되지 않는 실패**가 있고, 그때 프론트가 사유를 아는 유일한 통로가 여기다.
+    종료 이벤트 셋이 `RunStatus` 의 종료 상태 셋과 짝을 이룬다:
+    `run.done`→succeeded, `run.failed`→failed, `run.cancelled`→cancelled.
+    """
+
+    t: Literal["run.failed"]
+    run_id: str
+    elapsed_ms: int
+    code: str
+    message: str
+
+
+@dataclass(frozen=True, slots=True)
 class RunCancelled:
     t: Literal["run.cancelled"]
     run_id: str
@@ -208,6 +226,7 @@ Event = (
     | NodeDone
     | NodeError
     | RunDone
+    | RunFailed
     | RunCancelled
     | QueueStatus
 )

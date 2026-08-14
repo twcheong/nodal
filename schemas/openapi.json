@@ -340,9 +340,25 @@
             "type": "boolean"
           },
           "type": {
-            "description": "`types.json` 카탈로그 표기 (`INT`, `Image`, `List[Image]`)",
-            "title": "Type",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/ListTypeExpr"
+              },
+              {
+                "$ref": "#/components/schemas/UnionTypeExpr"
+              },
+              {
+                "$ref": "#/components/schemas/OpaqueTypeExpr"
+              },
+              {
+                "$ref": "#/components/schemas/TensorTypeExpr"
+              }
+            ],
+            "description": "`types.json` 의 타입 표현식",
+            "title": "Type"
           },
           "widget": {
             "additionalProperties": {
@@ -439,6 +455,36 @@
           "$link"
         ],
         "title": "Link",
+        "type": "object"
+      },
+      "ListTypeExpr": {
+        "additionalProperties": false,
+        "properties": {
+          "list": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/ListTypeExpr"
+              },
+              {
+                "$ref": "#/components/schemas/UnionTypeExpr"
+              },
+              {
+                "$ref": "#/components/schemas/OpaqueTypeExpr"
+              },
+              {
+                "$ref": "#/components/schemas/TensorTypeExpr"
+              }
+            ],
+            "title": "List"
+          }
+        },
+        "required": [
+          "list"
+        ],
+        "title": "ListTypeExpr",
         "type": "object"
       },
       "ModelEntry": {
@@ -664,6 +710,29 @@
         "title": "NodesResponse",
         "type": "object"
       },
+      "OpaqueTypeExpr": {
+        "additionalProperties": false,
+        "properties": {
+          "capabilities": {
+            "description": "능력 태그",
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "opaque": {
+            "description": "핸들 이름 (`Model`, `VAE` ...)",
+            "title": "Opaque",
+            "type": "string"
+          }
+        },
+        "required": [
+          "opaque"
+        ],
+        "title": "OpaqueTypeExpr",
+        "type": "object"
+      },
       "OutputRefModel": {
         "additionalProperties": false,
         "description": "`nodal.OutputRef` 의 전송 형태 — 값이 아니라 **참조**다 (design.md §6).\n\n이미지나 텐서를 그대로 실으면 메가바이트가 나간다. 작은 값만 `inline` 에\n싣고 큰 값은 `asset` 해시로 가리킨다.",
@@ -696,8 +765,24 @@
             "type": "string"
           },
           "type": {
-            "title": "Type",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/ListTypeExpr"
+              },
+              {
+                "$ref": "#/components/schemas/UnionTypeExpr"
+              },
+              {
+                "$ref": "#/components/schemas/OpaqueTypeExpr"
+              },
+              {
+                "$ref": "#/components/schemas/TensorTypeExpr"
+              }
+            ],
+            "title": "Type"
           }
         },
         "required": [
@@ -720,8 +805,24 @@
             "type": "string"
           },
           "type": {
-            "title": "Type",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/ListTypeExpr"
+              },
+              {
+                "$ref": "#/components/schemas/UnionTypeExpr"
+              },
+              {
+                "$ref": "#/components/schemas/OpaqueTypeExpr"
+              },
+              {
+                "$ref": "#/components/schemas/TensorTypeExpr"
+              }
+            ],
+            "title": "Type"
           }
         },
         "required": [
@@ -955,6 +1056,88 @@
         "title": "RunSummary",
         "type": "object"
       },
+      "TensorBodyExpr": {
+        "additionalProperties": false,
+        "properties": {
+          "dtypes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Dtypes",
+            "type": "array"
+          },
+          "shape": {
+            "description": "정수는 고정 크기, 문자열 라벨과 null 은 임의 크기",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Shape",
+            "type": "array"
+          }
+        },
+        "required": [
+          "dtypes",
+          "shape"
+        ],
+        "title": "TensorBodyExpr",
+        "type": "object"
+      },
+      "TensorTypeExpr": {
+        "additionalProperties": false,
+        "properties": {
+          "tensor": {
+            "$ref": "#/components/schemas/TensorBodyExpr"
+          }
+        },
+        "required": [
+          "tensor"
+        ],
+        "title": "TensorTypeExpr",
+        "type": "object"
+      },
+      "UnionTypeExpr": {
+        "additionalProperties": false,
+        "properties": {
+          "union": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/components/schemas/ListTypeExpr"
+                },
+                {
+                  "$ref": "#/components/schemas/UnionTypeExpr"
+                },
+                {
+                  "$ref": "#/components/schemas/OpaqueTypeExpr"
+                },
+                {
+                  "$ref": "#/components/schemas/TensorTypeExpr"
+                }
+              ]
+            },
+            "title": "Union",
+            "type": "array"
+          }
+        },
+        "required": [
+          "union"
+        ],
+        "title": "UnionTypeExpr",
+        "type": "object"
+      },
       "ValidateRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1058,6 +1241,7 @@
             "queue": "#/components/schemas/WsQueueStatus",
             "run.cancelled": "#/components/schemas/WsRunCancelled",
             "run.done": "#/components/schemas/WsRunDone",
+            "run.failed": "#/components/schemas/WsRunFailed",
             "run.started": "#/components/schemas/WsRunStarted"
           },
           "propertyName": "t"
@@ -1086,6 +1270,9 @@
           },
           {
             "$ref": "#/components/schemas/WsRunDone"
+          },
+          {
+            "$ref": "#/components/schemas/WsRunFailed"
           },
           {
             "$ref": "#/components/schemas/WsRunCancelled"
@@ -1372,6 +1559,43 @@
           "elapsed_ms"
         ],
         "title": "WsRunDone",
+        "type": "object"
+      },
+      "WsRunFailed": {
+        "additionalProperties": false,
+        "description": "실행이 실패했다. `run.done`·`run.cancelled` 와 대칭인 종료 이벤트다.\n\n`node.error` 만으로는 부족하다 — 사이클처럼 어느 노드에도 귀속되지 않는\n실패가 있고, 그때 사유를 아는 통로가 여기뿐이다.",
+        "properties": {
+          "code": {
+            "description": "`node_failed` · `graph_invalid` · `internal_error`",
+            "title": "Code",
+            "type": "string"
+          },
+          "elapsed_ms": {
+            "title": "Elapsed Ms",
+            "type": "integer"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "t": {
+            "const": "run.failed",
+            "title": "T",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t",
+          "run_id",
+          "elapsed_ms",
+          "code",
+          "message"
+        ],
+        "title": "WsRunFailed",
         "type": "object"
       },
       "WsRunStarted": {

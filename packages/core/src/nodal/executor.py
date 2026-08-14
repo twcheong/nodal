@@ -79,12 +79,13 @@ from .events import (
     OutputRef,
     RunCancelled,
     RunDone,
+    RunFailed,
     RunStarted,
 )
 from .graph import Graph, Link, Node
 from .registry import NodeRegistry, NodeTypeNotFoundError
 from .schema import NodeResult, NodeSchema
-from .types import is_compatible
+from .types import is_compatible, to_type_expr
 
 __all__ = [
     "Blocked",
@@ -754,6 +755,21 @@ async def execute(
         events.emit(RunCancelled(t="run.cancelled", run_id=identifier, elapsed_ms=elapsed_ms()))
         raise
 
+    except BaseException as exc:
+        # 실패에도 run 레벨 종료 이벤트가 나가야 한다. 없으면 프론트의 상태
+        # 머신이 종료 신호를 영원히 기다린다 (`node.error` 는 노드 단위이고,
+        # 사이클처럼 어느 노드에도 귀속되지 않는 실패도 있다).
+        events.emit(
+            RunFailed(
+                t="run.failed",
+                run_id=identifier,
+                elapsed_ms=elapsed_ms(),
+                code=_failure_code(exc),
+                message=str(exc),
+            )
+        )
+        raise
+
     events.emit(RunDone(t="run.done", run_id=identifier, elapsed_ms=elapsed_ms()))
 
     return RunResult(
@@ -766,6 +782,15 @@ async def execute(
         blocked=tuple(dict.fromkeys(blocked)),
         elapsed_ms=elapsed_ms(),
     )
+
+
+def _failure_code(exc: BaseException) -> str:
+    """실패 사유의 안정적인 코드. 서버의 `ErrorBody.code` 와 같은 어휘를 쓴다."""
+    if isinstance(exc, NodeExecutionError):
+        return "node_failed"
+    if isinstance(exc, GraphValidationError):
+        return "graph_invalid"
+    return "internal_error"
 
 
 async def run_node(
@@ -819,7 +844,7 @@ def _output_refs(
         refs.append(
             OutputRef(
                 socket=socket,
-                type=spec.type.describe() if spec else "Any",
+                type=to_type_expr(spec.type) if spec else "Any",
                 inline=value if _is_json_safe(value) else None,
             )
         )
