@@ -1,20 +1,24 @@
 import type {
+  AssetRef,
   CreateRunResponse,
   ErrorResponse,
+  GraphFromPngResponse,
   NodesResponse,
   ValidateResponse,
   WsEvent,
 } from "./types";
-import { API_PATHS } from "./types";
+import { API_PATHS, assetSrc } from "./types";
 import type { GraphDocument } from "../graph/types";
 
 export type EventListener = (event: WsEvent) => void;
 
 export interface GraphApiClient {
   readonly mode: "mock" | "live";
+  assetUrl(asset: AssetRef): string;
   listNodes(): Promise<NodesResponse>;
   validateGraph(graph: GraphDocument): Promise<ValidateResponse>;
   createRun(graph: GraphDocument, useCache: boolean): Promise<CreateRunResponse>;
+  graphFromPng(file: File): Promise<GraphFromPngResponse>;
   subscribe(listener: EventListener): () => void;
   dispose(): void;
 }
@@ -39,6 +43,10 @@ export class HttpGraphApiClient implements GraphApiClient {
     this.#baseUrl = baseUrl.replace(/\/$/, "");
   }
 
+  assetUrl(asset: AssetRef): string {
+    return `${this.#baseUrl}${assetSrc(asset)}`;
+  }
+
   listNodes(): Promise<NodesResponse> {
     return this.#request<NodesResponse>(API_PATHS.nodes);
   }
@@ -57,6 +65,15 @@ export class HttpGraphApiClient implements GraphApiClient {
     });
   }
 
+  graphFromPng(file: File): Promise<GraphFromPngResponse> {
+    const body = new FormData();
+    body.append("file", file);
+    return this.#request<GraphFromPngResponse>(API_PATHS.graphFromPng, {
+      method: "POST",
+      body,
+    });
+  }
+
   subscribe(listener: EventListener): () => void {
     this.#listeners.add(listener);
     this.#ensureSocket();
@@ -70,9 +87,13 @@ export class HttpGraphApiClient implements GraphApiClient {
   }
 
   async #request<T>(path: string, init?: RequestInit): Promise<T> {
+    const headers = new Headers(init?.headers);
+    if (init?.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
     const response = await fetch(`${this.#baseUrl}${path}`, {
       ...init,
-      headers: { "Content-Type": "application/json", ...init?.headers },
+      headers,
     });
     if (!response.ok) {
       const error = (await response.json().catch(() => undefined)) as ErrorResponse | undefined;

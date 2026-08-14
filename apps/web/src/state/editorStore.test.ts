@@ -26,6 +26,47 @@ describe("실행 이벤트 상태", () => {
     expect(useEditorStore.getState().runtime[nodeId]?.status).toBe("cached");
   });
 
+  it("두 프리뷰 유니온을 문자열로 축약하지 않고 크기와 함께 보존한다", () => {
+    const nodeId = Object.keys(useEditorStore.getState().graph.nodes ?? {})[0] ?? "";
+    useEditorStore.getState().startRun("run-preview");
+    useEditorStore.getState().handleEvent({
+      t: "node.preview",
+      run_id: "run-preview",
+      node_id: nodeId,
+      preview: {
+        kind: "inline",
+        data_uri: "data:image/png;base64,abc",
+        width: 32,
+        height: 20,
+      },
+    });
+    expect(useEditorStore.getState().runtime[nodeId]?.preview).toMatchObject({
+      kind: "inline",
+      width: 32,
+      height: 20,
+    });
+
+    useEditorStore.getState().handleEvent({
+      t: "node.preview",
+      run_id: "run-preview",
+      node_id: nodeId,
+      preview: {
+        kind: "asset",
+        asset: {
+          hash: "image-hash",
+          media_type: "image/png",
+          size_bytes: 100,
+          width: 64,
+          height: 40,
+        },
+      },
+    });
+    expect(useEditorStore.getState().runtime[nodeId]?.preview).toMatchObject({
+      kind: "asset",
+      asset: { hash: "image-hash", width: 64, height: 40 },
+    });
+  });
+
   it("node.error 뒤 run.failed로 실행 실패를 확정한다", () => {
     const nodeId = Object.keys(useEditorStore.getState().graph.nodes ?? {})[0] ?? "";
     useEditorStore.getState().startRun("run-2");

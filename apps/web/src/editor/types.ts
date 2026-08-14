@@ -1,6 +1,6 @@
 import type { Node as FlowNode, Edge as FlowEdge, XYPosition } from "@xyflow/react";
 
-import type { Issue, NodeSchema, OutputRef, SocketTypeExpr } from "../api/types";
+import type { Issue, NodeSchema, OutputRef, Preview, SocketTypeExpr } from "../api/types";
 import type { GraphNode } from "../graph/types";
 
 export type NodeStatus = "idle" | "queued" | "running" | "cached" | "succeeded" | "error";
@@ -8,7 +8,7 @@ export type NodeStatus = "idle" | "queued" | "running" | "cached" | "succeeded" 
 export interface NodeRuntimeState {
   status: NodeStatus;
   progress?: { step: number; total: number };
-  preview?: string;
+  preview?: Preview;
   outputs?: OutputRef[];
   error?: { message: string; socket: string | null; traceback: string[] };
 }

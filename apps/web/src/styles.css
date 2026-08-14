@@ -330,6 +330,34 @@ button {
     monospace;
   pointer-events: none;
 }
+.canvas-drop-notice {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  top: 18px;
+  transform: translateX(-50%);
+  max-width: min(520px, calc(100% - 36px));
+  padding: 9px 12px;
+  border: 1px solid #395167;
+  border-radius: 4px;
+  background: rgba(13, 22, 29, 0.96);
+  color: #b9d3e3;
+  font-size: 10px;
+  box-shadow: 0 8px 24px #0008;
+}
+.canvas-drop-notice.error {
+  border-color: #6c3037;
+  background: rgba(42, 23, 28, 0.97);
+  color: #ffb2b7;
+}
+.canvas-drop-notice button {
+  margin-left: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+}
 
 .nodal-node {
   width: 244px;
@@ -555,9 +583,41 @@ button {
     monospace;
   color: #d89a9e;
 }
+.node-image-frame {
+  width: 100%;
+  overflow: hidden;
+  background:
+    linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.035) 50%, transparent 65%),
+    #0a1015;
+  border-top: 1px solid #26343e;
+}
 .node-preview {
   width: 100%;
+  height: 100%;
   display: block;
+  object-fit: contain;
+}
+.node-results {
+  border-top: 1px solid #26343e;
+  background: #0c1217;
+}
+.node-results > small {
+  display: block;
+  padding: 7px 11px;
+  color: var(--mint);
+  font:
+    8px ui-monospace,
+    monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.node-result > span {
+  display: block;
+  padding: 0 11px 6px;
+  color: #81919d;
+  font:
+    8px ui-monospace,
+    monospace;
 }
 
 .inspector-body {

@@ -1,15 +1,34 @@
 import { TYPES_VERSION } from "../graph/typesystem";
 import type { GraphDocument, InputValue } from "../graph/types";
 import { isLink } from "../graph/types";
-import type { GraphApiClient, EventListener } from "./client";
+import { ApiError, type EventListener, type GraphApiClient } from "./client";
 import type {
+  AssetRef,
   CreateRunResponse,
+  GraphFromPngResponse,
   Issue,
   NodeSchema,
   NodesResponse,
   ValidateResponse,
   WsEvent,
 } from "./types";
+import { assetSrc } from "./types";
+
+export const MOCK_IMAGE_HASH = "0f3a8a9c6d4e2f1876b5a493827160ff0f3a8a9c6d4e2f1876b5a493827160ff";
+
+const MOCK_IMAGE_ASSET: AssetRef = {
+  hash: MOCK_IMAGE_HASH,
+  media_type: "image/svg+xml",
+  size_bytes: 604,
+  width: 640,
+  height: 400,
+};
+
+const MOCK_INLINE_PREVIEW =
+  "data:image/svg+xml;charset=utf-8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#14242b"/><stop offset="1" stop-color="#1d6b5e"/></linearGradient></defs><rect width="640" height="400" fill="url(#g)"/><circle cx="320" cy="190" r="112" fill="#68e6b8" opacity=".78"/><text x="320" y="345" fill="#dffcf2" font-family="sans-serif" font-size="25" text-anchor="middle">nodal mock preview</text></svg>',
+  );
 
 const input = (
   name: string,
@@ -165,6 +184,18 @@ export const MOCK_NODE_SCHEMAS: readonly NodeSchema[] = [
     inputs: [input("text", "STRING", ""), input("enabled", "BOOL", true)],
     outputs: [output("text", "STRING")],
   },
+  {
+    id: "image.MockPreview",
+    title: "Mock Image",
+    category: "image",
+    aliases: ["목 이미지", "preview"],
+    version: "1",
+    cacheable: true,
+    output_node: true,
+    doc: "M3 이미지 프리뷰와 결과 표시를 백엔드 없이 확인합니다.",
+    inputs: [],
+    outputs: [output("image", "Image")],
+  },
 ];
 
 export class MockGraphApiClient implements GraphApiClient {
@@ -172,6 +203,10 @@ export class MockGraphApiClient implements GraphApiClient {
   readonly #listeners = new Set<EventListener>();
   #hasCompletedRun = false;
   #disposed = false;
+
+  assetUrl(asset: AssetRef): string {
+    return asset.hash === MOCK_IMAGE_HASH ? MOCK_INLINE_PREVIEW : assetSrc(asset);
+  }
 
   async listNodes(): Promise<NodesResponse> {
     await Promise.resolve();
@@ -190,6 +225,18 @@ export class MockGraphApiClient implements GraphApiClient {
     const nodes = executionNodes(graph);
     globalThis.setTimeout(() => this.#simulate(runId, nodes, useCache), 0);
     return { run_id: runId, status: "queued" };
+  }
+
+  async graphFromPng(file: File): Promise<GraphFromPngResponse> {
+    const signature = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+    const isPng = [137, 80, 78, 71, 13, 10, 26, 10].every(
+      (value, index) => signature[index] === value,
+    );
+    if (!isPng) throw new ApiError("PNG 파일이 손상됐거나 올바른 PNG가 아닙니다", 400);
+    if (file.name.toLowerCase().includes("no-workflow")) {
+      throw new ApiError("PNG에 nodal_workflow 정보가 없습니다", 404);
+    }
+    return { graph: mockRestoredGraph(), nodal_version: "mock-m3" };
   }
 
   subscribe(listener: EventListener): () => void {
@@ -232,6 +279,34 @@ export class MockGraphApiClient implements GraphApiClient {
           step: 1,
           total: 2,
         });
+        if (node.type === "image.MockPreview") {
+          this.#emit({
+            t: "node.preview",
+            run_id: runId,
+            node_id: nodeId,
+            preview: {
+              kind: "inline",
+              data_uri: MOCK_INLINE_PREVIEW,
+              width: 640,
+              height: 400,
+            },
+          });
+          globalThis.setTimeout(() => {
+            this.#emit({
+              t: "node.preview",
+              run_id: runId,
+              node_id: nodeId,
+              preview: { kind: "asset", asset: MOCK_IMAGE_ASSET },
+            });
+            this.#emit({
+              t: "node.done",
+              run_id: runId,
+              node_id: nodeId,
+              outputs: mockOutputs(node.type, index),
+            });
+          }, 60);
+          return;
+        }
         if (node.type === "math.Divide" && literalNumber(node.inputs?.b) === 0) {
           this.#emit({
             t: "node.error",
@@ -276,8 +351,26 @@ function mockOutputs(nodeType: string, index: number) {
   return (schema?.outputs ?? []).map((socket) => ({
     socket: socket.name,
     type: socket.type,
-    inline: socket.type === "STRING" ? `목 실행 결과 ${index + 1}` : index + 1,
+    ...(socket.type === "Image"
+      ? { asset: MOCK_IMAGE_ASSET }
+      : { inline: socket.type === "STRING" ? `목 실행 결과 ${index + 1}` : index + 1 }),
   }));
+}
+
+function mockRestoredGraph(): GraphDocument {
+  const nodeId = "00000000-0000-4000-8000-000000000301";
+  return {
+    nodal_version: "1",
+    id: "00000000-0000-4000-8000-000000000300",
+    nodes: {
+      [nodeId]: { type: "image.MockPreview", inputs: {}, meta: { title: "PNG에서 복원됨" } },
+    },
+    outputs: [nodeId],
+    ui: {
+      [nodeId]: { pos: [180, 120] },
+      viewport: { x: 0, y: 0, zoom: 1 },
+    },
+  };
 }
 
 function executionNodes(

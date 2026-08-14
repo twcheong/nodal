@@ -37,6 +37,7 @@ export type NodesResponse = Schemas["NodesResponse"];
 
 export type ValidateRequest = Schemas["ValidateRequest"];
 export type ValidateResponse = Schemas["ValidateResponse"];
+export type GraphFromPngResponse = Schemas["GraphFromPngResponse"];
 
 // ------------------------------------------------------------------ 실행
 
@@ -120,11 +121,21 @@ export type Preview = Schemas["InlinePreviewModel"] | Schemas["AssetPreviewModel
  * 해시인지 구분할 방법이 없었다. M3 계약에서 `kind` 로 판별되는 유니온이 됐다.
  */
 export function previewSrc(preview: Preview): string {
-  return preview.kind === "inline" ? preview.data_uri : API_PATHS.asset(preview.asset.hash);
+  return preview.kind === "inline" ? preview.data_uri : assetSrc(preview.asset);
 }
 
 /** 프리뷰의 픽셀 크기. 모르면 `null` — 프론트는 그때만 자리를 추정한다. */
 export function previewSize(preview: Preview): { width: number | null; height: number | null } {
   const source = preview.kind === "inline" ? preview : preview.asset;
   return { width: source.width ?? null, height: source.height ?? null };
+}
+
+/** 저장된 에셋을 내려받는 URL. */
+export function assetSrc(asset: AssetRef): string {
+  return API_PATHS.asset(asset.hash);
+}
+
+/** `OutputRef.asset` 중 브라우저에서 이미지로 표시할 수 있는 것만 고른다. */
+export function isImageAsset(asset: AssetRef | null | undefined): asset is AssetRef {
+  return asset?.media_type.startsWith("image/") ?? false;
 }

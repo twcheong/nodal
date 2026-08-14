@@ -1,11 +1,10 @@
-import { forwardRef, useCallback, useImperativeHandle, useMemo } from "react";
+import { forwardRef, useCallback, useImperativeHandle, useMemo, useState } from "react";
 import {
   Background,
   BackgroundVariant,
   Controls,
   MiniMap,
   ReactFlow,
-  useNodesInitialized,
   useReactFlow,
   type Connection,
   type Edge,
@@ -13,6 +12,7 @@ import {
 } from "@xyflow/react";
 
 import { createBenchmarkGraph, graphToFlow, graphViewport } from "../editor/graph";
+import { isPngFile } from "../editor/pngDrop";
 import { socketTypesCompatible } from "../editor/socketTypes";
 import type { NodalFlowNode } from "../editor/types";
 import { useEditorStore } from "../state/editorStore";
@@ -23,11 +23,19 @@ export interface CanvasHandle {
   benchmark: () => Promise<number | null>;
 }
 
+interface GraphCanvasProps {
+  onPngDrop: (file: File) => Promise<void>;
+}
+
 const nodeTypes = { nodal: NodalNode };
 
-export const GraphCanvas = forwardRef<CanvasHandle>(function GraphCanvas(_props, ref) {
+export const GraphCanvas = forwardRef<CanvasHandle, GraphCanvasProps>(function GraphCanvas(
+  { onPngDrop },
+  ref,
+) {
   const flow = useReactFlow<NodalFlowNode>();
-  const nodesInitialized = useNodesInitialized();
+  const [dropState, setDropState] = useState<"idle" | "loading" | "error">("idle");
+  const [dropMessage, setDropMessage] = useState<string | null>(null);
   const graph = useEditorStore((state) => state.graph);
   const schemas = useEditorStore((state) => state.schemas);
   const runtime = useEditorStore((state) => state.runtime);
@@ -95,6 +103,38 @@ export const GraphCanvas = forwardRef<CanvasHandle>(function GraphCanvas(_props,
     [graph.nodes, schemaMap],
   );
 
+  const handleDrop = useCallback(
+    async (event: React.DragEvent<HTMLElement>) => {
+      event.preventDefault();
+      if (event.dataTransfer.files.length) {
+        const file = Array.from(event.dataTransfer.files).find(isPngFile);
+        if (!file) {
+          setDropState("error");
+          setDropMessage("PNG 파일만 캔버스에서 워크플로로 복원할 수 있습니다.");
+          return;
+        }
+        setDropState("loading");
+        setDropMessage("PNG에서 워크플로를 확인하고 있습니다…");
+        try {
+          await onPngDrop(file);
+          setDropState("idle");
+          setDropMessage(null);
+        } catch (error) {
+          setDropState("error");
+          setDropMessage(`워크플로 복원 실패: ${readError(error)}`);
+        }
+        return;
+      }
+
+      const schemaId = event.dataTransfer.getData("application/x-nodal-node");
+      const schema = schemaMap.get(schemaId);
+      if (schema) {
+        addNode(schema, flow.screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+      }
+    },
+    [addNode, flow, onPngDrop, schemaMap],
+  );
+
   useImperativeHandle(
     ref,
     () => ({
@@ -135,13 +175,7 @@ export const GraphCanvas = forwardRef<CanvasHandle>(function GraphCanvas(_props,
         event.preventDefault();
         event.dataTransfer.dropEffect = "copy";
       }}
-      onDrop={(event) => {
-        event.preventDefault();
-        const schemaId = event.dataTransfer.getData("application/x-nodal-node");
-        const schema = schemaMap.get(schemaId);
-        if (schema)
-          addNode(schema, flow.screenToFlowPosition({ x: event.clientX, y: event.clientY }));
-      }}
+      onDrop={(event) => void handleDrop(event)}
     >
       <ReactFlow
         nodes={projection.nodes}
@@ -163,7 +197,7 @@ export const GraphCanvas = forwardRef<CanvasHandle>(function GraphCanvas(_props,
         deleteKeyCode={["Backspace", "Delete"]}
         selectionOnDrag
         panOnScroll
-        onlyRenderVisibleElements={nodesInitialized}
+        onlyRenderVisibleElements
         fitView
         minZoom={0.15}
         maxZoom={2}
@@ -173,7 +207,31 @@ export const GraphCanvas = forwardRef<CanvasHandle>(function GraphCanvas(_props,
         <Controls showInteractive={false} />
       </ReactFlow>
       <NodeSearch />
+      {dropMessage ? (
+        <div
+          className={`canvas-drop-notice ${dropState}`}
+          role={dropState === "error" ? "alert" : "status"}
+        >
+          {dropMessage}
+          {dropState === "error" ? (
+            <button
+              type="button"
+              aria-label="복원 오류 닫기"
+              onClick={() => {
+                setDropState("idle");
+                setDropMessage(null);
+              }}
+            >
+              ×
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       <div className="canvas-hint">더블클릭해 노드 찾기</div>
     </section>
   );
 });
+
+function readError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}

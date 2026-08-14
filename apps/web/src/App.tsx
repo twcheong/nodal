@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 
 import { createGraphApiClient } from "./api";
+import { AssetUrlContext } from "./api/context";
 import { GraphCanvas, type CanvasHandle } from "./components/GraphCanvas";
 import { Inspector } from "./components/Inspector";
 import { NodePalette } from "./components/NodePalette";
@@ -84,6 +85,25 @@ export function App(): React.JSX.Element {
     }
   };
 
+  const restoreGraphFromPng = useCallback(
+    async (file: File) => {
+      const response = await api.graphFromPng(file);
+      const result = validateGraphDocument(response.graph);
+      if (!result.valid) {
+        const issue = result.issues[0];
+        throw new Error(
+          issue ? `${issue.location}: ${issue.message}` : "PNG의 워크플로 형식이 올바르지 않습니다",
+        );
+      }
+      loadGraph(result.document);
+    },
+    [api, loadGraph],
+  );
+  const assetUrl = useCallback(
+    (asset: Parameters<typeof api.assetUrl>[0]) => api.assetUrl(asset),
+    [api],
+  );
+
   const run = useCallback(
     async (useCache: boolean) => {
       if (!beginRunSubmission()) return;
@@ -116,42 +136,44 @@ export function App(): React.JSX.Element {
   }, [run]);
 
   return (
-    <ReactFlowProvider>
-      <main className="app-shell">
-        <Toolbar
-          mode={api.mode}
-          runStatus={runStatus}
-          submissionPending={runSubmissionPending}
-          fps={fps}
-          onRun={(useCache) => void run(useCache)}
-          onSave={save}
-          onLoad={() => fileInput.current?.click()}
-          onBenchmark={() => void canvas.current?.benchmark()}
-        />
-        <div className="workspace">
-          <NodePalette />
-          <GraphCanvas ref={canvas} />
-          <Inspector />
-        </div>
-        {message ? (
-          <button className="toast" type="button" onClick={() => setMessage(null)}>
-            {message}
-            <span>×</span>
-          </button>
-        ) : null}
-        <input
-          ref={fileInput}
-          hidden
-          type="file"
-          accept=".json,.nodal.json,application/json"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void openGraph(file);
-            event.target.value = "";
-          }}
-        />
-      </main>
-    </ReactFlowProvider>
+    <AssetUrlContext.Provider value={assetUrl}>
+      <ReactFlowProvider>
+        <main className="app-shell">
+          <Toolbar
+            mode={api.mode}
+            runStatus={runStatus}
+            submissionPending={runSubmissionPending}
+            fps={fps}
+            onRun={(useCache) => void run(useCache)}
+            onSave={save}
+            onLoad={() => fileInput.current?.click()}
+            onBenchmark={() => void canvas.current?.benchmark()}
+          />
+          <div className="workspace">
+            <NodePalette />
+            <GraphCanvas ref={canvas} onPngDrop={restoreGraphFromPng} />
+            <Inspector />
+          </div>
+          {message ? (
+            <button className="toast" type="button" onClick={() => setMessage(null)}>
+              {message}
+              <span>×</span>
+            </button>
+          ) : null}
+          <input
+            ref={fileInput}
+            hidden
+            type="file"
+            accept=".json,.nodal.json,application/json"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void openGraph(file);
+              event.target.value = "";
+            }}
+          />
+        </main>
+      </ReactFlowProvider>
+    </AssetUrlContext.Provider>
   );
 }
 

@@ -1,7 +1,8 @@
-import { memo, useMemo } from "react";
+import { memo, useContext, useMemo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 
-import type { InputSocket } from "../api/types";
+import { isImageAsset, previewSize, previewSrc, type InputSocket } from "../api/types";
+import { AssetUrlContext } from "../api/context";
 import { describeSocketType, socketTypesCompatible } from "../editor/socketTypes";
 import type { NodalFlowNode } from "../editor/types";
 import { isLink, type JsonValue } from "../graph/types";
@@ -18,10 +19,15 @@ const STATUS_LABEL = {
 
 export const NodalNode = memo(function NodalNode({ data, selected }: NodeProps<NodalFlowNode>) {
   const setLiteralInput = useEditorStore((state) => state.setLiteralInput);
+  const assetUrl = useContext(AssetUrlContext);
   const beginConnection = useEditorStore((state) => state.beginConnection);
   const issueSockets = useMemo(
     () => new Set(data.issues.map((issue) => issue.socket).filter(Boolean)),
     [data.issues],
+  );
+  const imageOutputs = useMemo(
+    () => (data.runtime.outputs ?? []).filter((output) => isImageAsset(output.asset)),
+    [data.runtime.outputs],
   );
 
   return (
@@ -102,7 +108,34 @@ export const NodalNode = memo(function NodalNode({ data, selected }: NodeProps<N
       </div>
 
       {data.runtime.preview ? (
-        <img className="node-preview" src={data.runtime.preview} alt="노드 미리보기" />
+        <NodeImage
+          src={
+            data.runtime.preview.kind === "asset"
+              ? assetUrl(data.runtime.preview.asset)
+              : previewSrc(data.runtime.preview)
+          }
+          size={previewSize(data.runtime.preview)}
+          alt="노드 미리보기"
+        />
+      ) : null}
+
+      {imageOutputs.length ? (
+        <section className="node-results" aria-label="실행 결과 이미지">
+          <small>실행 결과</small>
+          {imageOutputs.map((output) => (
+            <div className="node-result" key={output.socket}>
+              <span>{output.socket}</span>
+              <NodeImage
+                src={assetUrl(output.asset!)}
+                size={{
+                  width: output.asset?.width ?? null,
+                  height: output.asset?.height ?? null,
+                }}
+                alt={`${output.socket} 실행 결과`}
+              />
+            </div>
+          ))}
+        </section>
       ) : null}
 
       {data.runtime.status === "cached" ? (
@@ -131,6 +164,34 @@ export const NodalNode = memo(function NodalNode({ data, selected }: NodeProps<N
     </article>
   );
 });
+
+function NodeImage({
+  src,
+  size,
+  alt,
+}: {
+  src: string;
+  size: { width: number | null; height: number | null };
+  alt: string;
+}): React.JSX.Element {
+  const hasSize = Boolean(size.width && size.height);
+  return (
+    <div
+      className="node-image-frame"
+      style={{ aspectRatio: hasSize ? `${size.width} / ${size.height}` : "16 / 10" }}
+    >
+      <img
+        className="node-preview"
+        src={src}
+        alt={alt}
+        width={size.width ?? undefined}
+        height={size.height ?? undefined}
+        loading="lazy"
+        decoding="async"
+      />
+    </div>
+  );
+}
 
 function SocketWidget({
   socket,
