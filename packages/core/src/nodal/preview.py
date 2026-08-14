@@ -33,6 +33,7 @@ __all__ = [
     "InlinePreview",
     "Preview",
     "PreviewEncoder",
+    "PreviewEncoderNotFoundError",
     "clear_preview_encoders",
     "encode_preview",
     "register_preview_encoder",
@@ -75,6 +76,10 @@ class EncodedPreview:
     height: int
 
 
+class PreviewEncoderNotFoundError(LookupError):
+    """프리뷰를 요청했지만 등록된 인코더가 값을 처리하지 못했다."""
+
+
 #: 프론트가 받는 프리뷰. `kind` 로 판별한다 — 문자열 하나로 두면 받는 쪽이
 #: base64 인지 해시인지 추측해야 한다 (M2 까지의 `image: str` 이 그랬다).
 Preview: TypeAlias = InlinePreview | AssetPreview
@@ -111,11 +116,14 @@ def encode_preview(
     *,
     assets: AssetStore | None = None,
     persistent: bool = False,
+    required: bool = True,
 ) -> Preview | None:
     """등록된 인코더로 런타임 값을 프리뷰로 바꾼다.
 
-    등록된 인코더가 없거나 아무도 처리하지 못하면 `None` 이다. 그때는
-    `node.preview` 이벤트를 **보내지 않는다** — 빈 프리뷰를 보내는 것보다 낫다.
+    등록된 인코더가 없거나 아무도 처리하지 못하면 기본적으로
+    `PreviewEncoderNotFoundError` 다. 명시적으로 요청한 프리뷰가 조용히 사라지면
+    노드 팩 초기화 누락을 성공으로 오해하기 때문이다. 불투명 모델 핸들처럼 프리뷰
+    대상이 아닐 수 있는 값의 전송 참조를 만들 때만 `required=False`를 쓴다.
 
     인코더는 바이트와 메타데이터만 만든다. core 가 `persistent` 정책을 적용해
     중간 프리뷰는 data URI 로, 영속 프리뷰는 실행별 `AssetStore` 로 보낸다.
@@ -142,5 +150,9 @@ def encode_preview(
             data_uri=f"data:{encoded.media_type};base64,{payload}",
             width=encoded.width,
             height=encoded.height,
+        )
+    if required:
+        raise PreviewEncoderNotFoundError(
+            f"{type(value).__module__}.{type(value).__qualname__} 값을 처리할 프리뷰 인코더가 없다"
         )
     return None

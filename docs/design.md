@@ -361,10 +361,12 @@ NodeResult(out, preview=out)          ctx.progress(step, total, preview=out)
 def encode_ndarray(value: Any) -> EncodedPreview | None: ...
 ```
 
-등록된 인코더가 아무도 처리하지 못하면 **이벤트를 보내지 않는다.** 빈 프리뷰를 보내는
-것보다 낫다. `ctx.progress(preview=...)` 는 data URI, `NodeResult(preview=...)` 와 JSON 이
-아닌 인코딩 가능한 출력은 asset 이 된다. 인코딩 실패는 해당 노드의 `node.error` 로
-보고하고 실행을 실패시킨다.
+등록된 인코더가 없거나 아무도 값을 처리하지 못하면 `PreviewEncoderNotFoundError`다.
+명시적으로 요청한 프리뷰가 조용히 사라지면 노드 팩 초기화 누락을 성공으로 오해하기
+때문이다. Tensor 출력도 인코더가 없으면 실패한다. Model 같은 불투명 핸들은 프리뷰
+대상이 아니므로 전송 참조가 비어 있을 수 있다. `ctx.progress(preview=...)` 는 data URI,
+`NodeResult(preview=...)` 와 JSON 이 아닌 인코딩 가능한 출력은 asset 이 된다. 모든
+인코딩 실패는 해당 노드의 `node.error` 로 보고하고 실행을 실패시킨다.
 
 ---
 

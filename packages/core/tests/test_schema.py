@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from nodal import Combo, Image, Socket, as_type, register_combo_provider
 
 COMBO_PROVIDER_NAME = "tests.dynamic-models"
@@ -24,3 +26,11 @@ def test_socket_normalizes_catalog_name_classes() -> None:
 
     assert socket.type == as_type(Image)
     assert socket.type.describe() == "Image"
+
+
+def test_image_contract_keeps_core_alias_neutral_and_socket_float32_only() -> None:
+    """core의 `Image.T`는 Any이고 실제 소켓 정본은 float32 하나다."""
+    descriptor = as_type(Image)
+
+    assert Image.T is Any
+    assert descriptor.dtypes == frozenset({"float32"})  # type: ignore[attr-defined]

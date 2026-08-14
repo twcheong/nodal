@@ -87,7 +87,7 @@ from .graph import Graph, Link, Node
 from .preview import AssetPreview, encode_preview
 from .registry import NodeRegistry, NodeTypeNotFoundError
 from .schema import NodeResult, NodeSchema
-from .types import is_compatible, to_type_expr
+from .types import TensorType, is_compatible, to_type_expr
 
 __all__ = [
     "Blocked",
@@ -893,7 +893,12 @@ def _output_refs(
         inline = value if _is_json_safe(value) else None
         asset = None
         if inline is None:
-            preview = encode_preview(value, assets=assets, persistent=True)
+            preview = encode_preview(
+                value,
+                assets=assets,
+                persistent=True,
+                required=spec is not None and isinstance(spec.type, TensorType),
+            )
             if isinstance(preview, AssetPreview):
                 asset = preview.asset
         refs.append(

@@ -49,6 +49,9 @@
 - **결정**: 프리뷰 인코더는 `Preview` 대신 `EncodedPreview(data, media_type, width,
   height)` 를 반환한다. core 가 `ctx.progress` 는 inline data URI, `NodeResult.preview`와
   비-JSON 출력은 실행별 `AssetStore`의 asset 으로 만든다.
+- **결정**: 명시적 프리뷰와 Tensor 출력에 맞는 인코더가 없으면
+  `PreviewEncoderNotFoundError`로 실패한다. Model 같은 불투명 핸들의 빈 전송 참조만
+  허용한다. 인코더 등록 누락을 조용한 성공으로 숨기지 않는다.
 - **결정**: `execute(..., assets=...)`를 추가하고 server 의 업로드 라우트와 실행 큐가
   같은 저장소 인스턴스를 공유한다. `RunResult.references`가 WS와 REST에 같은
   `OutputRef`를 공급한다.

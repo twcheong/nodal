@@ -24,6 +24,7 @@ from nodal import (
     NodeResult,
     NodeStarted,
     NullCache,
+    PreviewEncoderNotFoundError,
     RecordingEventSink,
     RunDone,
     RunStarted,
@@ -309,3 +310,40 @@ async def test_preview_encoding_failure_is_attributed_to_the_node() -> None:
     errors = events.of_type(NodeError)
     assert len(errors) == 1
     assert errors[0].node_id == "broken"  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize("explicit_preview", [True, False])
+async def test_missing_encoder_fails_explicit_preview_and_tensor_output(
+    explicit_preview: bool,
+) -> None:
+    """인코더 등록 누락은 프리뷰와 Tensor 출력을 조용히 버리지 않는다."""
+    token = object()
+
+    @node(id="test.MissingEncoder", category="test")
+    class MissingEncoder:
+        returns = {"image": Image}
+
+        def run(self) -> NodeResult:
+            return NodeResult(token, preview=token if explicit_preview else None)
+
+    registry = NodeRegistry()
+    registry.register(MissingEncoder)
+    events = RecordingEventSink()
+    clear_preview_encoders()
+
+    with pytest.raises(NodeExecutionError) as caught:
+        await execute(
+            parse_graph(
+                {"nodes": {"image": {"type": "test.MissingEncoder"}}, "outputs": ["image"]}
+            ),
+            ["image"],
+            registry=registry,
+            cache=NullCache(),
+            events=events,
+            cancel_token=CancelToken(),
+        )
+
+    assert isinstance(caught.value.cause, PreviewEncoderNotFoundError)
+    errors = events.of_type(NodeError)
+    assert len(errors) == 1
+    assert errors[0].node_id == "image"  # type: ignore[attr-defined]
