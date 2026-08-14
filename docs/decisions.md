@@ -278,3 +278,26 @@
 - **영향 범위**: `packages/core/src/nodal/__init__.py`, `packages/core/tests/test_schema.py`,
   `docs/design.md` §4.2
 - **되돌릴 수 있나**: 예 — M6 확장 생태계가 이 API를 쓰기 전까지는 이름을 바꿀 수 있다.
+
+### 2026-08-14 · Codex · M2 스펙 모호 — API 소켓 타입의 문자열 문법
+
+- **결정**: `/api/nodes`의 `InputSocketModel.type`·`OutputSocketModel.type` 문자열은
+  `types.json`의 이름을 기본으로 해석하고, OpenAPI 설명에 예시로 적힌 `List[T]`와
+  design.md §4.3의 `Union[A, B]`만 얕은 문자열 문법으로 구조화한다. 실제 호환 판정은
+  새로 구현하지 않고 기존 `graph/typesystem.ts`에 위임한다.
+- **이유**: OpenAPI 계약은 소켓 타입을 구조화 서술자가 아닌 `string`으로 전송하며
+  `List[Image]` 예시는 있지만 중첩 타입을 기계적으로 파싱할 문법이나 구조화 필드가 없다.
+  현재 어댑터는 M2 카탈로그 표현을 지원하지만 Tensor의 인라인 shape/dtype 표현처럼 더
+  복잡한 문자열이 서버에서 오면 계약 확장이 필요하다.
+- **영향 범위**: `apps/web/src/editor/socketTypes.ts`
+- **되돌릴 수 있나**: 예 — OpenAPI가 구조화 `TypeExpr`을 보내면 문자열 어댑터를 제거할 수 있다.
+
+### 2026-08-14 · Codex · M2 스펙 모호 — 실행 실패의 터미널 WS 이벤트
+
+- **결정**: `node.error`를 받은 실행은 뒤이어 `run.done`이 와도 프론트 상태를 `failed`로
+  유지한다. `run.done`은 전송 완료 신호로만 취급한다.
+- **이유**: `RunStatus`에는 `failed`가 있지만 `WsEvent` 유니온에는 `run.failed`가 없고,
+  `node.error` 이후 어떤 터미널 이벤트가 오는지 design.md §6에 명시되지 않았다. 오류를
+  성공으로 덮는 것보다 노드 오류를 보존하는 해석이 사용자에게 안전하다.
+- **영향 범위**: `apps/web/src/state/editorStore.ts`, 목 실행 클라이언트
+- **되돌릴 수 있나**: 예 — `run.failed` 이벤트가 계약에 추가되면 그 이벤트로 전환한다.

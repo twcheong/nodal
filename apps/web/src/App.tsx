@@ -1,63 +1,146 @@
-/**
- * M0 자리표시자.
- *
- * 캔버스(@xyflow/react)와 노드 팔레트는 M2 에서 들어온다. 지금 이 화면이
- * 증명하는 것은 하나뿐이다: 프론트가 백엔드에서 생성된 캐논 스키마를 그대로
- * 읽어 문서를 검증할 수 있다.
- */
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { ReactFlowProvider } from "@xyflow/react";
 
-import { useMemo, useState } from "react";
-
+import { createGraphApiClient } from "./api";
+import { GraphCanvas, type CanvasHandle } from "./components/GraphCanvas";
+import { Inspector } from "./components/Inspector";
+import { NodePalette } from "./components/NodePalette";
+import { Toolbar } from "./components/Toolbar";
 import { validateGraphDocument } from "./graph/schema";
-
-const SAMPLE = JSON.stringify(
-  {
-    nodal_version: "1",
-    nodes: {
-      n_c3d4: { type: "image.Load", inputs: { path: "cat.png" } },
-      n_a1b2: {
-        type: "image.Resize",
-        inputs: { image: { $link: ["n_c3d4", "image"] }, width: 512 },
-      },
-    },
-    outputs: ["n_a1b2"],
-  },
-  null,
-  2,
-);
+import { useEditorStore } from "./state/editorStore";
 
 export function App(): React.JSX.Element {
-  const [text, setText] = useState(SAMPLE);
+  const api = useMemo(() => createGraphApiClient(), []);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const canvas = useRef<CanvasHandle>(null);
+  const graph = useEditorStore((state) => state.graph);
+  const runStatus = useEditorStore((state) => state.runStatus);
+  const message = useEditorStore((state) => state.message);
+  const fps = useEditorStore((state) => state.benchmarkFps);
+  const setSchemas = useEditorStore((state) => state.setSchemas);
+  const setCatalogError = useEditorStore((state) => state.setCatalogError);
+  const loadGraph = useEditorStore((state) => state.loadGraph);
+  const setIssues = useEditorStore((state) => state.setIssues);
+  const startRun = useEditorStore((state) => state.startRun);
+  const handleEvent = useEditorStore((state) => state.handleEvent);
+  const setMessage = useEditorStore((state) => state.setMessage);
 
-  const result = useMemo(() => {
+  useEffect(() => {
+    let active = true;
+    api.listNodes()
+      .then((response) => {
+        if (active) setSchemas(response.nodes ?? []);
+      })
+      .catch((error: unknown) => {
+        if (active) setCatalogError(readError(error));
+      });
+    const unsubscribe = api.subscribe(handleEvent);
+    return () => {
+      active = false;
+      unsubscribe();
+      api.dispose();
+    };
+  }, [api, handleEvent, setCatalogError, setSchemas]);
+
+  useEffect(() => {
+    const timer = globalThis.setTimeout(() => {
+      localStorage.setItem("nodal.lastGraph", JSON.stringify(graph));
+    }, 300);
+    return () => globalThis.clearTimeout(timer);
+  }, [graph]);
+
+  const save = () => {
+    const blob = new Blob([JSON.stringify(graph, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `nodal-${graph.id ?? "graph"}.nodal.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setMessage("캐논 그래프를 저장했습니다");
+  };
+
+  const openGraph = async (file: File) => {
     try {
-      return validateGraphDocument(JSON.parse(text));
-    } catch {
-      return { valid: false as const, issues: [{ location: "graph", message: "JSON 파싱 실패" }] };
+      const parsed: unknown = JSON.parse(await file.text());
+      const result = validateGraphDocument(parsed);
+      if (!result.valid) {
+        setMessage(`불러오기 실패: ${result.issues[0]?.location} ${result.issues[0]?.message}`);
+        return;
+      }
+      const semantic = await api.validateGraph(result.document);
+      if (!semantic.valid) {
+        setIssues(semantic.issues ?? []);
+        setMessage("연결 또는 소켓 문제를 먼저 고쳐주세요");
+        return;
+      }
+      loadGraph(result.document);
+    } catch (error) {
+      setMessage(`불러오기 실패: ${readError(error)}`);
     }
-  }, [text]);
+  };
+
+  const run = useCallback(async (useCache: boolean) => {
+    try {
+      const validation = await api.validateGraph(graph);
+      setIssues(validation.issues ?? []);
+      if (!validation.valid) {
+        setMessage("실행 전 검증에서 문제가 발견됐습니다");
+        return;
+      }
+      const response = await api.createRun(graph, useCache);
+      startRun(response.run_id);
+    } catch (error) {
+      setMessage(`실행 요청 실패: ${readError(error)}`);
+    }
+  }, [api, graph, setIssues, setMessage, startRun]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key !== "Enter") return;
+      event.preventDefault();
+      void run(!event.shiftKey);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [run]);
 
   return (
-    <main style={{ fontFamily: "ui-monospace, monospace", padding: "1.5rem", lineHeight: 1.6 }}>
-      <h1 style={{ fontSize: "1.1rem" }}>nodal — 캐논 그래프 검증 (M0)</h1>
-      <textarea
-        value={text}
-        onChange={(event) => setText(event.target.value)}
-        spellCheck={false}
-        rows={20}
-        style={{ width: "100%", fontFamily: "inherit", fontSize: "0.85rem" }}
-      />
-      {result.valid ? (
-        <p>유효한 캐논 그래프 문서다.</p>
-      ) : (
-        <ul>
-          {result.issues.map((issue) => (
-            <li key={`${issue.location}:${issue.message}`}>
-              <code>{issue.location}</code> — {issue.message}
-            </li>
-          ))}
-        </ul>
-      )}
-    </main>
+    <ReactFlowProvider>
+      <main className="app-shell">
+        <Toolbar
+          mode={api.mode}
+          runStatus={runStatus}
+          fps={fps}
+          onRun={(useCache) => void run(useCache)}
+          onSave={save}
+          onLoad={() => fileInput.current?.click()}
+          onBenchmark={() => void canvas.current?.benchmark()}
+        />
+        <div className="workspace">
+          <NodePalette />
+          <GraphCanvas ref={canvas} />
+          <Inspector />
+        </div>
+        {message ? (
+          <button className="toast" type="button" onClick={() => setMessage(null)}>{message}<span>×</span></button>
+        ) : null}
+        <input
+          ref={fileInput}
+          hidden
+          type="file"
+          accept=".json,.nodal.json,application/json"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void openGraph(file);
+            event.target.value = "";
+          }}
+        />
+      </main>
+    </ReactFlowProvider>
   );
+}
+
+function readError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
