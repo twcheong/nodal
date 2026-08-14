@@ -77,6 +77,18 @@ WS 이벤트는 OpenAPI 가 다루지 않으므로 `tools/export_openapi.py` 가
 `components.schemas` 에 주입한다. core 의 dataclass 와 서버 pydantic 미러가
 어긋나지 않는지는 `packages/server/tests/test_openapi_export.py` 가 검사한다.
 
+## 서버 (M2)
+
+```bash
+uv run nodal serve                  # http://127.0.0.1:8188 (--port 로 변경)
+uv run nodal serve --port 8199
+```
+
+`/docs` 에 OpenAPI UI 가 뜬다. WS 는 `ws://호스트/ws` 하나이고 전역 스트림이다.
+
+서버는 노드 팩을 import 하지 않는다 — `create_app(registry)` 가 레지스트리를
+주입받는다. `nodal serve` 가 그 둘을 붙이는 유일한 지점이다.
+
 ## 그래프 실행 (M1)
 
 ```bash

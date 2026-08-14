@@ -1,11 +1,11 @@
 """FastAPI 앱 — 라우트 계약 (docs/design.md §6).
 
-> **계약 파일.** 라우트 시그니처와 응답 모델만 확정한다. 본문은 M2 구현
-> 단계에서 채운다 — 지금 호출하면 501 이 나간다.
+> **계약 파일.** 라우트 데코레이터(경로 · 응답 모델 · 상태 코드)는
+> `schemas/openapi.json` 을 결정한다. 프론트가 그 산출물에서 타입을 생성하고
+> 있으므로 **데코레이터를 바꾸면 프론트가 통째로 어긋난다** (AGENTS.md 협업 규칙 7).
 
-이 파일이 존재하는 이유는 `schemas/openapi.json` 을 만들기 위해서다. 프론트는
-그 산출물에서 타입을 생성하므로, 라우트가 선언되지 않으면 프론트가 시작할 수
-없다.
+노드 레지스트리는 **주입받는다.** 서버는 어떤 노드 팩도 import 하지 않는다 —
+의존성은 `server → core` 한 방향뿐이다 (AGENTS.md 아키텍처 절).
 
 `/ws` 이벤트는 OpenAPI 가 다루지 않는다. `tools/export_openapi.py` 가
 `components.schemas` 에 주입하고 `x-nodal-ws-events` 로 표시한다.
@@ -13,11 +13,20 @@
 
 from __future__ import annotations
 
+import contextlib
+import logging
+from collections.abc import AsyncIterator
 from typing import Annotated
 
-from fastapi import FastAPI, File, Path, Query, UploadFile, WebSocket, status
+from fastapi import FastAPI, File, HTTPException, Path, Query, UploadFile, WebSocket, status
 from fastapi.responses import Response
+from fastapi.websockets import WebSocketDisconnect
 
+from nodal import Cache, NodeRegistry, load_catalog, validate_for_execution
+
+from .assets import AssetStore
+from .hub import EventHub
+from .queue import RunQueue, RunRecord
 from .schemas import (
     AssetInfo,
     CancelRunResponse,
@@ -26,14 +35,19 @@ from .schemas import (
     ErrorResponse,
     ExtensionsResponse,
     ModelsResponse,
+    NodeSchemaModel,
     NodesResponse,
     RunDetail,
     RunListResponse,
+    RunSummary,
     ValidateRequest,
     ValidateResponse,
 )
+from .wire import error_body, issue_models, node_schema_model, refs_from_values
 
 __all__ = ["create_app"]
+
+_LOGGER = logging.getLogger("nodal.server")
 
 API_VERSION = "1"
 
@@ -48,9 +62,47 @@ _ERRORS: dict[int | str, dict[str, object]] = {
 }
 
 
-def create_app() -> FastAPI:
-    """앱을 만든다. 테스트가 자기 인스턴스를 갖도록 팩토리로 둔다."""
+def _http_error(
+    status_code: int,
+    code: str,
+    message: str,
+    issues: object = (),
+) -> HTTPException:
+    """`ErrorResponse` 모양을 갖춘 예외. 에러 본문은 언제나 하나의 모양이다."""
+    body = error_body(code, message, issues)  # type: ignore[arg-type]
+    return HTTPException(status_code=status_code, detail={"error": body.model_dump(mode="json")})
+
+
+def create_app(
+    registry: NodeRegistry | None = None,
+    *,
+    cache: Cache | None = None,
+    history_limit: int = 100,
+) -> FastAPI:
+    """앱을 만든다. 테스트가 자기 인스턴스를 갖도록 팩토리로 둔다.
+
+    Args:
+        registry: 실행에 쓸 노드 레지스트리. 서버는 노드 팩을 import 하지 않으므로
+            호출자가 채워서 넘긴다. 없으면 빈 레지스트리 — 모든 실행이 "등록되지
+            않은 노드 타입"으로 실패한다.
+        cache: 실행 사이에 공유할 캐시. 없으면 LRU 를 새로 만든다.
+        history_limit: 히스토리 보관 상한.
+    """
+    node_registry = registry if registry is not None else NodeRegistry()
+    hub = EventHub()
+    runs = RunQueue(node_registry, hub, cache=cache, history_limit=history_limit)
+    assets = AssetStore()
+
+    @contextlib.asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        runs.start()
+        try:
+            yield
+        finally:
+            await runs.aclose()
+
     app = FastAPI(
+        lifespan=lifespan,
         title="nodal API",
         version=API_VERSION,
         summary="노드 그래프 실행 서버",
@@ -72,7 +124,11 @@ def create_app() -> FastAPI:
         tags=["nodes"],
     )
     async def list_nodes() -> NodesResponse:
-        raise NotImplementedError
+        models: list[NodeSchemaModel] = [
+            node_schema_model(schema)
+            for schema in sorted(node_registry, key=lambda schema: schema.id)
+        ]
+        return NodesResponse(nodes=models, types_version=load_catalog().version)
 
     @app.post(
         "/api/graph/validate",
@@ -86,7 +142,9 @@ def create_app() -> FastAPI:
         tags=["graph"],
     )
     async def validate_graph_endpoint(request: ValidateRequest) -> ValidateResponse:
-        raise NotImplementedError
+        outputs = request.outputs if request.outputs is not None else list(request.graph.outputs)
+        issues = validate_for_execution(request.graph, node_registry, outputs)
+        return ValidateResponse(valid=not issues, issues=issue_models(issues))
 
     # ---------------------------------------------------------------- 실행
 
@@ -103,7 +161,31 @@ def create_app() -> FastAPI:
         tags=["runs"],
     )
     async def create_run(request: CreateRunRequest) -> CreateRunResponse:
-        raise NotImplementedError
+        outputs = request.outputs if request.outputs is not None else list(request.graph.outputs)
+        if not outputs:
+            raise _http_error(
+                status.HTTP_400_BAD_REQUEST,
+                "no_outputs",
+                "실행할 출력 노드가 없다. 그래프의 `outputs` 를 채우거나 `outputs` 를 지정하라",
+            )
+
+        # 큐 진입 전에 전체 검증. 첫 노드를 돌리기 전에 실패시킨다 (design.md §2 원칙 2).
+        issues = validate_for_execution(request.graph, node_registry, outputs)
+        if issues:
+            raise _http_error(
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                "graph_invalid",
+                f"그래프 검증 실패 ({len(issues)}건)",
+                issues,
+            )
+
+        record = runs.enqueue(
+            request.graph,
+            outputs,
+            use_cache=request.use_cache,
+            priority=request.priority,
+        )
+        return CreateRunResponse(run_id=record.run_id, status=record.status)
 
     @app.get(
         "/api/runs",
@@ -114,7 +196,13 @@ def create_app() -> FastAPI:
     async def list_runs(
         limit: Annotated[int, Query(ge=1, le=500, description="히스토리 최대 개수")] = 50,
     ) -> RunListResponse:
-        raise NotImplementedError
+        running = runs.running
+        return RunListResponse(
+            running=_summary(running) if running is not None else None,
+            queued=[_summary(record) for record in runs.queued()],
+            history=[_summary(record) for record in runs.history(limit)],
+            limit=runs.history_limit,
+        )
 
     @app.get(
         "/api/runs/{run_id}",
@@ -124,7 +212,12 @@ def create_app() -> FastAPI:
         tags=["runs"],
     )
     async def get_run(run_id: Annotated[str, Path(description="실행 ID")]) -> RunDetail:
-        raise NotImplementedError
+        record = runs.get(run_id)
+        if record is None:
+            raise _http_error(
+                status.HTTP_404_NOT_FOUND, "run_not_found", f"그런 실행이 없다: {run_id!r}"
+            )
+        return _detail(record)
 
     @app.delete(
         "/api/runs/{run_id}",
@@ -135,7 +228,12 @@ def create_app() -> FastAPI:
         tags=["runs"],
     )
     async def cancel_run(run_id: Annotated[str, Path(description="실행 ID")]) -> CancelRunResponse:
-        raise NotImplementedError
+        record = runs.cancel(run_id)
+        if record is None:
+            raise _http_error(
+                status.HTTP_404_NOT_FOUND, "run_not_found", f"그런 실행이 없다: {run_id!r}"
+            )
+        return CancelRunResponse(run_id=record.run_id, status=record.status)
 
     # ------------------------------------------------------ 모델 · 에셋 · 확장
 
@@ -147,7 +245,9 @@ def create_app() -> FastAPI:
         tags=["models"],
     )
     async def list_models() -> ModelsResponse:
-        raise NotImplementedError
+        # 모델 스캐너는 M4 다 (roadmap M4). 형태만 고정하고 빈 목록을 낸다 —
+        # 프론트가 "아직 없음"과 "엔드포인트 없음"을 구분할 수 있어야 한다.
+        return ModelsResponse(models=[], kinds=[])
 
     @app.post(
         "/api/assets",
@@ -161,7 +261,21 @@ def create_app() -> FastAPI:
     async def upload_asset(
         file: Annotated[UploadFile, File(description="업로드할 파일")],
     ) -> AssetInfo:
-        raise NotImplementedError
+        data = await file.read()
+        try:
+            stored = assets.put(
+                data,
+                media_type=file.content_type or "application/octet-stream",
+                filename=file.filename,
+            )
+        except ValueError as exc:
+            raise _http_error(status.HTTP_400_BAD_REQUEST, "asset_too_large", str(exc)) from exc
+        return AssetInfo(
+            hash=stored.hash,
+            size_bytes=stored.size_bytes,
+            media_type=stored.media_type,
+            filename=stored.filename,
+        )
 
     @app.get(
         "/api/assets/{asset_hash}",
@@ -179,7 +293,12 @@ def create_app() -> FastAPI:
         tags=["assets"],
     )
     async def get_asset(asset_hash: Annotated[str, Path(description="내용 해시")]) -> Response:
-        raise NotImplementedError
+        stored = assets.get(asset_hash)
+        if stored is None:
+            raise _http_error(
+                status.HTTP_404_NOT_FOUND, "asset_not_found", f"그런 에셋이 없다: {asset_hash!r}"
+            )
+        return Response(content=stored.data, media_type=stored.media_type)
 
     @app.get(
         "/api/extensions",
@@ -189,7 +308,9 @@ def create_app() -> FastAPI:
         tags=["extensions"],
     )
     async def list_extensions() -> ExtensionsResponse:
-        raise NotImplementedError
+        # 확장 로더는 M6 다 (roadmap M6). 실패한 확장을 숨기지 않는다는 계약만
+        # 먼저 세워 둔다 — 지금은 로드한 것도 실패한 것도 없다.
+        return ExtensionsResponse(loaded=[], failed=[])
 
     # ------------------------------------------------------------------ WS
 
@@ -203,7 +324,55 @@ def create_app() -> FastAPI:
 
         OpenAPI 는 WS 를 다루지 않으므로 이벤트 스키마는
         `tools/export_openapi.py` 가 `components.schemas` 에 주입한다.
+
+        이 클라이언트가 끊겨도 실행은 계속된다 — 구독이 정리될 뿐이다.
         """
-        raise NotImplementedError
+        await socket.accept()
+        try:
+            async for message in hub.stream():
+                await socket.send_json(message)
+        except WebSocketDisconnect:
+            pass
+        except Exception:
+            _LOGGER.debug("WS 클라이언트가 비정상 종료했다", exc_info=True)
+        finally:
+            with contextlib.suppress(Exception):
+                await socket.close()
+
+    # ------------------------------------------------------------ 응답 조립
+
+    def _summary(record: RunRecord) -> RunSummary:
+        return RunSummary(
+            run_id=record.run_id,
+            status=record.status,
+            node_count=record.node_count,
+            elapsed_ms=record.elapsed_ms,
+            created_at=record.created_at,
+            started_at=record.started_at,
+            finished_at=record.finished_at,
+        )
+
+    def _detail(record: RunRecord) -> RunDetail:
+        result = record.result
+        outputs = {}
+        if result is not None:
+            for node_id, values in result.outputs.items():
+                node = record.graph.nodes.get(node_id)
+                schema = node_registry.schemas().get(node.type) if node is not None else None
+                outputs[node_id] = refs_from_values(values, schema)
+
+        return RunDetail(
+            run_id=record.run_id,
+            status=record.status,
+            outputs=outputs,
+            executed=list(result.executed) if result else [],
+            cached=list(result.cached) if result else [],
+            blocked=list(result.blocked) if result else [],
+            elapsed_ms=record.elapsed_ms,
+            created_at=record.created_at,
+            started_at=record.started_at,
+            finished_at=record.finished_at,
+            error=record.error,
+        )
 
     return app

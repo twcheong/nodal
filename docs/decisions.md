@@ -67,6 +67,34 @@
 **되돌릴 수 있나**: 아니오 — 다른 에이전트가 이 시그니처로 테스트를 작성하면 양쪽이 함께 깨진다.
 바꾸려면 사용자 확인이 필요하다 (AGENTS.md 협업 규칙 7).
 
+### 2026-08-13 · Claude Code · M2 서버 구현 — 합성 지점과 인메모리 에셋
+
+- **결정 1 (합성 지점)**: `create_app(registry)` 로 레지스트리를 **주입받는다.**
+  `packages/server` 는 어떤 노드 팩도 import 하지 않는다. 둘을 붙이는
+  `nodal serve` 는 노드 팩 CLI 에 두고, `nodal-nodes-core[serve]` 선택적 extra 로
+  `nodal-server` 를 건다
+- **이유**: AGENTS.md 의 의존성 화살표는 `server → core`, `nodes-* → core` 두 개뿐이다.
+  서버가 노드 팩을 알면 §8 의 플러그인 구조가 처음부터 무너진다. 반대로 노드 팩이
+  서버를 **필수로** 의존해도 같은 문제라, 필수가 아닌 extra 로 뒀다
+- **결정 2 (에셋)**: `POST/GET /api/assets` 를 인메모리 저장소로 구현했다
+- **이유**: 계약상 M2 엔드포인트지만 `AssetStore` 의 제대로 된 설계는 M3 다
+  (roadmap M3). 지금 디스크 레이아웃을 정하면 M3 가 그것을 물려받게 되므로,
+  엔드포인트가 실제로 동작하는 데까지만 하고 저장 방식은 M3 에 넘긴다
+- **영향 범위**: `packages/server/src/nodal_server/{app,assets}.py`,
+  `packages/nodes-core/{pyproject.toml,src/nodal_nodes_core/cli.py}`
+- **되돌릴 수 있나**: 예
+
+### 2026-08-13 · Claude Code · WS 브로드캐스트 — 느린 구독자는 이벤트를 잃는다
+
+- **결정**: 구독자마다 유한 버퍼(256)를 두고, 차면 **가장 오래된 이벤트를 버린다.**
+  `EventHub.emit` 은 절대 블록하지 않고 절대 예외를 던지지 않는다
+- **이유**: core 의 `EventSink.emit` 은 동기이고 실행 루프 한가운데서 불린다.
+  여기서 네트워크를 기다리면 느린 클라이언트 하나가 노드 실행을 멈춘다.
+  잃어도 되는 이유는 놓친 클라이언트가 `GET /api/runs/{id}` 로 최종 상태를 다시
+  얻을 수 있기 때문이다 — `RunDetail` 에 `executed`·`cached` 를 둔 것이 이 설계와 짝이다
+- **영향 범위**: `packages/server/src/nodal_server/hub.py`
+- **되돌릴 수 있나**: 예 — 버퍼 크기와 축출 방향은 상수 하나다
+
 ### 2026-08-13 · Claude Code · M2 API 계약 (사용자 확인 후 확정)
 
 `docs/design.md` §6 이 답을 주지 않는 지점 4개를 **사용자에게 물어 확정**했다. 임의 해석하지 않았다.

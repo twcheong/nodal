@@ -9,6 +9,12 @@ dependencies = [
     "nodal-core",
 ]
 
+[project.optional-dependencies]
+# `nodal serve` 의 합성 지점. server 는 노드 팩을 import 하지 않고 (의존성은
+# server → core 한 방향), 노드 팩도 server 를 **필수로** 의존하지 않는다.
+# 둘을 붙이는 지점이 어딘가에는 있어야 해서 선택적 extra 로 둔다.
+serve = ["nodal-server"]
+
 [project.scripts]
 # M1 의 유일한 사용자 인터페이스. core 가 아니라 여기 있는 이유는 core 가
 # 노드를 하나도 모르기 때문이다 — 실행하려면 레지스트리를 채울 팩이 필요하다.
@@ -23,3 +29,4 @@ packages = ["src/nodal_nodes_core"]
 
 [tool.uv.sources]
 nodal-core = { workspace = true }
+nodal-server = { workspace = true }

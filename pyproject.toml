@@ -32,6 +32,7 @@ dev = [
     "pytest-asyncio>=0.24",
     "mypy>=1.13",
     "jsonschema>=4.26.0",
+    "httpx>=0.28.1",
 ]
 
 # ---------------------------------------------------------------- ruff
@@ -73,7 +74,9 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"**/tests/**" = ["ANN"]
+# 테스트도 `@node` 로 노드를 정의한다. RUF012 를 켜 두면 `returns = {...}` 가
+# 전부 걸린다 — 노드 팩과 같은 이유로 면제한다.
+"**/tests/**" = ["ANN", "RUF012"]
 "tools/*" = ["ANN"]
 # 노드 팩의 `returns = {"image": Image}` 는 공유 가변 상태가 아니라 **선언**이다
 # (design.md §4.2). RUF012 를 켜 두면 노드 저자가 전부 ClassVar 로 감싸야 하고,

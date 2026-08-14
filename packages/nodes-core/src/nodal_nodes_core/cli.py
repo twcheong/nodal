@@ -5,9 +5,10 @@ M1 은 UI 도 GPU 도 없이 완성한다. 이 CLI 가 M1 의 유일한 사용�
 확인하는 도구다.
 
     nodal run examples/arithmetic.nodal.json
-    nodal run graph.json --watch value=42     # 리터럴을 바꿔 두 번 실행
+    nodal run graph.json --twice --set seed.value=6   # 캐시 무효화를 눈으로
     nodal nodes                                # 등록된 노드 목록
     nodal validate graph.json                  # 실행 없이 검증만
+    nodal serve                                # 개발 서버 (M2)
 
 이 CLI 가 `packages/core` 가 아니라 노드 팩에 있는 이유: core 는 노드를 하나도
 모른다. 실행하려면 레지스트리에 무언가 들어 있어야 하고, 그 "무언가"를 아는
@@ -238,6 +239,29 @@ def _validate(args: argparse.Namespace) -> int:
     return 1
 
 
+def _serve(args: argparse.Namespace) -> int:
+    """개발 서버를 띄운다.
+
+    여기가 **합성 지점**이다. `packages/server` 는 어떤 노드 팩도 import 하지
+    않으므로 (의존성은 `server → core` 한 방향), 레지스트리를 채워 넘기는 일은
+    노드를 아는 쪽이 한다.
+    """
+    try:
+        import uvicorn
+
+        from nodal_server.app import create_app
+    except ImportError as exc:  # pragma: no cover — 설치 안내 경로
+        raise SystemExit(
+            "서버 의존성이 없다. `uv sync --extra serve` 또는 "
+            "`pip install nodal-nodes-core[serve]` 를 실행하라."
+        ) from exc
+
+    registry = _build_registry()
+    print(f"노드 {len(registry)}개 등록. http://{args.host}:{args.port}/docs")
+    uvicorn.run(create_app(registry), host=args.host, port=args.port, log_level=args.log_level)
+    return 0
+
+
 def _nodes(args: argparse.Namespace) -> int:
     registry = _build_registry()
     schemas = sorted(registry.search(args.query or "", limit=1000), key=lambda s: s.id)
@@ -301,6 +325,12 @@ def _parser() -> argparse.ArgumentParser:
     validate = sub.add_parser("validate", help="실행 없이 검증만 한다")
     validate.add_argument("graph", type=Path)
     validate.set_defaults(handler=_validate)
+
+    serve = sub.add_parser("serve", help="개발 서버를 띄운다 (REST + WebSocket)")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8188)
+    serve.add_argument("--log-level", default="info")
+    serve.set_defaults(handler=_serve)
 
     nodes = sub.add_parser("nodes", help="등록된 노드를 보여준다")
     nodes.add_argument("query", nargs="?", help="퍼지 검색어 (별칭·한글 포함)")
