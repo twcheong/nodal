@@ -539,4 +539,4 @@ class LoadCheckpoint:
 1. 그래프 저장소: 파일(`.nodal.json`) vs SQLite 라이브러리 → **파일 권장**, git 친화적
 2. ComfyUI 워크플로 임포트 지원 여부 → 사용자 유입에는 강력하지만 §1.2의 부채를 일부 다시 들여옴
 3. 다중 실행 워커 (GPU 여러 장) → M6 이후
-4. 라이선스 → `license.md` 참조 (M3까지 보류)
+4. ~~라이선스~~ → **해소됨.** Apache-2.0 확정 (2026-08-14, `license.md`)

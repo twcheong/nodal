@@ -2,7 +2,7 @@
   "name": "nodal-monorepo",
   "version": "0.0.0",
   "private": true,
-  "license": "LicenseRef-UNDECIDED",
+  "license": "Apache-2.0",
   "packageManager": "pnpm@11.21.0",
   "engines": {
     "node": ">=20"

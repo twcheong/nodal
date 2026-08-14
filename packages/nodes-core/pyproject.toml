@@ -1,9 +1,8 @@
-# ⚠️ license 필드 없음 — 의도적. docs/license.md 참조.
-
 [project]
 name = "nodal-nodes-core"
 version = "0.0.0"
 description = "nodal — 기본 노드 팩 (유틸 · 수학 · 문자열 · 파일)"
+license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = [
     "nodal-core",

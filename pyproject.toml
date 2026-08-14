@@ -1,12 +1,10 @@
 # nodal monorepo root — 워크스페이스 앵커. 배포되지 않는다.
-#
-# ⚠️ license 필드는 의도적으로 비어 있다. docs/license.md 참조.
-#    M3 전에 소유자가 결정하기 전까지 어떤 라이선스도 명시하지 않는다.
 
 [project]
 name = "nodal-workspace"
 version = "0.0.0"
 description = "nodal monorepo root (not published)"
+license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = [
     "nodal-core",
