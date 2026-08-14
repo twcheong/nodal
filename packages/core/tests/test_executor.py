@@ -2,13 +2,24 @@
 
 from __future__ import annotations
 
+import hashlib
 from typing import ClassVar
+
+import pytest
 
 from nodal import (
     INT,
+    AssetPreview,
+    AssetRef,
     CancelToken,
+    EncodedPreview,
+    Image,
+    InlinePreview,
     Int,
     NodeDone,
+    NodeError,
+    NodeExecutionError,
+    NodePreview,
     NodeRegistry,
     NodeResult,
     NodeStarted,
@@ -17,9 +28,11 @@ from nodal import (
     RunDone,
     RunStarted,
     Type,
+    clear_preview_encoders,
     execute,
     node,
     parse_graph,
+    register_preview_encoder,
 )
 
 EXECUTION_GRAPH = {
@@ -37,6 +50,34 @@ EXECUTION_GRAPH = {
     },
     "outputs": ["sum"],
 }
+
+
+class _MemoryAssets:
+    def __init__(self) -> None:
+        self._data: dict[str, bytes] = {}
+        self._refs: dict[str, AssetRef] = {}
+
+    def put(
+        self,
+        data: bytes,
+        *,
+        media_type: str = "application/octet-stream",
+        filename: str | None = None,
+        width: int | None = None,
+        height: int | None = None,
+    ) -> AssetRef:
+        del filename
+        digest = hashlib.blake2b(data, digest_size=16).hexdigest()
+        ref = AssetRef(digest, media_type, len(data), width, height)
+        self._data[digest] = data
+        self._refs[digest] = ref
+        return ref
+
+    def get(self, digest: str) -> bytes | None:
+        return self._data.get(digest)
+
+    def ref(self, digest: str) -> AssetRef | None:
+        return self._refs.get(digest)
 
 
 def _execution_registry(calls: list[tuple[str, int]]) -> NodeRegistry:
@@ -182,3 +223,89 @@ async def test_output_node_is_selected_before_an_independent_ready_node() -> Non
     )
 
     assert calls == ["preview", "plain", "join"]
+
+
+async def test_preview_encoder_uses_inline_for_progress_and_asset_for_final_output() -> None:
+    """인코더는 바이트만 만들고 core가 실행별 저장·전송 정책을 적용한다."""
+    token = object()
+
+    @node(id="test.ImagePreview", category="test")
+    class ImagePreview:
+        returns = {"image": Image}
+
+        def run(self, ctx: object) -> NodeResult:
+            ctx.progress(1, 2, preview=token)  # type: ignore[attr-defined]
+            return NodeResult(token, preview=token)
+
+    def encoder(value: object) -> EncodedPreview | None:
+        if value is not token:
+            return None
+        return EncodedPreview(b"png-bytes", "image/png", 2, 3)
+
+    registry = NodeRegistry()
+    registry.register(ImagePreview)
+    events = RecordingEventSink()
+    assets = _MemoryAssets()
+    clear_preview_encoders()
+    register_preview_encoder(encoder)
+    try:
+        result = await execute(
+            parse_graph({"nodes": {"image": {"type": "test.ImagePreview"}}, "outputs": ["image"]}),
+            ["image"],
+            registry=registry,
+            cache=NullCache(),
+            events=events,
+            cancel_token=CancelToken(),
+            assets=assets,
+        )
+    finally:
+        clear_preview_encoders()
+
+    previews = [event.preview for event in events.of_type(NodePreview)]
+    assert isinstance(previews[0], InlinePreview)
+    assert previews[0].data_uri == "data:image/png;base64,cG5nLWJ5dGVz"
+    assert isinstance(previews[1], AssetPreview)
+    assert assets.get(previews[1].asset.hash) == b"png-bytes"
+
+    (ref,) = result.references["image"]
+    assert ref.asset == previews[1].asset
+    done = events.of_type(NodeDone)[0]
+    assert done.outputs[0].asset == previews[1].asset  # type: ignore[attr-defined]
+
+
+async def test_preview_encoding_failure_is_attributed_to_the_node() -> None:
+    """프리뷰 인코더 실패도 익명 run 실패가 아니라 node.error가 된다."""
+
+    @node(id="test.BrokenPreview", category="test")
+    class BrokenPreview:
+        returns = {"value": INT}
+
+        def run(self) -> NodeResult:
+            return NodeResult(1, preview=object())
+
+    def broken_encoder(_: object) -> EncodedPreview:
+        raise ValueError("preview failed")
+
+    registry = NodeRegistry()
+    registry.register(BrokenPreview)
+    events = RecordingEventSink()
+    clear_preview_encoders()
+    register_preview_encoder(broken_encoder)
+    try:
+        with pytest.raises(NodeExecutionError, match="preview failed"):
+            await execute(
+                parse_graph(
+                    {"nodes": {"broken": {"type": "test.BrokenPreview"}}, "outputs": ["broken"]}
+                ),
+                ["broken"],
+                registry=registry,
+                cache=NullCache(),
+                events=events,
+                cancel_token=CancelToken(),
+            )
+    finally:
+        clear_preview_encoders()
+
+    errors = events.of_type(NodeError)
+    assert len(errors) == 1
+    assert errors[0].node_id == "broken"  # type: ignore[attr-defined]

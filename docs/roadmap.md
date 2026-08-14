@@ -79,7 +79,7 @@
 - [ ] 노드: Load / Save / Resize / Crop / Blend / Mask / Composite
 - [ ] 노드 내 이미지 프리뷰 위젯
 - [ ] `AssetStore` (content-addressed, 해시 파일명)
-- [ ] PNG `tEXt` 메타데이터에 워크플로 임베딩
+- [ ] PNG `iTXt` 메타데이터에 UTF-8 워크플로 임베딩
 - [ ] PNG 드래그앤드롭 → 워크플로 복원
 
 **완료 기준**: GPU 없이도 쓸모 있는 이미지 처리 도구가 된다.

@@ -62,9 +62,10 @@ import time
 import traceback
 import uuid
 from collections.abc import Iterator, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
+from .assets import AssetStore, NullAssetStore
 from .cache import MISS, Cache, cache_key
 from .errors import GraphIssue, GraphValidationError, IssueCode
 from .events import (
@@ -83,6 +84,7 @@ from .events import (
     RunStarted,
 )
 from .graph import Graph, Link, Node
+from .preview import AssetPreview, encode_preview
 from .registry import NodeRegistry, NodeTypeNotFoundError
 from .schema import NodeResult, NodeSchema
 from .types import is_compatible, to_type_expr
@@ -217,6 +219,7 @@ class RunResult:
         cached: 캐시 히트로 건너뛴 노드 ID.
         blocked: 블로커 때문에 실행되지 않은 노드 ID.
         elapsed_ms: 총 소요 시간.
+        references: 노드 출력의 WS/REST 전송 참조. 원시 `outputs`와 분리한다.
 
     `executed` 와 `cached` 를 나눠 두는 것이 M1 완료 기준의 증거다 — "입력 하나를
     바꿨더니 그 아래만 재실행됐다"를 로그가 아니라 값으로 증명할 수 있다.
@@ -228,6 +231,7 @@ class RunResult:
     cached: tuple[str, ...] = ()
     blocked: tuple[str, ...] = ()
     elapsed_ms: int = 0
+    references: Mapping[str, tuple[OutputRef, ...]] = field(default_factory=dict)
 
 
 # ------------------------------------------------------------ 동적 그래프
@@ -613,6 +617,7 @@ async def execute(
     events: EventSink,
     cancel_token: CancelToken,
     run_id: str | None = None,
+    assets: AssetStore | None = None,
 ) -> RunResult:
     """그래프를 실행한다 (design.md §5.1).
 
@@ -630,6 +635,7 @@ async def execute(
         events: 진행률·프리뷰·캐시 히트 이벤트를 받을 싱크.
         cancel_token: 협조적 취소 토큰.
         run_id: 이벤트에 붙는 실행 ID. 없으면 새로 만든다.
+        assets: 실행 중인 노드와 출력 직렬화가 공유할 에셋 저장소.
 
     Returns:
         실행 요약. `executed` 와 `cached` 로 무엇이 재실행됐는지 알 수 있다.
@@ -648,6 +654,7 @@ async def execute(
     identifier = run_id or uuid.uuid4().hex
     started_at = time.perf_counter()
 
+    asset_store = assets if assets is not None else NullAssetStore()
     dyn = DynamicGraph(graph)
     plan = ExecutionList(dyn, cache, registry)
     for out_id in requested_outputs:
@@ -657,6 +664,7 @@ async def execute(
     executed: list[str] = []
     cached: list[str] = []
     blocked: list[str] = []
+    references: dict[str, tuple[OutputRef, ...]] = {}
 
     events.emit(RunStarted(t="run.started", run_id=identifier, node_count=len(plan.pending())))
 
@@ -692,21 +700,37 @@ async def execute(
             events.emit(NodeStarted(t="node.started", run_id=identifier, node_id=visible))
 
             inputs = resolve_inputs(node_id, dyn, schema, results)
-            ctx = NodeContext(visible, identifier, events, cancel_token)
+            ctx = NodeContext(visible, identifier, events, cancel_token, asset_store)
             outcome = await run_node(node_id, dyn, schema, inputs, ctx)
 
             match outcome:
                 case Success():
                     results[node_id] = outcome.outputs
                     executed.append(node_id)
+                    try:
+                        refs = _output_refs(outcome.outputs, schema, asset_store)
+                    except Exception as exc:
+                        events.emit(
+                            NodeError(
+                                t="node.error",
+                                run_id=identifier,
+                                node_id=visible,
+                                message=str(exc),
+                                traceback=tuple(
+                                    traceback.format_exception(type(exc), exc, exc.__traceback__)
+                                ),
+                            )
+                        )
+                        raise NodeExecutionError(visible, exc) from exc
                     if schema.cacheable:
                         cache.set(key, outcome.outputs)
+                    references[node_id] = refs
                     events.emit(
                         NodeDone(
                             t="node.done",
                             run_id=identifier,
                             node_id=visible,
-                            outputs=_output_refs(outcome.outputs, schema),
+                            outputs=refs,
                         )
                     )
                     plan.complete()
@@ -751,6 +775,27 @@ async def execute(
                         visible, TypeError(f"알 수 없는 실행 결과: {outcome!r}")
                     )
 
+        # 캐시 히트인 요청 출력은 node.done 을 다시 내지 않으므로 여기서 참조만 만든다.
+        for out_id in requested_outputs:
+            if out_id in results and out_id not in references:
+                schema = registry.get(dyn.node(out_id).type, node_id=out_id)
+                try:
+                    references[out_id] = _output_refs(results[out_id], schema, asset_store)
+                except Exception as exc:
+                    visible = dyn.visible_id(out_id)
+                    events.emit(
+                        NodeError(
+                            t="node.error",
+                            run_id=identifier,
+                            node_id=visible,
+                            message=str(exc),
+                            traceback=tuple(
+                                traceback.format_exception(type(exc), exc, exc.__traceback__)
+                            ),
+                        )
+                    )
+                    raise NodeExecutionError(visible, exc) from exc
+
     except Cancelled:
         events.emit(RunCancelled(t="run.cancelled", run_id=identifier, elapsed_ms=elapsed_ms()))
         raise
@@ -781,6 +826,7 @@ async def execute(
         cached=tuple(cached),
         blocked=tuple(dict.fromkeys(blocked)),
         elapsed_ms=elapsed_ms(),
+        references=references,
     )
 
 
@@ -820,39 +866,42 @@ async def run_node(
         else:
             # 동기 노드가 이벤트 루프를 막지 않게 스레드로 보낸다.
             raw = await asyncio.to_thread(instance.run, **call_kwargs)
+        # `NodeResult(preview=...)` 는 최종 프리뷰라 실행별 저장소에 남긴다.
+        if isinstance(raw, NodeResult) and raw.preview is not None:
+            ctx.preview(raw.preview, persistent=True)
+        return _classify(raw, schema)
     except Cancelled:
         raise
     except Exception as exc:
         return Failure(exc)
 
-    # `NodeResult(preview=...)` 가 WS 로 나가는 지점 (M3 계약).
-    # M2 까지 이 필드는 여기서 조용히 버려졌다 — `_classify` 는 값만 꺼낸다.
-    # `ctx` 를 선언하지 않은 노드도 프리뷰를 보낼 수 있어야 하므로 (design.md
-    # §4.2 의 `Resize` 가 그렇다) 엔진이 대신 부른다.
-    if isinstance(raw, NodeResult) and raw.preview is not None:
-        ctx.preview(raw.preview)
-
-    return _classify(raw, schema)
-
 
 def _output_refs(
     outputs: Mapping[str, Any],
     schema: NodeSchema,
+    assets: AssetStore,
 ) -> tuple[OutputRef, ...]:
     """노드 출력을 WS 로 내보낼 참조로 바꾼다 (design.md §6).
 
-    JSON 으로 표현되는 값만 `inline` 에 싣는다. 그렇지 않은 값(M3 의 이미지,
-    M4 의 모델 핸들)은 `asset` 이 채워질 때까지 둘 다 비어 있다 — 소켓 이름과
-    타입은 언제나 실려 나가므로 UI 는 무엇이 나왔는지는 안다.
+    JSON 으로 표현되는 값은 `inline` 에 싣는다. 그렇지 않은 값은 등록된 인코더가
+    처리할 수 있으면 실행별 저장소에 넣고 `asset` 을 채운다. 모델 핸들처럼 인코더가
+    모르는 값은 둘 다 비어 있지만 소켓 이름과 타입은 언제나 실린다.
     """
     refs: list[OutputRef] = []
     for socket, value in outputs.items():
         spec = schema.outputs.get(socket)
+        inline = value if _is_json_safe(value) else None
+        asset = None
+        if inline is None:
+            preview = encode_preview(value, assets=assets, persistent=True)
+            if isinstance(preview, AssetPreview):
+                asset = preview.asset
         refs.append(
             OutputRef(
                 socket=socket,
                 type=to_type_expr(spec.type) if spec else "Any",
-                inline=value if _is_json_safe(value) else None,
+                inline=inline,
+                asset=asset,
             )
         )
     return tuple(refs)

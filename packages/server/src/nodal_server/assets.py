@@ -12,6 +12,8 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 
+from nodal import AssetRef
+
 __all__ = ["AssetStore", "StoredAsset"]
 
 #: 메모리에 둘 수 있는 총량. M2 는 테스트용 작은 파일만 다룬다.
@@ -20,14 +22,13 @@ DEFAULT_CAPACITY_BYTES = 256 * 1024 * 1024
 
 @dataclass(frozen=True, slots=True)
 class StoredAsset:
-    hash: str
+    ref: AssetRef
     data: bytes
-    media_type: str
     filename: str | None
 
     @property
-    def size_bytes(self) -> int:
-        return len(self.data)
+    def hash(self) -> str:
+        return self.ref.hash
 
 
 class AssetStore:
@@ -44,7 +45,9 @@ class AssetStore:
         *,
         media_type: str = "application/octet-stream",
         filename: str | None = None,
-    ) -> StoredAsset:
+        width: int | None = None,
+        height: int | None = None,
+    ) -> AssetRef:
         """저장하고 해시를 돌려준다. 이미 있으면 그대로 돌려준다.
 
         Raises:
@@ -53,20 +56,32 @@ class AssetStore:
         digest = hashlib.blake2b(data, digest_size=16).hexdigest()
         existing = self._assets.get(digest)
         if existing is not None:
-            return existing
+            return existing.ref
 
         if self._used + len(data) > self._capacity:
             raise ValueError(
                 f"에셋 저장소 용량을 넘었다 ({self._capacity} 바이트). M3 에서 디스크로 스필한다"
             )
 
-        asset = StoredAsset(hash=digest, data=data, media_type=media_type, filename=filename)
+        ref = AssetRef(
+            hash=digest,
+            media_type=media_type,
+            size_bytes=len(data),
+            width=width,
+            height=height,
+        )
+        asset = StoredAsset(ref=ref, data=data, filename=filename)
         self._assets[digest] = asset
         self._used += len(data)
-        return asset
+        return ref
 
-    def get(self, digest: str) -> StoredAsset | None:
-        return self._assets.get(digest)
+    def get(self, digest: str) -> bytes | None:
+        stored = self._assets.get(digest)
+        return stored.data if stored is not None else None
+
+    def ref(self, digest: str) -> AssetRef | None:
+        stored = self._assets.get(digest)
+        return stored.ref if stored is not None else None
 
     def __len__(self) -> int:
         return len(self._assets)

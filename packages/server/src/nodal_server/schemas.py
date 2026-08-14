@@ -363,8 +363,8 @@ class AssetInfo(_Model):
 class GraphFromPngResponse(_Model):
     """`POST /api/graph/from-png` 의 응답 (M3).
 
-    PNG 의 `nodal_workflow` tEXt 청크에서 캐논 그래프를 꺼낸 결과다.
-    파싱을 서버 한 곳에만 두는 이유는 tEXt 파서가 Python·TS 양쪽에 생기면
+    PNG 의 `nodal_workflow` iTXt 청크에서 캐논 그래프를 꺼낸 결과다.
+    파싱을 서버 한 곳에만 두는 이유는 iTXt 파서가 Python·TS 양쪽에 생기면
     그것이 곧 "규칙을 두 번 쓰지 않는다" 위반이기 때문이다.
 
     청크가 없거나 JSON 이 깨졌으면 이 응답이 아니라 `ErrorResponse` 가 나간다.
@@ -373,7 +373,7 @@ class GraphFromPngResponse(_Model):
     graph: Graph = Field(description="복원된 캐논 그래프")
     nodal_version: str | None = Field(
         default=None,
-        description="PNG 에 함께 박힌 `nodal_version` tEXt. 없으면 null",
+        description="PNG 에 함께 박힌 `nodal_version` iTXt. 없으면 null",
     )
 
 

@@ -72,7 +72,7 @@ export interface paths {
         put?: never;
         /**
          * PNG 에서 워크플로 복원
-         * @description PNG 의 `nodal_workflow` tEXt 청크에서 캐논 그래프를 꺼낸다. 프론트의 드래그앤드롭이 이 엔드포인트로 파일을 던진다 — tEXt 파서를 Python·TS 양쪽에 두지 않기 위해서다.
+         * @description PNG 의 `nodal_workflow` iTXt 청크에서 캐논 그래프를 꺼낸다. 프론트의 드래그앤드롭이 이 엔드포인트로 파일을 던진다 — iTXt 파서를 Python·TS 양쪽에 두지 않기 위해서다.
          *
          *     **M3 계약 시점에는 아직 구현되지 않았다.** 501 을 돌려준다.
          */
@@ -266,7 +266,7 @@ export interface components {
         Body_graph_from_png_api_graph_from_png_post: {
             /**
              * File
-             * @description `nodal_workflow` 청크를 담은 PNG
+             * @description `nodal_workflow` iTXt 청크를 담은 PNG
              */
             file: string;
         };
@@ -423,8 +423,8 @@ export interface components {
          * GraphFromPngResponse
          * @description `POST /api/graph/from-png` 의 응답 (M3).
          *
-         *     PNG 의 `nodal_workflow` tEXt 청크에서 캐논 그래프를 꺼낸 결과다.
-         *     파싱을 서버 한 곳에만 두는 이유는 tEXt 파서가 Python·TS 양쪽에 생기면
+         *     PNG 의 `nodal_workflow` iTXt 청크에서 캐논 그래프를 꺼낸 결과다.
+         *     파싱을 서버 한 곳에만 두는 이유는 iTXt 파서가 Python·TS 양쪽에 생기면
          *     그것이 곧 "규칙을 두 번 쓰지 않는다" 위반이기 때문이다.
          *
          *     청크가 없거나 JSON 이 깨졌으면 이 응답이 아니라 `ErrorResponse` 가 나간다.
@@ -434,7 +434,7 @@ export interface components {
             graph: components["schemas"]["Graph"];
             /**
              * Nodal Version
-             * @description PNG 에 함께 박힌 `nodal_version` tEXt. 없으면 null
+             * @description PNG 에 함께 박힌 `nodal_version` iTXt. 없으면 null
              */
             nodal_version?: string | null;
         };

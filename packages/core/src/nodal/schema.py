@@ -139,13 +139,13 @@ class Socket(InputDescriptor):
 
     def __init__(
         self,
-        type: Type,
+        type: TypingAny,
         default: TypingAny = InputDescriptor.MISSING,
         *,
         lazy: bool = False,
         doc: str = "",
     ) -> None:
-        super().__init__(type=type, default=default, lazy=lazy, doc=doc, widget={})
+        super().__init__(type=as_type(type), default=default, lazy=lazy, doc=doc, widget={})
 
 
 @dataclass(frozen=True)

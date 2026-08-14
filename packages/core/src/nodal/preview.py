@@ -14,20 +14,22 @@
 인코더를 등록하고 core 는 **부르기만** 한다. `register_combo_provider()` 와 같은
 패턴이다 — 그쪽도 core 가 모르는 것(체크포인트 목록)을 노드 팩이 채운다.
 
-`ctx.progress(preview=...)` 와 `NodeResult(preview=...)` 는 **같은 경로**를 탄다.
-프리뷰가 두 군데서 다르게 만들어지면 프론트가 두 모양을 다뤄야 한다.
+`ctx.progress(preview=...)` 와 `NodeResult(preview=...)` 는 **같은 인코더**를 탄다.
+전자는 버려질 inline, 후자는 저장될 asset 으로 core 가 전달 정책만 다르게 적용한다.
 """
 
 from __future__ import annotations
 
+import base64
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Literal, TypeAlias
 
-from .assets import AssetRef
+from .assets import AssetRef, AssetStore, NullAssetStore
 
 __all__ = [
     "AssetPreview",
+    "EncodedPreview",
     "InlinePreview",
     "Preview",
     "PreviewEncoder",
@@ -63,12 +65,22 @@ class AssetPreview:
     asset: AssetRef
 
 
+@dataclass(frozen=True, slots=True)
+class EncodedPreview:
+    """노드 팩이 만든 프리뷰 바이트. 전송·저장 정책은 아직 적용하지 않았다."""
+
+    data: bytes
+    media_type: str
+    width: int
+    height: int
+
+
 #: 프론트가 받는 프리뷰. `kind` 로 판별한다 — 문자열 하나로 두면 받는 쪽이
 #: base64 인지 해시인지 추측해야 한다 (M2 까지의 `image: str` 이 그랬다).
 Preview: TypeAlias = InlinePreview | AssetPreview
 
 #: 런타임 값 → 프리뷰. 해석할 수 없는 값이면 `None` 을 돌려주고 다음 인코더에 넘긴다.
-PreviewEncoder: TypeAlias = Callable[[Any], Preview | None]
+PreviewEncoder: TypeAlias = Callable[[Any], EncodedPreview | None]
 
 _ENCODERS: list[PreviewEncoder] = []
 
@@ -80,7 +92,7 @@ def register_preview_encoder(encoder: PreviewEncoder) -> PreviewEncoder:
     하기 때문이다 (`nodes-diffusion` 이 latent 프리뷰를 따로 그리는 경우).
 
     Args:
-        encoder: 런타임 값을 받아 `Preview` 또는 `None` 을 돌려주는 함수.
+        encoder: 런타임 값을 받아 `EncodedPreview` 또는 `None` 을 돌려주는 함수.
 
     Returns:
         받은 인코더 그대로. 데코레이터로 쓸 수 있게.
@@ -94,18 +106,41 @@ def clear_preview_encoders() -> None:
     _ENCODERS.clear()
 
 
-def encode_preview(value: Any) -> Preview | None:
+def encode_preview(
+    value: Any,
+    *,
+    assets: AssetStore | None = None,
+    persistent: bool = False,
+) -> Preview | None:
     """등록된 인코더로 런타임 값을 프리뷰로 바꾼다.
 
     등록된 인코더가 없거나 아무도 처리하지 못하면 `None` 이다. 그때는
     `node.preview` 이벤트를 **보내지 않는다** — 빈 프리뷰를 보내는 것보다 낫다.
 
-    이미 `Preview` 인 값은 그대로 통과한다. 노드가 직접 만들어 넣을 수 있다.
+    인코더는 바이트와 메타데이터만 만든다. core 가 `persistent` 정책을 적용해
+    중간 프리뷰는 data URI 로, 영속 프리뷰는 실행별 `AssetStore` 로 보낸다.
+    이미 `Preview` 인 값은 그대로 통과한다.
     """
     if isinstance(value, InlinePreview | AssetPreview):
         return value
     for encoder in reversed(_ENCODERS):
-        preview = encoder(value)
-        if preview is not None:
-            return preview
+        encoded = encoder(value)
+        if encoded is None:
+            continue
+        if persistent:
+            store = assets if assets is not None else NullAssetStore()
+            ref = store.put(
+                encoded.data,
+                media_type=encoded.media_type,
+                width=encoded.width,
+                height=encoded.height,
+            )
+            return AssetPreview(kind="asset", asset=ref)
+        payload = base64.b64encode(encoded.data).decode("ascii")
+        return InlinePreview(
+            kind="inline",
+            data_uri=f"data:{encoded.media_type};base64,{payload}",
+            width=encoded.width,
+            height=encoded.height,
+        )
     return None

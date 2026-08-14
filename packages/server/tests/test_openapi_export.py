@@ -34,7 +34,7 @@ import export_openapi  # noqa: E402
 EXPECTED_OPERATIONS = {
     ("get", "/api/nodes"),
     ("post", "/api/graph/validate"),
-    ("post", "/api/graph/from-png"),  # M3 — PNG tEXt 에서 워크플로 복원
+    ("post", "/api/graph/from-png"),  # M3 — PNG iTXt 에서 워크플로 복원
     ("post", "/api/runs"),
     ("get", "/api/runs"),
     ("get", "/api/runs/{run_id}"),

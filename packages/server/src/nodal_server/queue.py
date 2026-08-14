@@ -29,6 +29,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from nodal import (
+    AssetStore,
     Cache,
     Cancelled,
     CancelToken,
@@ -37,6 +38,7 @@ from nodal import (
     LRUCache,
     NodeExecutionError,
     NodeRegistry,
+    NullAssetStore,
     NullCache,
     QueueStatus,
     RunCancelled,
@@ -106,6 +108,7 @@ class RunQueue:
         hub: EventHub,
         *,
         cache: Cache | None = None,
+        assets: AssetStore | None = None,
         history_limit: int = DEFAULT_HISTORY_LIMIT,
     ) -> None:
         self._registry = registry
@@ -113,6 +116,7 @@ class RunQueue:
         #: 실행 사이에 **공유되는** 캐시. 캐시가 실행 경계를 넘어 사는 것이 요점이다
         #: — 같은 그래프를 다시 큐에 넣으면 전부 node.cached 로 나가야 한다.
         self._cache: Cache = cache if cache is not None else LRUCache(512)
+        self._assets: AssetStore = assets if assets is not None else NullAssetStore()
         self._history_limit = history_limit
 
         self._records: dict[str, RunRecord] = {}
@@ -261,6 +265,7 @@ class RunQueue:
                 events=self._hub,
                 cancel_token=record.cancel_token,
                 run_id=record.run_id,
+                assets=self._assets,
             )
             record.status = RunStatus.SUCCEEDED
 

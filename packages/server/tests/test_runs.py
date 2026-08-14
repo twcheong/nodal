@@ -15,6 +15,9 @@ from typing import Any
 from conftest import simple_graph, slow_graph, wait_for
 from fastapi.testclient import TestClient
 
+from nodal import AssetStore as AssetStoreContract
+from nodal_server.assets import AssetStore
+
 # ------------------------------------------------------------------ 노드 · 검증
 
 
@@ -51,6 +54,22 @@ def test_validate_reports_issues_with_200(client: TestClient) -> None:
     (issue,) = payload["issues"]
     assert issue["code"] == "unknown_output_socket"
     assert issue["location"] == "nodes.add.inputs.a", "프론트가 이걸로 소켓을 지목한다"
+
+
+def test_not_implemented_endpoint_uses_declared_error_response(client: TestClient) -> None:
+    response = client.post(
+        "/api/graph/from-png",
+        files={"file": ("workflow.png", b"not-yet-parsed", "image/png")},
+    )
+
+    assert response.status_code == 501
+    assert response.json() == {
+        "error": {
+            "code": "not_implemented",
+            "message": "PNG 워크플로 복원은 M3 구현 단계에서 채운다 (계약만 확정됨)",
+            "issues": [],
+        }
+    }
 
 
 # ------------------------------------------------------------------ 실행
@@ -118,7 +137,7 @@ def test_invalid_graph_is_rejected_before_queueing(client: TestClient) -> None:
     response = client.post("/api/runs", json={"graph": graph})
     assert response.status_code == 422
 
-    error = response.json()["detail"]["error"]
+    error = response.json()["error"]
     assert error["code"] == "graph_invalid"
     assert any(issue["code"] == "unknown_node_type" for issue in error["issues"])
 
@@ -139,7 +158,7 @@ def test_node_failure_marks_the_run_failed(client: TestClient) -> None:
 def test_unknown_run_is_404_with_the_shared_error_shape(client: TestClient) -> None:
     response = client.get("/api/runs/nope")
     assert response.status_code == 404
-    assert response.json()["detail"]["error"]["code"] == "run_not_found"
+    assert response.json()["error"]["code"] == "run_not_found"
 
 
 # ------------------------------------------------------------------ 취소
@@ -249,7 +268,17 @@ def test_asset_round_trip_is_content_addressed(client: TestClient) -> None:
     assert fetched.headers["content-type"] == "image/png"
 
 
+def test_server_asset_store_implements_the_core_contract() -> None:
+    store = AssetStore()
+    ref = store.put(b"image", media_type="image/png", width=2, height=3)
+
+    assert isinstance(store, AssetStoreContract)
+    assert store.get(ref.hash) == b"image"
+    assert store.ref(ref.hash) == ref
+    assert (ref.width, ref.height) == (2, 3)
+
+
 def test_unknown_asset_is_404(client: TestClient) -> None:
     response = client.get("/api/assets/deadbeef")
     assert response.status_code == 404
-    assert response.json()["detail"]["error"]["code"] == "asset_not_found"
+    assert response.json()["error"]["code"] == "asset_not_found"

@@ -529,10 +529,10 @@ class CatalogType:
 class Image(CatalogType, catalog="Image"):
     """이미지 소켓.
 
-    서술자는 `Tensor[uint8|float32, (B, H, W, C)]` 다 (`types.json`).
+    서술자는 `Tensor[float32, (B, H, W, C)]` 다 (`types.json`).
     런타임 값은 **채널 마지막 numpy 배열**이고 배치 축이 언제나 있다 (M3 계약,
-    `design.md` §4.4). 정본은 `float32` 0..1 이며 `uint8` 0..255 는 파일 입출력
-    경계에서만 나타난다. PIL 은 Load/Save 노드 안에서만 쓰고 소켓으로 흐르지 않는다.
+    `design.md` §4.4). 정본은 `float32` 0..1 이다. `uint8` 0..255 와 PIL 은
+    Load/Save 노드 내부의 파일 경계에서만 나타나고 소켓으로 흐르지 않는다.
     """
 
 

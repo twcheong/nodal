@@ -96,24 +96,27 @@ def output_refs(refs: Sequence[OutputRef]) -> list[OutputRefModel]:
 def refs_from_values(
     outputs: Mapping[str, Any],
     schema: NodeSchema | None,
+    refs: Sequence[OutputRef] | None = None,
 ) -> list[OutputRefModel]:
     """엔진의 원시 출력(`RunResult.outputs`)을 참조로 바꾼다.
 
-    `RunResult` 는 엔진 내부 결과라 실제 파이썬 값을 들고 있다. REST 응답은
-    WS 의 `node.done` 과 같은 모양이어야 하므로 여기서 참조로 옮긴다 —
-    프론트가 두 경로에서 다른 모양을 보면 안 된다.
+    `RunResult` 는 엔진 내부 결과라 실제 파이썬 값과 실행 때 만든 `references`를
+    함께 들고 있다. REST 응답은 WS 의 `node.done` 과 같은 참조를 재사용한다 —
+    프론트가 두 경로에서 다른 모양을 보면 안 되고 이미지를 다시 인코딩해서도 안 된다.
     """
-    refs: list[OutputRefModel] = []
+    if refs is not None:
+        return output_refs(refs)
+    wire_refs: list[OutputRefModel] = []
     for socket, value in outputs.items():
         spec = schema.outputs.get(socket) if schema else None
-        refs.append(
+        wire_refs.append(
             OutputRefModel(
                 socket=socket,
                 type=to_type_expr(spec.type) if spec else "Any",
                 inline=value if _is_json_safe(value) else None,
             )
         )
-    return refs
+    return wire_refs
 
 
 def node_schema_model(schema: NodeSchema) -> NodeSchemaModel:

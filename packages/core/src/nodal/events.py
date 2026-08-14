@@ -114,7 +114,7 @@ class OutputRef:
     """
 
     socket: str
-    type: str
+    type: Any
     inline: Any = None
     asset: AssetRef | None = None
 
@@ -346,7 +346,7 @@ class NodeContext:
         if preview is not None:
             self.preview(preview)
 
-    def preview(self, value: Any) -> None:
+    def preview(self, value: Any, *, persistent: bool = False) -> None:
         """프리뷰를 보낸다 (M3).
 
         `value` 는 런타임 값(ndarray 등)이거나 이미 만들어진 `Preview` 다.
@@ -357,7 +357,7 @@ class NodeContext:
         지점으로 모인다. 프리뷰가 여러 군데서 다르게 만들어지면 프론트가 여러
         모양을 다뤄야 한다.
         """
-        encoded = encode_preview(value)
+        encoded = encode_preview(value, assets=self._assets, persistent=persistent)
         if encoded is None:
             return
         self._events.emit(

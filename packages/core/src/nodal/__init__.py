@@ -73,9 +73,11 @@ from .graph import (
 )
 from .preview import (
     AssetPreview,
+    EncodedPreview,
     InlinePreview,
     Preview,
     PreviewEncoder,
+    clear_preview_encoders,
     encode_preview,
     register_preview_encoder,
 )
@@ -192,10 +194,12 @@ __all__ = [  # noqa: RUF022
     "AssetPreview",
     "AssetRef",
     "AssetStore",
+    "EncodedPreview",
     "InlinePreview",
     "NullAssetStore",
     "Preview",
     "PreviewEncoder",
+    "clear_preview_encoders",
     "encode_preview",
     "register_preview_encoder",
     # --- 노드 스키마 (M1 계약)

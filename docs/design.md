@@ -57,7 +57,7 @@
 
 **⑥ 이미지 메타데이터에 워크플로 임베딩**
 
-PNG `tEXt` 청크에 워크플로 JSON을 넣어 이미지 파일 자체가 재현 가능한 레시피가 된다. 커뮤니티 문화의 근원. 반드시 넣는다.
+PNG `iTXt` 청크에 워크플로 JSON을 넣어 이미지 파일 자체가 재현 가능한 레시피가 된다. 커뮤니티 문화의 근원. 반드시 넣는다.
 
 **⑦ `IS_CHANGED` 훅**
 
@@ -236,7 +236,7 @@ returns = (Model, CLIP, VAE)               # 축약 → "model", "clip", "vae"
 Type = Primitive | Tensor | Opaque | List[Type] | Union[Type, ...] | Any
 
 Primitive : INT | FLOAT | STRING | BOOL
-Tensor    : dtype + shape 서술 (예: Image = Tensor[uint8|float32, (B,H,W,C)])
+Tensor    : dtype + shape 서술 (예: Image = Tensor[float32, (B,H,W,C)])
 Opaque    : 이름 있는 불투명 핸들 (Model, VAE, Scheduler) + 능력 태그 집합
 ```
 
@@ -272,7 +272,7 @@ Opaque    : 이름 있는 불투명 핸들 (Model, VAE, Scheduler) + 능력 태�
 
 ### 4.4 Image 런타임 표현 (M3 계약)
 
-`types.json` 의 서술자는 `Image = Tensor[uint8|float32, (B, H, W, C)]` 다. 그것은
+`types.json` 의 서술자는 `Image = Tensor[float32, (B, H, W, C)]` 다. 그것은
 **소켓에 무엇이 흐르는지에 대한 서술**이고, 아래는 그 값의 **실제 파이썬 표현**이다.
 
 | 항목 | 확정 |
@@ -280,7 +280,7 @@ Opaque    : 이름 있는 불투명 핸들 (Model, VAE, Scheduler) + 능력 태�
 | 컨테이너 | `numpy.ndarray` |
 | 축 순서 | `(B, H, W, C)` — 배치가 언제나 있다. 이미지 한 장도 `B=1` |
 | 정본 dtype | `float32`, 값 범위 **0..1** |
-| 허용 dtype | `uint8` (0..255) — **파일 입출력 경계에서만** |
+| 파일 경계 dtype | `uint8` (0..255) — Load/Save 내부에서만, 소켓에는 흐르지 않음 |
 | 채널 | `C ∈ {1, 3, 4}` (L, RGB, RGBA) |
 | PIL | Load/Save 노드 **안에서만**. 소켓으로 흐르지 않는다 |
 
@@ -330,6 +330,10 @@ class AssetStore(Protocol):
     def ref(self, digest: str) -> AssetRef | None: ...
 ```
 
+`execute(..., assets=store)` 가 저장소를 `NodeContext` 까지 전달한다. server 는 업로드
+라우트와 실행 큐에 **같은 인스턴스**를 주입하므로 `AssetRef.hash` 를 곧바로
+`GET /api/assets/{hash}` 에 쓸 수 있다.
+
 **픽셀 크기는 넣는 쪽이 알려준다.** 저장소는 바이트와 미디어 타입만 안다 — 저장소가
 이미지를 해석하기 시작하면 그것은 더 이상 범용 바이트 저장소가 아니다.
 
@@ -342,22 +346,25 @@ class AssetStore(Protocol):
 NodeResult(out, preview=out)          ctx.progress(step, total, preview=out)
               └────────────┬───────────────────────┘
                     ctx.preview(value)
-                    encode_preview(value)     ← 등록된 인코더가 ndarray → PNG
+                    encoder(value)            ← ndarray → EncodedPreview(PNG bytes)
+                    core delivery policy      ← progress=inline, NodeResult=asset
                     node.preview 이벤트
 ```
 
 인코딩을 core 가 직접 하지 않는 이유는 core 가 numpy 를 모르기 때문이다. `server` 도
-`core` 만 의존하므로 마찬가지다. 그래서 **노드 팩이 인코더를 등록하고 core 는 부르기만**
-한다 — `register_combo_provider()` 와 같은 패턴이다.
+`core` 만 의존하므로 마찬가지다. 그래서 **노드 팩은 바이트와 미디어 메타데이터만
+만들고**, core 가 data URI 변환 또는 `AssetStore.put()` 을 결정한다. 인코더가 저장소를
+직접 붙잡지 않으므로 앱·테스트마다 다른 실행별 저장소를 안전하게 주입할 수 있다.
 
 ```python
 @register_preview_encoder
-def encode_ndarray(value: Any) -> Preview | None: ...
+def encode_ndarray(value: Any) -> EncodedPreview | None: ...
 ```
 
 등록된 인코더가 아무도 처리하지 못하면 **이벤트를 보내지 않는다.** 빈 프리뷰를 보내는
-것보다 낫다. 두 진입점이 한 지점으로 모이는 이유는 프리뷰가 여러 군데서 다르게
-만들어지면 프론트가 여러 모양을 다뤄야 하기 때문이다.
+것보다 낫다. `ctx.progress(preview=...)` 는 data URI, `NodeResult(preview=...)` 와 JSON 이
+아닌 인코딩 가능한 출력은 asset 이 된다. 인코딩 실패는 해당 노드의 `node.error` 로
+보고하고 실행을 실패시킨다.
 
 ---
 
@@ -436,7 +443,7 @@ ComfyUI가 여러 캐시 구현을 병렬 운영하며 도달한 결론을 압�
 |---|---|
 | `GET  /api/nodes` | 전체 노드 스키마 (프론트 팔레트 소스) |
 | `POST /api/graph/validate` | 실행 없이 타입 검증만 |
-| `POST /api/graph/from-png` | PNG `tEXt` 에서 워크플로 복원 (M3) |
+| `POST /api/graph/from-png` | PNG `iTXt` 에서 워크플로 복원 (M3) |
 | `POST /api/runs` | 실행 큐 등록 → `{run_id}` |
 | `GET  /api/runs/{id}` | 상태 · 결과 |
 | `DELETE /api/runs/{id}` | 취소 |
@@ -552,13 +559,13 @@ type Preview =
 
 `executed`와 `cached`를 REST에도 두는 이유는 WS를 놓친 클라이언트(새로고침·늦은 접속)도 무엇이 재실행됐는지 알아야 하기 때문이다.
 
-### PNG `tEXt` 워크플로 (M3 계약)
+### PNG `iTXt` 워크플로 (M3 계약)
 
 이미지 파일 자체가 재현 가능한 레시피가 된다 (§1.2). 확정한 것:
 
 | 항목 | 확정 |
 |---|---|
-| 청크 종류 | PNG `tEXt` |
+| 청크 종류 | PNG `iTXt` (UTF-8) |
 | 키워드 | **`nodal_workflow`** — 캐논 그래프 JSON |
 | 부가 키워드 | `nodal_version` — 나중에 포맷이 바뀔 때 마이그레이션 근거 |
 | 임베딩 | Save 노드 |
@@ -568,7 +575,10 @@ type Preview =
 `workflow` 를 쓰기 때문이다. 남의 PNG 를 삼켜 이상한 그래프를 만들거나 반대로 nodal
 PNG 를 남이 오해하는 일이 없어야 한다.
 
-**복원을 서버가 하는 이유**: tEXt 파서가 Python·TS 양쪽에 생기면 그것이 곧 "규칙을 두
+`tEXt` 는 Latin-1 이라 한글 노드 제목·프롬프트를 담는 캐논 JSON과 맞지 않는다.
+`iTXt` 를 쓰면 `Graph.to_json()` 의 UTF-8 문자열을 ASCII 이스케이프 없이 보존한다.
+
+**복원을 서버가 하는 이유**: iTXt 파서가 Python·TS 양쪽에 생기면 그것이 곧 "규칙을 두
 번 쓰지 않는다" 위반이다. 프론트의 드래그앤드롭은 파일을 이 엔드포인트로 던지고
 캐논 그래프를 받는다. 스키마 검증도 서버가 한 번에 한다.
 

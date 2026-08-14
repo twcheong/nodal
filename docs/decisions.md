@@ -42,6 +42,29 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-14 · Codex · M3 이미지 계약 보정
+
+- **결정**: `Image` 소켓 dtype 을 `float32` 하나로 좁혔다. `uint8` 은 Load/Save 노드
+  내부의 파일 경계 표현일 뿐 소켓으로 흐르지 않는다.
+- **결정**: 프리뷰 인코더는 `Preview` 대신 `EncodedPreview(data, media_type, width,
+  height)` 를 반환한다. core 가 `ctx.progress` 는 inline data URI, `NodeResult.preview`와
+  비-JSON 출력은 실행별 `AssetStore`의 asset 으로 만든다.
+- **결정**: `execute(..., assets=...)`를 추가하고 server 의 업로드 라우트와 실행 큐가
+  같은 저장소 인스턴스를 공유한다. `RunResult.references`가 WS와 REST에 같은
+  `OutputRef`를 공급한다.
+- **결정**: PNG 워크플로 청크를 `tEXt`에서 UTF-8 `iTXt`로 보정했다. 키워드는
+  `nodal_workflow` 그대로다.
+- **결정**: API 오류 본문은 OpenAPI 선언대로 `{error: ...}`를 직접 반환한다. FastAPI
+  기본 `HTTPException.detail` 래퍼를 쓰지 않는다.
+- **이유**: `56baaad`의 형태만으로는 저장소를 `ctx.assets`에 주입할 수 없었고, 인코더가
+  실행별 저장소나 inline/asset 정책을 알 수 없었다. `Socket(Image)`도 이름 클래스를
+  그대로 저장해 즉시 실패했다. 또한 `tEXt`는 Latin-1이라 한글 프롬프트를 보존하지
+  못하고, 실제 오류 응답은 선언한 스키마와 달랐다.
+- **영향 범위**: `types.json`, core 실행·프리뷰·스키마 API, server AssetStore·RunQueue,
+  OpenAPI 설명과 오류 런타임, `docs/design.md`·`docs/roadmap.md`
+- **되돌릴 수 있나**: 아니오 — M3 노드 팩과 프론트가 이 주입·인코딩·전송 계약을
+  구현 기준으로 사용한다.
+
 ### 2026-08-13 · Claude Code · M0
 - **결정**: M0를 `AGENTS.md` 도입 이전 문서 세트로 단독 진행
 - **이유**: 멀티 에이전트 구성 전에 스캐폴딩이 먼저 필요했음

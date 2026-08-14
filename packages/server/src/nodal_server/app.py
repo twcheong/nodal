@@ -19,7 +19,7 @@ from collections.abc import AsyncIterator
 from typing import Annotated
 
 from fastapi import FastAPI, File, HTTPException, Path, Query, UploadFile, WebSocket, status
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from fastapi.websockets import WebSocketDisconnect
 
 from nodal import Cache, NodeRegistry, load_catalog, validate_for_execution
@@ -67,15 +67,23 @@ _ERRORS: dict[int | str, dict[str, object]] = {
 }
 
 
+class _ApiError(HTTPException):
+    """OpenAPI 에 선언한 `ErrorResponse`를 그대로 내보내는 내부 예외."""
+
+    def __init__(self, status_code: int, body: ErrorResponse) -> None:
+        super().__init__(status_code=status_code)
+        self.body = body
+
+
 def _http_error(
     status_code: int,
     code: str,
     message: str,
     issues: object = (),
-) -> HTTPException:
+) -> _ApiError:
     """`ErrorResponse` 모양을 갖춘 예외. 에러 본문은 언제나 하나의 모양이다."""
     body = error_body(code, message, issues)  # type: ignore[arg-type]
-    return HTTPException(status_code=status_code, detail={"error": body.model_dump(mode="json")})
+    return _ApiError(status_code, ErrorResponse(error=body))
 
 
 def create_app(
@@ -95,8 +103,14 @@ def create_app(
     """
     node_registry = registry if registry is not None else NodeRegistry()
     hub = EventHub()
-    runs = RunQueue(node_registry, hub, cache=cache, history_limit=history_limit)
     assets = AssetStore()
+    runs = RunQueue(
+        node_registry,
+        hub,
+        cache=cache,
+        assets=assets,
+        history_limit=history_limit,
+    )
 
     @contextlib.asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -118,6 +132,13 @@ def create_app(
             "해당 소켓을 지목한다."
         ),
     )
+
+    @app.exception_handler(_ApiError)
+    async def api_error_handler(_: object, exc: _ApiError) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=exc.body.model_dump(mode="json"),
+        )
 
     # ---------------------------------------------------------- 노드 · 검증
 
@@ -260,15 +281,15 @@ def create_app(
         responses=_ERRORS,
         summary="PNG 에서 워크플로 복원",
         description=(
-            "PNG 의 `nodal_workflow` tEXt 청크에서 캐논 그래프를 꺼낸다. "
-            "프론트의 드래그앤드롭이 이 엔드포인트로 파일을 던진다 — tEXt 파서를 "
+            "PNG 의 `nodal_workflow` iTXt 청크에서 캐논 그래프를 꺼낸다. "
+            "프론트의 드래그앤드롭이 이 엔드포인트로 파일을 던진다 — iTXt 파서를 "
             "Python·TS 양쪽에 두지 않기 위해서다.\n\n"
             "**M3 계약 시점에는 아직 구현되지 않았다.** 501 을 돌려준다."
         ),
         tags=["graph"],
     )
     async def graph_from_png(
-        file: Annotated[UploadFile, File(description="`nodal_workflow` 청크를 담은 PNG")],
+        file: Annotated[UploadFile, File(description="`nodal_workflow` iTXt 청크를 담은 PNG")],
     ) -> GraphFromPngResponse:
         raise _http_error(
             status.HTTP_501_NOT_IMPLEMENTED,
@@ -303,7 +324,9 @@ def create_app(
             hash=stored.hash,
             size_bytes=stored.size_bytes,
             media_type=stored.media_type,
-            filename=stored.filename,
+            filename=file.filename,
+            width=stored.width,
+            height=stored.height,
         )
 
     @app.get(
@@ -322,12 +345,13 @@ def create_app(
         tags=["assets"],
     )
     async def get_asset(asset_hash: Annotated[str, Path(description="내용 해시")]) -> Response:
-        stored = assets.get(asset_hash)
-        if stored is None:
+        data = assets.get(asset_hash)
+        ref = assets.ref(asset_hash)
+        if data is None or ref is None:
             raise _http_error(
                 status.HTTP_404_NOT_FOUND, "asset_not_found", f"그런 에셋이 없다: {asset_hash!r}"
             )
-        return Response(content=stored.data, media_type=stored.media_type)
+        return Response(content=data, media_type=ref.media_type)
 
     @app.get(
         "/api/extensions",
@@ -388,7 +412,11 @@ def create_app(
             for node_id, values in result.outputs.items():
                 node = record.graph.nodes.get(node_id)
                 schema = node_registry.schemas().get(node.type) if node is not None else None
-                outputs[node_id] = refs_from_values(values, schema)
+                outputs[node_id] = refs_from_values(
+                    values,
+                    schema,
+                    result.references.get(node_id),
+                )
 
         return RunDetail(
             run_id=record.run_id,

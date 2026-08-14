@@ -46,7 +46,7 @@
     "tensors": {
       "Image": {
         "title": "이미지",
-        "dtypes": ["uint8", "float32"],
+        "dtypes": ["float32"],
         "shape": ["B", "H", "W", "C"]
       },
       "Mask": {
