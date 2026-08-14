@@ -304,12 +304,14 @@ class NodeContext:
         events: EventSink,
         cancel_token: CancelToken,
         assets: AssetStore | None = None,
+        graph: Any = None,
     ) -> None:
         self._node_id = node_id
         self._run_id = run_id
         self._events = events
         self._cancel_token = cancel_token
         self._assets: AssetStore = assets if assets is not None else NullAssetStore()
+        self._graph = graph
 
     @property
     def node_id(self) -> str:
@@ -323,6 +325,27 @@ class NodeContext:
     @property
     def cancel_token(self) -> CancelToken:
         return self._cancel_token
+
+    def graph_json(self) -> str | None:
+        """실행 중인 캐논 그래프의 JSON (M3). 없으면 `None`.
+
+        PNG `iTXt` 에 워크플로를 심는 Save 노드가 쓴다 (design.md §6). 이미지 파일
+        자체가 재현 가능한 레시피가 되려면 저장하는 노드가 그래프를 알아야 한다.
+
+        **읽기 전용이다.** 문자열을 돌려주므로 노드가 그래프를 고칠 수 없다 —
+        실행 중인 그래프를 노드가 바꾸는 길을 열지 않는다 (확장은 `Expanded` 로 한다).
+        """
+        if self._graph is None:
+            return None
+        to_json = getattr(self._graph, "to_json", None)
+        return to_json() if callable(to_json) else None
+
+    def graph_version(self) -> str | None:
+        """실행 중인 그래프의 `nodal_version`. 없으면 `None`."""
+        if self._graph is None:
+            return None
+        version = getattr(self._graph, "nodal_version", None)
+        return str(version) if version is not None else None
 
     @property
     def assets(self) -> AssetStore:

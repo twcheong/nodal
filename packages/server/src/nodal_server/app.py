@@ -16,16 +16,25 @@ from __future__ import annotations
 import contextlib
 import logging
 from collections.abc import AsyncIterator
+from pathlib import Path as FsPath
 from typing import Annotated
 
 from fastapi import FastAPI, File, HTTPException, Path, Query, UploadFile, WebSocket, status
 from fastapi.responses import JSONResponse, Response
 from fastapi.websockets import WebSocketDisconnect
 
-from nodal import Cache, NodeRegistry, load_catalog, validate_for_execution
+from nodal import (
+    Cache,
+    GraphValidationError,
+    NodeRegistry,
+    load_catalog,
+    parse_graph,
+    validate_for_execution,
+)
 
-from .assets import AssetStore
+from .assets import AssetStore, FileAssetStore
 from .hub import EventHub
+from .png import PngFormatError, read_text_chunks
 from .queue import RunQueue, RunRecord
 from .schemas import (
     AssetInfo,
@@ -51,6 +60,12 @@ __all__ = ["create_app"]
 _LOGGER = logging.getLogger("nodal.server")
 
 API_VERSION = "1"
+
+#: PNG `iTXt` 키워드 (design.md §6). 쓰는 쪽은 `nodal_nodes_image` 지만 서버는
+#: 노드 팩을 import 하지 않으므로 (의존성 화살표) 상수를 여기에도 둔다.
+#: 값이 어긋나면 `test_png_roundtrip` 이 즉시 잡는다.
+_WORKFLOW_KEY = "nodal_workflow"
+_VERSION_KEY = "nodal_version"
 
 #: 모든 엔드포인트가 공유하는 실패 응답. 본문은 언제나 `ErrorResponse` 다.
 _ERRORS: dict[int | str, dict[str, object]] = {
@@ -91,6 +106,7 @@ def create_app(
     *,
     cache: Cache | None = None,
     history_limit: int = 100,
+    assets_root: FsPath | str | None = None,
 ) -> FastAPI:
     """앱을 만든다. 테스트가 자기 인스턴스를 갖도록 팩토리로 둔다.
 
@@ -103,7 +119,11 @@ def create_app(
     """
     node_registry = registry if registry is not None else NodeRegistry()
     hub = EventHub()
-    assets = AssetStore()
+    # 디스크 저장소가 기본이다 (M3). 경로를 안 주면 인메모리로 — 테스트가
+    # 임시 디렉토리를 만들지 않고도 돌 수 있어야 한다.
+    assets: AssetStore | FileAssetStore = (
+        FileAssetStore(FsPath(assets_root)) if assets_root is not None else AssetStore()
+    )
     runs = RunQueue(
         node_registry,
         hub,
@@ -291,11 +311,35 @@ def create_app(
     async def graph_from_png(
         file: Annotated[UploadFile, File(description="`nodal_workflow` iTXt 청크를 담은 PNG")],
     ) -> GraphFromPngResponse:
-        raise _http_error(
-            status.HTTP_501_NOT_IMPLEMENTED,
-            "not_implemented",
-            "PNG 워크플로 복원은 M3 구현 단계에서 채운다 (계약만 확정됨)",
-        )
+        data = await file.read()
+        try:
+            chunks = read_text_chunks(data)
+        except PngFormatError as exc:
+            raise _http_error(
+                status.HTTP_400_BAD_REQUEST, "png_invalid", f"PNG 로 읽을 수 없다: {exc}"
+            ) from exc
+
+        raw = chunks.get(_WORKFLOW_KEY)
+        if raw is None:
+            found = ", ".join(sorted(chunks)) or "없음"
+            raise _http_error(
+                status.HTTP_404_NOT_FOUND,
+                "workflow_not_found",
+                f"이 PNG 에 {_WORKFLOW_KEY!r} 청크가 없다. 들어 있는 키워드: {found}",
+            )
+
+        # 파싱은 캐논 파서에 맡긴다. 서버가 그래프 스키마를 두 번 알지 않는다.
+        try:
+            graph = parse_graph(raw)
+        except GraphValidationError as exc:
+            raise _http_error(
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                "graph_invalid",
+                f"{_WORKFLOW_KEY} 청크의 그래프가 유효하지 않다 ({len(exc.issues)}건)",
+                exc.issues,
+            ) from exc
+
+        return GraphFromPngResponse(graph=graph, nodal_version=chunks.get(_VERSION_KEY))
 
     @app.post(
         "/api/assets",

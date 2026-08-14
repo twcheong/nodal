@@ -9,6 +9,7 @@ requires-python = ">=3.11"
 dependencies = [
     "nodal-core",
     "nodal-nodes-core",
+    "nodal-nodes-image",
     "nodal-server",
 ]
 
@@ -21,6 +22,7 @@ members = ["packages/*"]
 [tool.uv.sources]
 nodal-core = { workspace = true }
 nodal-nodes-core = { workspace = true }
+nodal-nodes-image = { workspace = true }
 nodal-server = { workspace = true }
 
 [dependency-groups]
@@ -39,7 +41,12 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-src = ["packages/core/src", "packages/server/src", "packages/nodes-core/src"]
+src = [
+    "packages/core/src",
+    "packages/server/src",
+    "packages/nodes-core/src",
+    "packages/nodes-image/src",
+]
 # ruff 0.16+ 는 마크다운 안의 python 코드 블록도 포맷한다. docs/ 는 스펙 문서이므로
 # 손대지 않는다 — 문서의 정렬은 의도된 것이고, 예제 코드는 실행 대상이 아니다.
 extend-exclude = ["docs/**", "*.md"]
@@ -87,14 +94,14 @@ ignore = [
 "torch".msg = "packages/core 와 packages/server 는 torch 를 import 하지 않는다. torch 는 packages/nodes-diffusion 전용."
 
 [tool.ruff.lint.isort]
-known-first-party = ["nodal", "nodal_server", "nodal_nodes_core"]
+known-first-party = ["nodal", "nodal_server", "nodal_nodes_core", "nodal_nodes_image"]
 
 # ---------------------------------------------------------------- pytest
 
 [tool.pytest.ini_options]
 # packages/core/tests 는 M1 에서 다른 에이전트가 소유한다.
 # packages/server/tests 는 M2 API 계약 검사다.
-testpaths = ["packages/core/tests", "packages/server/tests"]
+testpaths = ["packages/core/tests", "packages/server/tests", "packages/nodes-image/tests"]
 addopts = "-q --strict-markers"
 asyncio_mode = "auto"
 
@@ -103,11 +110,21 @@ asyncio_mode = "auto"
 [tool.mypy]
 python_version = "3.11"
 strict = true
-mypy_path = "packages/core/src:packages/server/src:packages/nodes-core/src"
-packages = ["nodal", "nodal_server", "nodal_nodes_core"]
+mypy_path = "packages/core/src:packages/server/src:packages/nodes-core/src:packages/nodes-image/src"
+packages = ["nodal", "nodal_server", "nodal_nodes_core", "nodal_nodes_image"]
 plugins = ["pydantic.mypy"]
 
 [tool.pydantic-mypy]
 init_forbid_extra = true
 init_typed = true
 warn_required_dynamic_aliases = true
+
+# numpy 2.5 의 스텁은 PEP 695 `type` 문을 쓴다. mypy 는 `python_version` 이 3.12
+# 미만이면 그 문법을 파싱하지 못해 스텁 자체에서 syntax error 를 낸다.
+# 우리는 `requires-python = ">=3.11"` 을 유지하고 싶으므로 (AGENTS.md 기술 스택)
+# 대상 버전을 올리는 대신 numpy 스텁만 따라가지 않는다.
+# 대가: nodes-image 안에서 `np.ndarray` 가 Any 가 된다.
+[[tool.mypy.overrides]]
+module = ["numpy", "numpy.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true

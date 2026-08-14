@@ -336,6 +336,66 @@
 - **영향 범위**: `apps/web/src/editor/socketTypes.ts`
 - **되돌릴 수 있나**: 예 — OpenAPI가 구조화 `TypeExpr`을 보내면 문자열 어댑터를 제거할 수 있다.
 
+### 2026-08-14 · Claude Code · M3 백엔드 구현
+
+계약(`56baaad`·`374e6fd`)을 구현했다. 프론트가 병렬로 작업 중이라
+`apps/web/`·`schemas.py`·`openapi.json`·`types.json` 은 **건드리지 않았다.**
+
+- **`packages/nodes-image` 신설** (워크스페이스 4번째 파이썬 패키지). `core` 에만
+  의존하고 **numpy·Pillow 는 여기서만** 쓴다. import 하는 것만으로
+  `register_preview_encoder` 가 ndarray→PNG 인코더를 등록한다
+- **노드 7종**: Load · Save · Resize · Crop · Blend · Mask · Composite.
+  전부 `float32` 0..1 · `(B,H,W,C)` 계약을 지키고 범위 밖 값은 클립한다
+- **`FileAssetStore`**: `<root>/ab/<hash>` + 사이드카 `.json`. 앞 두 글자로 샤딩하는
+  이유는 한 디렉토리에 파일이 수만 개 쌓이면 파일시스템이 느려지기 때문이다.
+  쓰기는 임시 파일 + `os.replace` 로 원자적 — 중간에 죽어도 반쯤 쓰인 파일이
+  해시 이름으로 남지 않는다. 인메모리 `AssetStore` 는 테스트용으로 남겨 뒀다
+- **PNG `iTXt`**: 쓰기는 `nodes-image`(Pillow), 읽기는 `nodal_server.png`(**표준
+  라이브러리만**). 서버는 Pillow 를 의존하지 않으므로 청크 파서를 직접 썼다 —
+  픽셀은 건드리지 않고 텍스트 청크만 읽는다. 같은 키워드가 여러 번 나오면 처음
+  것을 쓴다(뒤에 덧붙여 앞의 워크플로를 덮어쓰지 못하게). zip 폭탄 상한 16MB
+- **`nodal run --pack MODULE --assets DIR`**: 팩을 **모듈 이름으로 늦게** import 해
+  `nodes-core → nodes-image` 정적 의존성을 만들지 않는다. `--assets` 도
+  `nodal_server` 를 늦게 import 한다 (`serve` 가 uvicorn 에 쓰는 패턴과 같다).
+  팩 자동 발견은 M6 확장 시스템의 몫이다
+
+**사용자 확인 후 바꾼 것 (core 공개 표면)**
+
+- **`NodeContext.graph_json()` · `graph_version()` 추가**. Save 노드가 캐논 그래프를
+  `iTXt` 로 심으려면 그래프에 닿아야 하는데 통로가 없었다. **추가만** 했으므로
+  프론트가 쓰는 `openapi.json`·`generated.ts` 는 그대로다. 문자열을 돌려주므로
+  노드가 그래프를 고칠 수 없다 — 실행 중 그래프 변경은 `Expanded` 의 몫이다
+
+**임의로 판단한 것 (사용자 확인 없이, 공개 표면 아님)**
+
+- **`_output_refs` 가 `AssetRef` 출력을 그대로 쓴다**. 노드가 이미 저장소에 넣고
+  참조를 돌려준 경우(Save)에 다시 인코딩하면 **워크플로가 심긴 PNG 대신 맨 PNG 가
+  하나 더** 생긴다. private 함수의 동작이고 전송 형태는 그대로다
+- **mypy 가 numpy 스텁을 따라가지 않게 했다**. numpy 2.5 의 스텁은 PEP 695 `type`
+  문을 쓰는데 mypy 는 `python_version < 3.12` 에서 그 문법을 파싱하지 못해 스텁
+  자체에서 syntax error 를 낸다. `requires-python = ">=3.11"` 을 유지하려고
+  대상 버전을 올리는 대신 numpy 만 `follow_imports = "skip"` 으로 뒀다.
+  **대가: nodes-image 안에서 `np.ndarray` 가 Any 다**
+
+**검증 (브라우저 없이)** — 요청받은 네 가지를 전부 실제로 돌려 확인했다.
+
+1. CLI 로 Load→Resize→Save (64x48 → 16x12) 실행, 디스크에 PNG 저장 확인
+2. 저장된 PNG 를 `POST /api/graph/from-png` 에 넣어 그래프 복원 → 노드 3개·링크·
+   그래프 id·한글 `meta.title` 까지 보존. **복원한 그래프를 그대로 재실행(202)** 까지 확인
+3. `--twice` 재실행에서 `load`·`resize` 캐시 히트, `save` 만 재실행
+   (Save 는 `cacheable=False` — 저장은 부수효과라 건너뛰면 안 된다)
+4. `node.preview` 가 세 노드 모두에서 나가고 픽셀 크기가 실린다
+
+- **영향 범위**: `packages/nodes-image/**`(신규), `packages/server/src/nodal_server/{assets,png,app}.py`,
+  `packages/core/src/nodal/{events,executor}.py`, `packages/nodes-core/src/nodal_nodes_core/cli.py`,
+  `pyproject.toml`, `docs/roadmap.md`
+- **되돌릴 수 있나**: 예 — 계약을 바꾸지 않았으므로 구현만 되돌리면 된다
+
+> ⚠️ **프론트 담당에게**: 계약은 그대로다. `generated.ts` 재생성이 필요 없다.
+> 다만 `POST /api/graph/from-png` 가 **이제 실제로 동작한다** (501 아님).
+> OpenAPI 의 설명 문구는 아직 "501 을 돌려준다" 라고 되어 있다 — 그것을 고치면
+> `openapi.json` 이 바뀌어 `generated.ts` 가 stale 이 되므로 건드리지 않았다.
+
 ### 2026-08-14 · Claude Code · `tools/ci-local.sh` — CI 를 파싱해서 실행한다
 
 - **결정**: 커밋 전 검사 스크립트를 추가하되, 명령 목록을 스크립트에 적지 않는다.

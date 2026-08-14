@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import importlib
 import json
 import sys
 from collections.abc import Sequence
@@ -128,10 +129,44 @@ def _load_graph(path: Path) -> Graph:
     return parse_graph(text)
 
 
-def _build_registry() -> NodeRegistry:
+def _build_registry(packs: Sequence[str] = ()) -> NodeRegistry:
+    """기본 노드 팩 + `--pack` 으로 지정한 팩들.
+
+    팩은 **모듈 이름으로 늦게** import 한다. 그래야 `nodal-nodes-core` 가
+    `nodal-nodes-image` 를 정적으로 의존하지 않는다 — 노드 팩끼리는 서로를 몰라야
+    한다 (AGENTS.md 아키텍처 절). 팩 자동 발견은 M6 확장 시스템의 몫이고, 여기서는
+    사용자가 이름을 대는 것까지만 한다.
+    """
     registry = NodeRegistry()
     register_all(registry)
+    for name in packs:
+        try:
+            module = importlib.import_module(name)
+        except ImportError as exc:
+            raise SystemExit(f"노드 팩을 import 할 수 없다: {name} ({exc})") from exc
+        factory = getattr(module, "registry", None)
+        if not callable(factory):
+            raise SystemExit(f"{name} 에 registry(into=...) 가 없다. 노드 팩이 맞나?")
+        factory(into=registry)
     return registry
+
+
+def _build_asset_store(root: Path | None) -> Any:
+    """`--assets` 가 있으면 파일시스템 저장소를 만든다.
+
+    `nodal_server` 를 **늦게** import 한다. `serve` 가 uvicorn 을 그렇게 하는 것과
+    같은 이유다 — 서버는 `nodal-nodes-core[serve]` 선택적 extra 이고, 저장소 없이
+    쓰는 사람에게 서버를 강제하지 않는다.
+    """
+    if root is None:
+        return None
+    try:
+        from nodal_server.assets import FileAssetStore
+    except ImportError as exc:  # pragma: no cover - extra 미설치 환경
+        raise SystemExit(
+            f"--assets 는 nodal-server 가 필요하다: pip install 'nodal-nodes-core[serve]' ({exc})"
+        ) from exc
+    return FileAssetStore(root)
 
 
 def _apply_overrides(graph: Graph, overrides: Sequence[str]) -> Graph:
@@ -187,7 +222,7 @@ def _print_result(result: RunResult, *, color: bool) -> None:
 
 async def _run(args: argparse.Namespace) -> int:
     color = _supports_color() and not args.no_color
-    registry = _build_registry()
+    registry = _build_registry(getattr(args, "pack", []))
     graph = _load_graph(args.graph)
     overridden = _apply_overrides(graph, args.set or [])
 
@@ -207,6 +242,7 @@ async def _run(args: argparse.Namespace) -> int:
     token = CancelToken()
 
     result: RunResult | None = None
+    assets = _build_asset_store(getattr(args, "assets", None))
     for attempt, current in enumerate(runs):
         if attempt:
             changed = f" ({', '.join(args.set)} 적용)" if args.set else ""
@@ -219,6 +255,7 @@ async def _run(args: argparse.Namespace) -> int:
             cache=cache,
             events=events,
             cancel_token=token,
+            assets=assets,
         )
 
     assert result is not None
@@ -315,6 +352,19 @@ def _parser() -> argparse.ArgumentParser:
         "--twice",
         action="store_true",
         help="같은 캐시로 두 번 실행한다. 두 번째는 전부 캐시 히트여야 한다",
+    )
+    run.add_argument(
+        "--pack",
+        action="append",
+        default=[],
+        metavar="MODULE",
+        help="추가 노드 팩 모듈 (예: nodal_nodes_image). 여러 번 쓸 수 있다",
+    )
+    run.add_argument(
+        "--assets",
+        type=Path,
+        metavar="DIR",
+        help="에셋 저장 디렉토리. Save 노드가 여기에 content-addressed 로 쓴다",
     )
     run.add_argument("--no-cache", action="store_true", help="캐시를 끈다")
     run.add_argument("--cache-size", type=int, default=128, help="LRU 캐시 크기")

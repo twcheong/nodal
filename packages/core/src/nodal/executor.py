@@ -65,7 +65,7 @@ from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from .assets import AssetStore, NullAssetStore
+from .assets import AssetRef, AssetStore, NullAssetStore
 from .cache import MISS, Cache, cache_key
 from .errors import GraphIssue, GraphValidationError, IssueCode
 from .events import (
@@ -700,7 +700,7 @@ async def execute(
             events.emit(NodeStarted(t="node.started", run_id=identifier, node_id=visible))
 
             inputs = resolve_inputs(node_id, dyn, schema, results)
-            ctx = NodeContext(visible, identifier, events, cancel_token, asset_store)
+            ctx = NodeContext(visible, identifier, events, cancel_token, asset_store, graph)
             outcome = await run_node(node_id, dyn, schema, inputs, ctx)
 
             match outcome:
@@ -892,7 +892,11 @@ def _output_refs(
         spec = schema.outputs.get(socket)
         inline = value if _is_json_safe(value) else None
         asset = None
-        if inline is None:
+        if isinstance(value, AssetRef):
+            # 노드가 이미 저장소에 넣고 참조를 돌려줬다 (Save 노드가 그렇다).
+            # 다시 인코딩하면 워크플로가 심긴 PNG 대신 맨 PNG 가 하나 더 생긴다.
+            asset = value
+        elif inline is None:
             preview = encode_preview(
                 value,
                 assets=assets,

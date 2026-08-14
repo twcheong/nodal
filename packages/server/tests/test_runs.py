@@ -56,20 +56,63 @@ def test_validate_reports_issues_with_200(client: TestClient) -> None:
     assert issue["location"] == "nodes.add.inputs.a", "프론트가 이걸로 소켓을 지목한다"
 
 
-def test_not_implemented_endpoint_uses_declared_error_response(client: TestClient) -> None:
+def test_from_png_rejects_non_png_with_declared_error_response(client: TestClient) -> None:
+    """PNG 가 아니면 400 이고 본문은 언제나 `ErrorResponse` 모양이다."""
     response = client.post(
         "/api/graph/from-png",
-        files={"file": ("workflow.png", b"not-yet-parsed", "image/png")},
+        files={"file": ("workflow.png", b"not-a-png", "image/png")},
     )
 
-    assert response.status_code == 501
-    assert response.json() == {
-        "error": {
-            "code": "not_implemented",
-            "message": "PNG 워크플로 복원은 M3 구현 단계에서 채운다 (계약만 확정됨)",
-            "issues": [],
-        }
-    }
+    assert response.status_code == 400
+    body = response.json()
+    assert body["error"]["code"] == "png_invalid"
+    assert body["error"]["issues"] == []
+
+
+def test_from_png_reports_missing_workflow_chunk(client: TestClient) -> None:
+    """워크플로 청크가 없는 PNG 는 404 이고, 무슨 키워드가 있었는지 알려준다."""
+    png = _png_with_text({"Software": "somebody else"})
+
+    response = client.post("/api/graph/from-png", files={"file": ("x.png", png, "image/png")})
+
+    assert response.status_code == 404
+    message = response.json()["error"]["message"]
+    assert "nodal_workflow" in message
+    assert "Software" in message  # 무엇이 들어 있었는지 지목한다
+
+
+def test_from_png_rejects_invalid_graph_in_chunk(client: TestClient) -> None:
+    """청크는 있지만 그래프가 무효하면 422 + issues."""
+    png = _png_with_text({"nodal_workflow": '{"nodal_version": "1", "nodes": {"a": {"type": 5}}}'})
+
+    response = client.post("/api/graph/from-png", files={"file": ("x.png", png, "image/png")})
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "graph_invalid"
+
+
+def _png_with_text(chunks: dict[str, str]) -> bytes:
+    """iTXt 청크를 담은 최소 PNG. Pillow 없이 표준 라이브러리로 만든다.
+
+    서버 테스트가 `nodal-nodes-image` 를 import 하면 의존성 화살표가 뒤집힌다
+    (server 는 노드 팩을 모른다). 그래서 여기서 바이트를 직접 만든다.
+    """
+    import struct
+    import zlib
+
+    def chunk(kind: bytes, body: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(body)) + kind + body + struct.pack(">I", zlib.crc32(kind + body))
+        )
+
+    out = [b"\x89PNG\r\n\x1a\n"]
+    out.append(chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 0, 0, 0, 0)))
+    for keyword, value in chunks.items():
+        body = keyword.encode("latin-1") + b"\x00\x00\x00" + b"\x00" + b"\x00"
+        out.append(chunk(b"iTXt", body + value.encode("utf-8")))
+    out.append(chunk(b"IDAT", zlib.compress(b"\x00\x00")))
+    out.append(chunk(b"IEND", b""))
+    return b"".join(out)
 
 
 # ------------------------------------------------------------------ 실행
