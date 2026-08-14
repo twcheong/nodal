@@ -362,9 +362,9 @@ export interface components {
             required: boolean;
             /**
              * Type
-             * @description `types.json` 카탈로그 표기 (`INT`, `Image`, `List[Image]`)
+             * @description `types.json` 의 타입 표현식
              */
-            type: string;
+            type: string | components["schemas"]["ListTypeExpr"] | components["schemas"]["UnionTypeExpr"] | components["schemas"]["OpaqueTypeExpr"] | components["schemas"]["TensorTypeExpr"];
             /**
              * Widget
              * @description min·max·step·options 등 위젯 힌트. 백엔드는 검증에만 쓴다
@@ -423,6 +423,11 @@ export interface components {
                 string,
                 string
             ];
+        };
+        /** ListTypeExpr */
+        ListTypeExpr: {
+            /** List */
+            list: string | components["schemas"]["ListTypeExpr"] | components["schemas"]["UnionTypeExpr"] | components["schemas"]["OpaqueTypeExpr"] | components["schemas"]["TensorTypeExpr"];
         };
         /**
          * ModelEntry
@@ -533,6 +538,19 @@ export interface components {
              */
             types_version: string;
         };
+        /** OpaqueTypeExpr */
+        OpaqueTypeExpr: {
+            /**
+             * Capabilities
+             * @description 능력 태그
+             */
+            capabilities?: string[];
+            /**
+             * Opaque
+             * @description 핸들 이름 (`Model`, `VAE` ...)
+             */
+            opaque: string;
+        };
         /**
          * OutputRefModel
          * @description `nodal.OutputRef` 의 전송 형태 — 값이 아니라 **참조**다 (design.md §6).
@@ -551,7 +569,7 @@ export interface components {
             /** Socket */
             socket: string;
             /** Type */
-            type: string;
+            type: string | components["schemas"]["ListTypeExpr"] | components["schemas"]["UnionTypeExpr"] | components["schemas"]["OpaqueTypeExpr"] | components["schemas"]["TensorTypeExpr"];
         };
         /** OutputSocketModel */
         OutputSocketModel: {
@@ -563,7 +581,7 @@ export interface components {
             /** Name */
             name: string;
             /** Type */
-            type: string;
+            type: string | components["schemas"]["ListTypeExpr"] | components["schemas"]["UnionTypeExpr"] | components["schemas"]["OpaqueTypeExpr"] | components["schemas"]["TensorTypeExpr"];
         };
         /**
          * RunDetail
@@ -659,6 +677,25 @@ export interface components {
             started_at?: string | null;
             status: components["schemas"]["RunStatus"];
         };
+        /** TensorBodyExpr */
+        TensorBodyExpr: {
+            /** Dtypes */
+            dtypes: string[];
+            /**
+             * Shape
+             * @description 정수는 고정 크기, 문자열 라벨과 null 은 임의 크기
+             */
+            shape: (number | string | null)[];
+        };
+        /** TensorTypeExpr */
+        TensorTypeExpr: {
+            tensor: components["schemas"]["TensorBodyExpr"];
+        };
+        /** UnionTypeExpr */
+        UnionTypeExpr: {
+            /** Union */
+            union: (string | components["schemas"]["ListTypeExpr"] | components["schemas"]["UnionTypeExpr"] | components["schemas"]["OpaqueTypeExpr"] | components["schemas"]["TensorTypeExpr"])[];
+        };
         /** ValidateRequest */
         ValidateRequest: {
             /** @description 캐논 그래프 문서 그대로. 서버는 변환하지 않는다 */
@@ -695,7 +732,7 @@ export interface components {
             /** Error Type */
             type: string;
         };
-        WsEvent: components["schemas"]["WsRunStarted"] | components["schemas"]["WsNodeStarted"] | components["schemas"]["WsNodeProgress"] | components["schemas"]["WsNodePreview"] | components["schemas"]["WsNodeCached"] | components["schemas"]["WsNodeDone"] | components["schemas"]["WsNodeError"] | components["schemas"]["WsRunDone"] | components["schemas"]["WsRunCancelled"] | components["schemas"]["WsQueueStatus"];
+        WsEvent: components["schemas"]["WsRunStarted"] | components["schemas"]["WsNodeStarted"] | components["schemas"]["WsNodeProgress"] | components["schemas"]["WsNodePreview"] | components["schemas"]["WsNodeCached"] | components["schemas"]["WsNodeDone"] | components["schemas"]["WsNodeError"] | components["schemas"]["WsRunDone"] | components["schemas"]["WsRunFailed"] | components["schemas"]["WsRunCancelled"] | components["schemas"]["WsQueueStatus"];
         /** WsNodeCached */
         WsNodeCached: {
             /** Node Id */
@@ -826,6 +863,31 @@ export interface components {
              * @enum {string}
              */
             t: "run.done";
+        };
+        /**
+         * WsRunFailed
+         * @description 실행이 실패했다. `run.done`·`run.cancelled` 와 대칭인 종료 이벤트다.
+         *
+         *     `node.error` 만으로는 부족하다 — 사이클처럼 어느 노드에도 귀속되지 않는
+         *     실패가 있고, 그때 사유를 아는 통로가 여기뿐이다.
+         */
+        WsRunFailed: {
+            /**
+             * Code
+             * @description `node_failed` · `graph_invalid` · `internal_error`
+             */
+            code: string;
+            /** Elapsed Ms */
+            elapsed_ms: number;
+            /** Message */
+            message: string;
+            /** Run Id */
+            run_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "run.failed";
         };
         /** WsRunStarted */
         WsRunStarted: {

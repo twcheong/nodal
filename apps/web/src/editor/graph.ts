@@ -28,33 +28,39 @@ export function createStarterGraph(): GraphDocument {
   const offset = crypto.randomUUID();
   const add = crypto.randomUUID();
   const format = crypto.randomUUID();
+  const print = crypto.randomUUID();
   return {
     nodal_version: GRAPH_VERSION,
     id: crypto.randomUUID(),
     nodes: {
-      [seed]: { type: "math.Number", inputs: { value: 8 }, meta: { title: "기준값" } },
-      [offset]: { type: "math.Number", inputs: { value: 3 }, meta: { title: "오프셋" } },
+      [seed]: { type: "math.Const", inputs: { value: 8 }, meta: { title: "기준값" } },
+      [offset]: { type: "math.Const", inputs: { value: 3 }, meta: { title: "오프셋" } },
       [add]: {
         type: "math.Add",
         inputs: {
-          left: { $link: [seed, "value"] },
-          right: { $link: [offset, "value"] },
+          a: { $link: [seed, "value"] },
+          b: { $link: [offset, "value"] },
         },
       },
       [format]: {
-        type: "text.Template",
+        type: "text.Format",
         inputs: {
-          value: { $link: [add, "value"] },
+          value: { $link: [add, "sum"] },
           template: "최종 결과: {value}",
         },
       },
+      [print]: {
+        type: "text.Print",
+        inputs: { text: { $link: [format, "text"] }, enabled: true },
+      },
     },
-    outputs: [format],
+    outputs: [print],
     ui: {
       [seed]: { pos: [40, 80] },
       [offset]: { pos: [40, 300] },
       [add]: { pos: [360, 180] },
       [format]: { pos: [690, 180] },
+      [print]: { pos: [990, 180] },
       viewport: DEFAULT_VIEWPORT,
     },
   };
@@ -171,10 +177,10 @@ export function createBenchmarkGraph(count = 200): GraphDocument {
     const nodeId = benchmarkUuid(index + 1);
     nodes[nodeId] =
       previous === null
-        ? { type: "math.Number", inputs: { value: 1 } }
+        ? { type: "math.Const", inputs: { value: 1 } }
         : {
             type: "math.Add",
-            inputs: { left: { $link: [previous, "value"] }, right: index },
+            inputs: { a: { $link: [previous, index === 1 ? "value" : "sum"] }, b: index },
           };
     ui[nodeId] = { pos: [(index % 20) * 280, Math.floor(index / 20) * 190] };
     previous = nodeId;

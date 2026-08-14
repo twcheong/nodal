@@ -26,18 +26,6 @@ const input = (
   widget,
 });
 
-const requiredInput = (
-  name: string,
-  type: string,
-): NonNullable<NodeSchema["inputs"]>[number] => ({
-  name,
-  type,
-  required: true,
-  lazy: false,
-  doc: "",
-  widget: {},
-});
-
 const output = (name: string, type: string): NonNullable<NodeSchema["outputs"]>[number] => ({
   name,
   type,
@@ -46,103 +34,139 @@ const output = (name: string, type: string): NonNullable<NodeSchema["outputs"]>[
 
 export const MOCK_NODE_SCHEMAS: readonly NodeSchema[] = [
   {
-    id: "math.Number",
-    title: "숫자",
-    category: "수학/입력",
-    aliases: ["number", "상수", "값"],
+    id: "math.Const",
+    title: "Const",
+    category: "math",
+    aliases: ["상수", "const"],
     version: "1",
     cacheable: true,
     output_node: false,
     doc: "그래프에 숫자 값을 공급합니다.",
-    inputs: [input("value", "FLOAT", 1, { min: -1000, max: 1000, step: 1 })],
-    outputs: [output("value", "FLOAT")],
-  },
-  {
-    id: "math.Integer",
-    title: "정수",
-    category: "수학/입력",
-    aliases: ["integer", "int", "정수값"],
-    version: "1",
-    cacheable: true,
-    output_node: false,
-    doc: "정수 값을 공급합니다.",
-    inputs: [input("value", "INT", 1, { min: -1000, max: 1000, step: 1 })],
+    inputs: [input("value", "INT", 0)],
     outputs: [output("value", "INT")],
   },
   {
     id: "math.Add",
-    title: "더하기",
-    category: "수학/연산",
-    aliases: ["add", "sum", "합계", "덧셈"],
+    title: "Add",
+    category: "math",
+    aliases: ["더하기", "plus", "+"],
     version: "1",
     cacheable: true,
     output_node: false,
     doc: "두 수를 더합니다.",
-    inputs: [input("left", "FLOAT", 0), input("right", "FLOAT", 0)],
-    outputs: [output("value", "FLOAT")],
+    inputs: [input("a", "INT", 0), input("b", "INT", 0)],
+    outputs: [output("sum", "INT")],
+  },
+  {
+    id: "math.Subtract",
+    title: "Subtract",
+    category: "math",
+    aliases: ["빼기", "minus", "-"],
+    version: "1",
+    cacheable: true,
+    output_node: false,
+    doc: "두 정수를 뺍니다.",
+    inputs: [input("a", "INT", 0), input("b", "INT", 0)],
+    outputs: [output("difference", "INT")],
   },
   {
     id: "math.Multiply",
-    title: "곱하기",
-    category: "수학/연산",
-    aliases: ["multiply", "product", "곱셈"],
+    title: "Multiply",
+    category: "math",
+    aliases: ["곱하기", "times", "*"],
     version: "1",
     cacheable: true,
     output_node: false,
     doc: "두 수를 곱합니다.",
-    inputs: [input("left", "FLOAT", 1), input("right", "FLOAT", 1)],
-    outputs: [output("value", "FLOAT")],
+    inputs: [input("a", "INT", 1), input("b", "INT", 1)],
+    outputs: [output("product", "INT")],
   },
   {
     id: "math.Divide",
-    title: "나누기",
-    category: "수학/연산",
-    aliases: ["divide", "division", "나눗셈"],
+    title: "Divide",
+    category: "math",
+    aliases: ["나누기", "/"],
     version: "1",
     cacheable: true,
     output_node: false,
     doc: "0으로 나누면 노드 안에 오류와 스택을 표시합니다.",
-    inputs: [input("left", "FLOAT", 1), input("right", "FLOAT", 1)],
-    outputs: [output("value", "FLOAT")],
+    inputs: [input("a", "FLOAT", 0), input("b", "FLOAT", 1)],
+    outputs: [output("quotient", "FLOAT")],
+  },
+  {
+    id: "math.Negate",
+    title: "Negate",
+    category: "math",
+    aliases: ["부호 반전"],
+    version: "1",
+    cacheable: true,
+    output_node: false,
+    doc: "정수의 부호를 반전합니다.",
+    inputs: [input("value", "INT", 0)],
+    outputs: [output("value", "INT")],
+  },
+  {
+    id: "math.Power",
+    title: "Power",
+    category: "math",
+    aliases: ["거듭제곱", "pow"],
+    version: "1",
+    cacheable: true,
+    output_node: false,
+    doc: "정수 거듭제곱을 계산합니다.",
+    inputs: [input("base", "INT", 2), input("exponent", "INT", 2, { min: 0, max: 16 })],
+    outputs: [output("value", "INT")],
   },
   {
     id: "math.Clamp",
-    title: "범위 제한",
-    category: "수학/연산",
-    aliases: ["clamp", "제한", "최솟값", "최댓값"],
+    title: "Clamp",
+    category: "math",
+    aliases: ["범위 제한"],
     version: "1",
     cacheable: true,
     output_node: false,
     doc: "값을 최소·최대 범위 안으로 제한합니다.",
     inputs: [
-      requiredInput("value", "FLOAT"),
-      input("minimum", "FLOAT", 0),
-      input("maximum", "FLOAT", 100),
+      input("value", "INT", 0),
+      input("low", "INT", 0),
+      input("high", "INT", 100),
     ],
-    outputs: [output("value", "FLOAT")],
+    outputs: [output("value", "INT")],
   },
   {
-    id: "logic.GreaterThan",
-    title: "보다 큼",
-    category: "논리",
-    aliases: ["greater", "비교", "초과"],
+    id: "math.Sum3",
+    title: "Sum 3",
+    category: "math",
+    aliases: ["세 수 합"],
     version: "1",
     cacheable: true,
     output_node: false,
-    doc: "왼쪽 값이 오른쪽보다 큰지 검사합니다.",
-    inputs: [input("left", "FLOAT", 0), input("right", "FLOAT", 0)],
-    outputs: [output("value", "BOOL")],
+    doc: "세 정수를 더합니다.",
+    inputs: [input("a", "INT", 0), input("b", "INT", 0), input("c", "INT", 0)],
+    outputs: [output("sum", "INT")],
   },
   {
-    id: "text.Template",
-    title: "텍스트 포맷",
-    category: "텍스트",
-    aliases: ["format", "template", "문자열", "출력"],
+    id: "text.Format",
+    title: "Format",
+    category: "text",
+    aliases: ["문자열 조립"],
+    version: "1",
+    cacheable: true,
+    output_node: false,
+    doc: "{value} 자리에 입력 값을 넣어 텍스트를 만듭니다.",
+    inputs: [input("template", "STRING", "{value}"), input("value", "INT", 0)],
+    outputs: [output("text", "STRING")],
+  },
+  {
+    id: "text.Print",
+    title: "Print",
+    category: "text",
+    aliases: ["출력", "print"],
     version: "1",
     cacheable: true,
     output_node: true,
-    doc: "{value} 자리에 입력 값을 넣어 텍스트를 만듭니다.",
-    inputs: [requiredInput("value", "FLOAT"), input("template", "STRING", "결과: {value}")],
+    doc: "텍스트를 출력합니다.",
+    inputs: [input("text", "STRING", ""), input("enabled", "BOOL", true)],
     outputs: [output("text", "STRING")],
   },
 ];
@@ -193,6 +217,9 @@ export class MockGraphApiClient implements GraphApiClient {
     nodes: [string, NonNullable<GraphDocument["nodes"]>[string]][],
     useCache: boolean,
   ): void {
+    const failedNode = nodes.find(
+      ([, node]) => node.type === "math.Divide" && literalNumber(node.inputs?.b) === 0,
+    );
     this.#emit({ t: "run.started", run_id: runId, node_count: nodes.length });
     nodes.forEach(([nodeId, node], index) => {
       const delay = 100 + index * 150;
@@ -209,12 +236,12 @@ export class MockGraphApiClient implements GraphApiClient {
           step: 1,
           total: 2,
         });
-        if (node.type === "math.Divide" && literalNumber(node.inputs?.right) === 0) {
+        if (node.type === "math.Divide" && literalNumber(node.inputs?.b) === 0) {
           this.#emit({
             t: "node.error",
             run_id: runId,
             node_id: nodeId,
-            socket: "right",
+            socket: "b",
             message: "0으로 나눌 수 없습니다",
             traceback: [
               "math.Divide.run(left, right)",
@@ -233,8 +260,18 @@ export class MockGraphApiClient implements GraphApiClient {
     });
     globalThis.setTimeout(
       () => {
-        this.#hasCompletedRun = true;
-        this.#emit({ t: "run.done", run_id: runId, elapsed_ms: nodes.length * 150 });
+        if (failedNode) {
+          this.#emit({
+            t: "run.failed",
+            run_id: runId,
+            elapsed_ms: nodes.length * 150,
+            code: "node_failed",
+            message: `${failedNode[0]} 노드 실행에 실패했습니다`,
+          });
+        } else {
+          this.#hasCompletedRun = true;
+          this.#emit({ t: "run.done", run_id: runId, elapsed_ms: nodes.length * 150 });
+        }
       },
       180 + nodes.length * 150,
     );

@@ -1,90 +1,34 @@
+import type { SocketTypeExpr } from "../api/types";
 import {
-  CATALOG,
   describeType,
   isCompatible,
   parseTypeExpr,
   TypeSpecError,
   type SocketType,
-  type TypeExpr,
 } from "../graph/typesystem";
 
-/**
- * OpenAPI 는 소켓 타입을 사람이 읽는 문자열로 운반한다. 호환 판정은 기존
- * typesystem.ts 에 맡기고, 이 함수는 문자열을 그 시스템의 TypeExpr 로만 바꾼다.
- */
-export function parseSocketTypeLabel(label: string): SocketType {
-  const value = label.trim();
-  if (value.startsWith("List[") && value.endsWith("]")) {
-    return parseTypeExpr({ list: toExpr(value.slice(5, -1)) });
-  }
-  if (value.startsWith("Union[") && value.endsWith("]")) {
-    return parseTypeExpr({ union: splitTopLevel(value.slice(6, -1)).map(toExpr) });
-  }
-
-  const bracket = /^([A-Za-z_][A-Za-z0-9_]*)\[(.*)\]$/.exec(value);
-  if (bracket) {
-    const [, name, inner = ""] = bracket;
-    const catalogType = CATALOG.get(name ?? "");
-    if (catalogType?.kind === "opaque" && name) {
-      return parseTypeExpr({
-        opaque: name,
-        capabilities: splitTopLevel(inner).filter(Boolean),
-      });
-    }
-  }
-
-  return parseTypeExpr(value);
+/** OpenAPI의 구조화 표현식을 `types.json` 기반 런타임 타입으로 푼다. */
+export function parseSocketType(expr: SocketTypeExpr): SocketType {
+  return parseTypeExpr(expr);
 }
 
-export function socketTypesCompatible(source: string, target: string): boolean {
+/** 호환 규칙을 복제하지 않고 기존 타입 시스템에 위임한다. */
+export function socketTypesCompatible(
+  source: SocketTypeExpr,
+  target: SocketTypeExpr,
+): boolean {
   try {
-    return isCompatible(parseSocketTypeLabel(source), parseSocketTypeLabel(target));
+    return isCompatible(parseSocketType(source), parseSocketType(target));
   } catch (error) {
     if (error instanceof TypeSpecError) return false;
     throw error;
   }
 }
 
-export function describeSocketType(label: string): string {
+export function describeSocketType(expr: SocketTypeExpr): string {
   try {
-    return describeType(parseSocketTypeLabel(label));
+    return describeType(parseSocketType(expr));
   } catch {
-    return label;
+    return JSON.stringify(expr);
   }
-}
-
-function toExpr(label: string): TypeExpr {
-  const value = label.trim();
-  if (value.startsWith("List[") && value.endsWith("]")) {
-    return { list: toExpr(value.slice(5, -1)) };
-  }
-  if (value.startsWith("Union[") && value.endsWith("]")) {
-    return { union: splitTopLevel(value.slice(6, -1)).map(toExpr) };
-  }
-  const bracket = /^([A-Za-z_][A-Za-z0-9_]*)\[(.*)\]$/.exec(value);
-  if (bracket) {
-    const [, name, inner = ""] = bracket;
-    const catalogType = CATALOG.get(name ?? "");
-    if (catalogType?.kind === "opaque" && name) {
-      return { opaque: name, capabilities: splitTopLevel(inner).filter(Boolean) };
-    }
-  }
-  return value;
-}
-
-function splitTopLevel(value: string): string[] {
-  const parts: string[] = [];
-  let depth = 0;
-  let start = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    const character = value[index];
-    if (character === "[") depth += 1;
-    if (character === "]") depth -= 1;
-    if (character === "," && depth === 0) {
-      parts.push(value.slice(start, index).trim());
-      start = index + 1;
-    }
-  }
-  parts.push(value.slice(start).trim());
-  return parts;
 }

@@ -11,7 +11,7 @@ import type { Issue, NodeSchema, RunStatus, WsEvent } from "../api/types";
 import type { GraphDocument, GraphNode, JsonValue } from "../graph/types";
 import { isLink, makeLink } from "../graph/types";
 import { createGraphNode, createStarterGraph, normalizeGraph } from "../editor/graph";
-import { socketTypesCompatible } from "../editor/socketTypes";
+import { describeSocketType, socketTypesCompatible } from "../editor/socketTypes";
 import type {
   ConnectionIntent,
   NodeRuntimeState,
@@ -149,7 +149,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const targetSocket = targetSchema?.inputs?.find((socket) => socket.name === targetHandle);
     if (!sourceSocket || !targetSocket) return false;
     if (!socketTypesCompatible(sourceSocket.type, targetSocket.type)) {
-      set({ message: `${sourceSocket.type} → ${targetSocket.type} 연결은 호환되지 않습니다` });
+      set({
+        message: `${describeSocketType(sourceSocket.type)} → ${describeSocketType(targetSocket.type)} 연결은 호환되지 않습니다`,
+      });
       return false;
     }
     set((current) => ({
@@ -188,18 +190,34 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setIssues: (issues) => set({ issues }),
   startRun: (runId) =>
-    set((state) => ({
-      activeRunId: runId,
-      runStatus: "queued",
-      runtime: Object.fromEntries(
-        Object.keys(state.graph.nodes ?? {}).map((nodeId) => [nodeId, { status: "queued" }]),
-      ),
-      message: "실행을 큐에 등록했습니다",
-    })),
+    set((state) => {
+      // 단일 워커가 매우 빠르면 run.started/run.done이 POST 응답보다 먼저 올 수 있다.
+      // 같은 run의 WS 상태를 이미 받았다면 늦은 HTTP 응답으로 queued를 덮지 않는다.
+      if (state.activeRunId === runId && state.runStatus !== null) return state;
+      return {
+        activeRunId: runId,
+        runStatus: "queued",
+        runtime: Object.fromEntries(
+          Object.keys(state.graph.nodes ?? {}).map((nodeId) => [nodeId, { status: "queued" }]),
+        ),
+        message: "실행을 큐에 등록했습니다",
+      };
+    }),
 
   handleEvent: (event) =>
     set((state) => {
-      if ("run_id" in event && state.activeRunId && event.run_id !== state.activeRunId) return state;
+      if (
+        "run_id" in event &&
+        state.activeRunId &&
+        event.run_id !== state.activeRunId &&
+        !(
+          event.t === "run.started" &&
+          state.runStatus !== "queued" &&
+          state.runStatus !== "running"
+        )
+      ) {
+        return state;
+      }
       switch (event.t) {
         case "run.started":
           return {
@@ -256,6 +274,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
               state.runStatus === "failed"
                 ? "오류와 함께 실행이 종료됐습니다"
                 : `${event.elapsed_ms}ms에 실행을 마쳤습니다`,
+          };
+        case "run.failed":
+          return {
+            runStatus: "failed",
+            message: `${event.code}: ${event.message}`,
           };
         case "run.cancelled":
           return {

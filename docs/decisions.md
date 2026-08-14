@@ -281,6 +281,9 @@
 
 ### 2026-08-14 · Codex · M2 스펙 모호 — API 소켓 타입의 문자열 문법
 
+- **상태**: **해소됨** — `0a24ba6`에서 소켓 타입이 구조화 `TypeExpr`로 확정되어 아래
+  문자열 어댑터 결정은 더 이상 적용하지 않는다.
+
 - **결정**: `/api/nodes`의 `InputSocketModel.type`·`OutputSocketModel.type` 문자열은
   `types.json`의 이름을 기본으로 해석하고, OpenAPI 설명에 예시로 적힌 `List[T]`와
   design.md §4.3의 `Union[A, B]`만 얕은 문자열 문법으로 구조화한다. 실제 호환 판정은
@@ -293,6 +296,8 @@
 - **되돌릴 수 있나**: 예 — OpenAPI가 구조화 `TypeExpr`을 보내면 문자열 어댑터를 제거할 수 있다.
 
 ### 2026-08-14 · Codex · M2 스펙 모호 — 실행 실패의 터미널 WS 이벤트
+
+- **상태**: **해소됨** — `0a24ba6`에서 `run.failed`가 추가되어 아래 임시 해석을 대체한다.
 
 - **결정**: `node.error`를 받은 실행은 뒤이어 `run.done`이 와도 프론트 상태를 `failed`로
   유지한다. `run.done`은 전송 완료 신호로만 취급한다.

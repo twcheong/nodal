@@ -20,6 +20,10 @@ export default defineConfig({
     },
   },
   server: {
+    proxy: {
+      "/api": { target: "http://127.0.0.1:8188" },
+      "/ws": { target: "ws://127.0.0.1:8188", ws: true },
+    },
     fs: {
       // 스키마가 앱 루트 밖(모노레포 루트/schemas)에 있다.
       allow: [fileURLToPath(new URL("../..", import.meta.url))],

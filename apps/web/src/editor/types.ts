@@ -1,6 +1,6 @@
 import type { Node as FlowNode, Edge as FlowEdge, XYPosition } from "@xyflow/react";
 
-import type { Issue, NodeSchema, OutputRef } from "../api/types";
+import type { Issue, NodeSchema, OutputRef, SocketTypeExpr } from "../api/types";
 import type { GraphNode } from "../graph/types";
 
 export type NodeStatus = "idle" | "queued" | "running" | "cached" | "succeeded" | "error";
@@ -16,7 +16,7 @@ export interface NodeRuntimeState {
 export interface ConnectionIntent {
   nodeId: string;
   socket: string;
-  type: string;
+  type: SocketTypeExpr;
 }
 
 export interface SearchState {
@@ -30,7 +30,7 @@ export interface NodalNodeData extends Record<string, unknown> {
   schema: NodeSchema;
   runtime: NodeRuntimeState;
   issues: Issue[];
-  connectionSourceType: string | null;
+  connectionSourceType: SocketTypeExpr | null;
 }
 
 export type NodalFlowNode = FlowNode<NodalNodeData, "nodal">;

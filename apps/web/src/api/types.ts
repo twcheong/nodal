@@ -29,6 +29,8 @@ export type ErrorResponse = Schemas["ErrorResponse"];
 export type NodeSchema = Schemas["NodeSchemaModel"];
 export type InputSocket = Schemas["InputSocketModel"];
 export type OutputSocket = Schemas["OutputSocketModel"];
+/** `types.json`의 재귀 타입 표현식. OpenAPI 생성 타입에서 직접 가져온다. */
+export type SocketTypeExpr = InputSocket["type"];
 export type NodesResponse = Schemas["NodesResponse"];
 
 // ------------------------------------------------------------------ 검증
@@ -68,6 +70,7 @@ export type NodeCachedEvent = Schemas["WsNodeCached"];
 export type NodeDoneEvent = Schemas["WsNodeDone"];
 export type NodeErrorEvent = Schemas["WsNodeError"];
 export type RunDoneEvent = Schemas["WsRunDone"];
+export type RunFailedEvent = Schemas["WsRunFailed"];
 export type RunCancelledEvent = Schemas["WsRunCancelled"];
 export type QueueStatusEvent = Schemas["WsQueueStatus"];
 

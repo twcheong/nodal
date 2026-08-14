@@ -138,7 +138,7 @@ function SocketWidget({
   onChange: (value: JsonValue) => void;
 }): React.JSX.Element | null {
   const stop = (event: React.SyntheticEvent) => event.stopPropagation();
-  if (socket.type === "BOOLEAN") {
+  if (socket.type === "BOOL") {
     return (
       <input
         className="nodrag"
