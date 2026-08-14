@@ -31,6 +31,7 @@ interface EditorState {
   catalogState: "loading" | "ready" | "error";
   activeRunId: string | null;
   runStatus: RunStatus | null;
+  runSubmissionPending: boolean;
   message: string | null;
   benchmarkFps: number | null;
   setSchemas: (schemas: NodeSchema[]) => void;
@@ -47,6 +48,8 @@ interface EditorState {
   closeSearch: () => void;
   loadGraph: (graph: GraphDocument) => void;
   setIssues: (issues: Issue[]) => void;
+  beginRunSubmission: () => boolean;
+  finishRunSubmission: () => void;
   startRun: (runId: string) => void;
   handleEvent: (event: WsEvent) => void;
   setMessage: (message: string | null) => void;
@@ -65,6 +68,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   catalogState: "loading",
   activeRunId: null,
   runStatus: null,
+  runSubmissionPending: false,
   message: null,
   benchmarkFps: null,
 
@@ -185,10 +189,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       nodeMeasurements: {},
       activeRunId: null,
       runStatus: null,
+      runSubmissionPending: false,
       message: "캐논 그래프를 불러왔습니다",
     }),
 
   setIssues: (issues) => set({ issues }),
+  beginRunSubmission: () => {
+    if (get().runSubmissionPending) return false;
+    set({ runSubmissionPending: true });
+    return true;
+  },
+  finishRunSubmission: () => set({ runSubmissionPending: false }),
   startRun: (runId) =>
     set((state) => {
       // 단일 워커가 매우 빠르면 run.started/run.done이 POST 응답보다 먼저 올 수 있다.

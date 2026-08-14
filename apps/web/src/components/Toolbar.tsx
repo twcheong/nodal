@@ -3,6 +3,7 @@ import type { RunStatus } from "../api/types";
 interface ToolbarProps {
   mode: "mock" | "live";
   runStatus: RunStatus | null;
+  submissionPending: boolean;
   fps: number | null;
   onRun: (useCache: boolean) => void;
   onSave: () => void;
@@ -13,13 +14,14 @@ interface ToolbarProps {
 export function Toolbar({
   mode,
   runStatus,
+  submissionPending,
   fps,
   onRun,
   onSave,
   onLoad,
   onBenchmark,
 }: ToolbarProps): React.JSX.Element {
-  const busy = runStatus === "queued" || runStatus === "running";
+  const busy = submissionPending || runStatus === "queued" || runStatus === "running";
   return (
     <header className="toolbar">
       <div className="brand">
@@ -41,7 +43,7 @@ export function Toolbar({
           캐시 없이
         </button>
         <button className="run-primary" type="button" disabled={busy} onClick={() => onRun(true)}>
-          {busy ? "실행 중…" : "▶ 실행"}
+          {submissionPending ? "요청 중…" : busy ? "실행 중…" : "▶ 실행"}
         </button>
       </div>
     </header>

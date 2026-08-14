@@ -20,7 +20,7 @@ import { NodalNode } from "./NodalNode";
 import { NodeSearch } from "./NodeSearch";
 
 export interface CanvasHandle {
-  benchmark: () => Promise<number>;
+  benchmark: () => Promise<number | null>;
 }
 
 const nodeTypes = { nodal: NodalNode };
@@ -44,6 +44,7 @@ export const GraphCanvas = forwardRef<CanvasHandle>(function GraphCanvas(_props,
   const loadGraph = useEditorStore((state) => state.loadGraph);
   const addNode = useEditorStore((state) => state.addNode);
   const setBenchmarkFps = useEditorStore((state) => state.setBenchmarkFps);
+  const setMessage = useEditorStore((state) => state.setMessage);
 
   const schemaMap = useMemo(() => new Map(schemas.map((schema) => [schema.id, schema])), [schemas]);
   const projection = useMemo(
@@ -75,6 +76,11 @@ export const GraphCanvas = forwardRef<CanvasHandle>(function GraphCanvas(_props,
 
   useImperativeHandle(ref, () => ({
     benchmark: async () => {
+      if (document.hidden) {
+        setBenchmarkFps(null);
+        setMessage("성능 측정은 화면에 보이는 브라우저 탭에서 실행해주세요");
+        return null;
+      }
       loadGraph(createBenchmarkGraph(200));
       setBenchmarkFps(null);
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -93,7 +99,7 @@ export const GraphCanvas = forwardRef<CanvasHandle>(function GraphCanvas(_props,
       setBenchmarkFps(fps);
       return fps;
     },
-  }), [flow, loadGraph, setBenchmarkFps]);
+  }), [flow, loadGraph, setBenchmarkFps, setMessage]);
 
   return (
     <section

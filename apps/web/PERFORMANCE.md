@@ -6,10 +6,11 @@ frames, and reports the measured frame rate beside the action.
 
 ## 2026-08-14 baseline
 
-- Browser: Codex in-app browser, desktop viewport (1280 × 720)
+- Browser: foreground Codex in-app browser, desktop viewport (1280 × 720)
+- Visibility check: `document.visibilityState === "visible"`, `document.hidden === false`
 - Graph: 200 nodes, 199 edges
-- Result: **117 fps** over 90 animation frames
-- Mounted node bodies during the run: **30 / 200**
+- Result: **116 fps** over 90 animation frames
+- Mounted node bodies during the run: **24 / 200**
 - Minimap nodes: 200 / 200
 
 The measured refresh rate can exceed 60 Hz. The M2 gate is therefore evaluated as

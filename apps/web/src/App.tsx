@@ -15,12 +15,15 @@ export function App(): React.JSX.Element {
   const canvas = useRef<CanvasHandle>(null);
   const graph = useEditorStore((state) => state.graph);
   const runStatus = useEditorStore((state) => state.runStatus);
+  const runSubmissionPending = useEditorStore((state) => state.runSubmissionPending);
   const message = useEditorStore((state) => state.message);
   const fps = useEditorStore((state) => state.benchmarkFps);
   const setSchemas = useEditorStore((state) => state.setSchemas);
   const setCatalogError = useEditorStore((state) => state.setCatalogError);
   const loadGraph = useEditorStore((state) => state.loadGraph);
   const setIssues = useEditorStore((state) => state.setIssues);
+  const beginRunSubmission = useEditorStore((state) => state.beginRunSubmission);
+  const finishRunSubmission = useEditorStore((state) => state.finishRunSubmission);
   const startRun = useEditorStore((state) => state.startRun);
   const handleEvent = useEditorStore((state) => state.handleEvent);
   const setMessage = useEditorStore((state) => state.setMessage);
@@ -81,6 +84,7 @@ export function App(): React.JSX.Element {
   };
 
   const run = useCallback(async (useCache: boolean) => {
+    if (!beginRunSubmission()) return;
     try {
       const validation = await api.validateGraph(graph);
       setIssues(validation.issues ?? []);
@@ -92,8 +96,10 @@ export function App(): React.JSX.Element {
       startRun(response.run_id);
     } catch (error) {
       setMessage(`실행 요청 실패: ${readError(error)}`);
+    } finally {
+      finishRunSubmission();
     }
-  }, [api, graph, setIssues, setMessage, startRun]);
+  }, [api, beginRunSubmission, finishRunSubmission, graph, setIssues, setMessage, startRun]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -111,6 +117,7 @@ export function App(): React.JSX.Element {
         <Toolbar
           mode={api.mode}
           runStatus={runStatus}
+          submissionPending={runSubmissionPending}
           fps={fps}
           onRun={(useCache) => void run(useCache)}
           onSave={save}

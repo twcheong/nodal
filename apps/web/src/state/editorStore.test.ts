@@ -10,6 +10,7 @@ describe("실행 이벤트 상태", () => {
       runtime: {},
       activeRunId: null,
       runStatus: null,
+      runSubmissionPending: false,
       message: null,
     });
   });
@@ -70,5 +71,15 @@ describe("실행 이벤트 상태", () => {
 
     expect(useEditorStore.getState().runStatus).toBe("succeeded");
     expect(useEditorStore.getState().runtime[nodeId]?.status).toBe("cached");
+  });
+
+  it("첫 HTTP 요청이 끝나기 전 연속 실행 제출을 하나로 제한한다", () => {
+    expect(useEditorStore.getState().beginRunSubmission()).toBe(true);
+    expect(useEditorStore.getState().beginRunSubmission()).toBe(false);
+    expect(useEditorStore.getState().beginRunSubmission()).toBe(false);
+
+    useEditorStore.getState().finishRunSubmission();
+
+    expect(useEditorStore.getState().beginRunSubmission()).toBe(true);
   });
 });
