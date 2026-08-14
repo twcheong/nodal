@@ -32,6 +32,29 @@ pnpm -r lint && pnpm -r typecheck          # 프론트 lint · 타입 체크
 pnpm --filter @nodal/web dev               # 개발 서버
 ```
 
+## 커밋 전 — CI 를 로컬에서 재현
+
+**위 "일상 명령"은 CI 의 일부일 뿐이다.** 그것만 돌리고 통과라고 판단하지 말 것.
+
+```bash
+tools/ci-local.sh              # 재현 가능한 검사 전부
+tools/ci-local.sh python web   # 지정한 잡만
+```
+
+이 스크립트는 `.github/workflows/ci.yml` 의 **복사본이 아니다.** 워크플로를 파싱해서
+거기 있는 `run:` 블록을 그대로 꺼내 실행한다. 그래서 CI 에 검사를 추가하면 이 스크립트를
+고치지 않아도 즉시 로컬에서도 돈다 — **검사 목록을 두 번 쓰지 않는다** (`types.json` 을
+단일 소스로 두는 것과 같은 원칙).
+
+로컬에 대응물이 없는 단계는 건너뛰고 **무엇을 왜 건너뛰었는지 끝에 나열한다.** 현재는
+액션 단계(`actions/checkout` 등)와 `dco` 잡이다. `dco` 는 PR 이벤트 전용이라
+(`if: github.event_name == 'pull_request'`) 로컬은 물론 push 에서도 돌지 않는다 —
+**첫 PR 을 열 때 처음 실행된다.**
+
+> 왜 있는가: 2026-08-14 에 로컬에서 일부 명령만 돌리고 "통과"라고 판단한 결과
+> `pnpm format:check` 실패가 12개 파일까지 누적됐다. 사람의 기억이 아니라 파일이
+> 검사 목록을 갖게 하는 것이 목적이다.
+
 ## 캐논 스키마 재생성
 
 `packages/core` 의 pydantic 모델이 캐논 그래프 포맷의 **단일 소스**다.

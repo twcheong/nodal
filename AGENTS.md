@@ -119,6 +119,7 @@ packages/nodes-*    →  packages/core
 - 타입 호환성 규칙은 `types.json` 단일 소스에 정의하고 Python/TS 양쪽에서 로드한다. **규칙을 두 번 쓰지 않는다.**
 - 에러는 항상 **어느 노드의 어느 소켓**인지 지목한다. 익명 에러 금지.
 - 커밋은 `Signed-off-by` (DCO) 포함.
+- **커밋 전에 `tools/ci-local.sh` 를 돌린다.** 명령 몇 개만 골라 돌리고 "통과"라고 하지 말 것 — 그래서 `pnpm format:check` 실패가 12개 파일까지 쌓인 적이 있다. 이 스크립트는 `ci.yml` 을 파싱해 실행하므로 CI 에 검사가 늘어도 따로 고칠 것이 없다 (`docs/dev.md`).
 
 ## 테스트 원칙
 
