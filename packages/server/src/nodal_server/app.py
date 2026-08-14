@@ -34,6 +34,7 @@ from .schemas import (
     CreateRunResponse,
     ErrorResponse,
     ExtensionsResponse,
+    GraphFromPngResponse,
     ModelsResponse,
     NodeSchemaModel,
     NodesResponse,
@@ -58,6 +59,10 @@ _ERRORS: dict[int | str, dict[str, object]] = {
     status.HTTP_422_UNPROCESSABLE_CONTENT: {
         "model": ErrorResponse,
         "description": "그래프 검증 실패. `issues` 가 어느 노드·어느 소켓인지 지목한다",
+    },
+    status.HTTP_501_NOT_IMPLEMENTED: {
+        "model": ErrorResponse,
+        "description": "계약은 확정됐지만 아직 구현되지 않았다 (M3)",
     },
 }
 
@@ -250,6 +255,28 @@ def create_app(
         return ModelsResponse(models=[], kinds=[])
 
     @app.post(
+        "/api/graph/from-png",
+        response_model=GraphFromPngResponse,
+        responses=_ERRORS,
+        summary="PNG 에서 워크플로 복원",
+        description=(
+            "PNG 의 `nodal_workflow` tEXt 청크에서 캐논 그래프를 꺼낸다. "
+            "프론트의 드래그앤드롭이 이 엔드포인트로 파일을 던진다 — tEXt 파서를 "
+            "Python·TS 양쪽에 두지 않기 위해서다.\n\n"
+            "**M3 계약 시점에는 아직 구현되지 않았다.** 501 을 돌려준다."
+        ),
+        tags=["graph"],
+    )
+    async def graph_from_png(
+        file: Annotated[UploadFile, File(description="`nodal_workflow` 청크를 담은 PNG")],
+    ) -> GraphFromPngResponse:
+        raise _http_error(
+            status.HTTP_501_NOT_IMPLEMENTED,
+            "not_implemented",
+            "PNG 워크플로 복원은 M3 구현 단계에서 채운다 (계약만 확정됨)",
+        )
+
+    @app.post(
         "/api/assets",
         response_model=AssetInfo,
         status_code=status.HTTP_201_CREATED,
@@ -270,6 +297,8 @@ def create_app(
             )
         except ValueError as exc:
             raise _http_error(status.HTTP_400_BAD_REQUEST, "asset_too_large", str(exc)) from exc
+        # width/height 는 M3 구현에서 이미지 디코딩이 붙을 때 채운다.
+        # 저장소는 바이트만 알고 픽셀 크기는 넣는 쪽이 알려준다 (nodal.AssetRef).
         return AssetInfo(
             hash=stored.hash,
             size_bytes=stored.size_bytes,

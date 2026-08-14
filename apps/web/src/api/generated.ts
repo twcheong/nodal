@@ -61,6 +61,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/graph/from-png": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * PNG 에서 워크플로 복원
+         * @description PNG 의 `nodal_workflow` tEXt 청크에서 캐논 그래프를 꺼낸다. 프론트의 드래그앤드롭이 이 엔드포인트로 파일을 던진다 — tEXt 파서를 Python·TS 양쪽에 두지 않기 위해서다.
+         *
+         *     **M3 계약 시점에는 아직 구현되지 않았다.** 501 을 돌려준다.
+         */
+        post: operations["graph_from_png_api_graph_from_png_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/graph/validate": {
         parameters: {
             query?: never;
@@ -181,10 +203,72 @@ export interface components {
              * @description 내용 해시. `GET /api/assets/{hash}` 의 키
              */
             hash: string;
+            /**
+             * Height
+             * @description 픽셀 높이. 이미지가 아니면 null
+             */
+            height?: number | null;
             /** Media Type */
             media_type: string;
             /** Size Bytes */
             size_bytes: number;
+            /**
+             * Width
+             * @description 픽셀 너비. 이미지가 아니면 null
+             */
+            width?: number | null;
+        };
+        /**
+         * AssetPreviewModel
+         * @description 저장소에 있는 프리뷰를 참조로 가리킨다 (노드의 최종 출력 이미지).
+         */
+        AssetPreviewModel: {
+            asset: components["schemas"]["AssetRefModel"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "asset";
+        };
+        /**
+         * AssetRefModel
+         * @description `nodal.AssetRef` 의 전송 형태 — 저장소에 있는 값에 대한 참조 (M3).
+         *
+         *     `width` · `height` 가 참조에 들어 있는 이유는 프론트가 이미지를 **받기 전에**
+         *     자리를 잡아야 하기 때문이다. 해시만 주면 GET 이 끝날 때까지 노드 레이아웃이
+         *     튄다. 이미지가 아닌 에셋에서는 둘 다 `null` 이다.
+         */
+        AssetRefModel: {
+            /**
+             * Hash
+             * @description 내용 해시. `GET /api/assets/{hash}` 의 키
+             */
+            hash: string;
+            /**
+             * Height
+             * @description 픽셀 높이. 이미지가 아니면 null
+             */
+            height?: number | null;
+            /**
+             * Media Type
+             * @description `image/png` 처럼
+             */
+            media_type: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /**
+             * Width
+             * @description 픽셀 너비. 이미지가 아니면 null
+             */
+            width?: number | null;
+        };
+        /** Body_graph_from_png_api_graph_from_png_post */
+        Body_graph_from_png_api_graph_from_png_post: {
+            /**
+             * File
+             * @description `nodal_workflow` 청크를 담은 PNG
+             */
+            file: string;
         };
         /** Body_upload_asset_api_assets_post */
         Body_upload_asset_api_assets_post: {
@@ -335,10 +419,52 @@ export interface components {
                 [key: string]: components["schemas"]["JsonValue"];
             };
         };
+        /**
+         * GraphFromPngResponse
+         * @description `POST /api/graph/from-png` 의 응답 (M3).
+         *
+         *     PNG 의 `nodal_workflow` tEXt 청크에서 캐논 그래프를 꺼낸 결과다.
+         *     파싱을 서버 한 곳에만 두는 이유는 tEXt 파서가 Python·TS 양쪽에 생기면
+         *     그것이 곧 "규칙을 두 번 쓰지 않는다" 위반이기 때문이다.
+         *
+         *     청크가 없거나 JSON 이 깨졌으면 이 응답이 아니라 `ErrorResponse` 가 나간다.
+         */
+        GraphFromPngResponse: {
+            /** @description 복원된 캐논 그래프 */
+            graph: components["schemas"]["Graph"];
+            /**
+             * Nodal Version
+             * @description PNG 에 함께 박힌 `nodal_version` tEXt. 없으면 null
+             */
+            nodal_version?: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * InlinePreviewModel
+         * @description 버려질 프리뷰를 data URI 로 그대로 싣는다 (샘플링 중간 프리뷰).
+         */
+        InlinePreviewModel: {
+            /** Data Uri */
+            data_uri: string;
+            /**
+             * Height
+             * @default null
+             */
+            height: number | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "inline";
+            /**
+             * Width
+             * @default null
+             */
+            width: number | null;
         };
         /**
          * InputSocketModel
@@ -556,14 +682,11 @@ export interface components {
          * @description `nodal.OutputRef` 의 전송 형태 — 값이 아니라 **참조**다 (design.md §6).
          *
          *     이미지나 텐서를 그대로 실으면 메가바이트가 나간다. 작은 값만 `inline` 에
-         *     싣고 큰 값은 `asset` 해시로 가리킨다.
+         *     싣고 큰 값은 `asset` 참조로 가리킨다.
          */
         OutputRefModel: {
-            /**
-             * Asset
-             * @description content-addressed 해시. `GET /api/assets/{hash}` 로 받는다 (M3)
-             */
-            asset?: string | null;
+            /** @description 저장소에 있는 값의 참조 (M3). M2 까지는 해시 문자열이었다 */
+            asset?: components["schemas"]["AssetRefModel"] | null;
             /** @description JSON 으로 표현되는 작은 값 */
             inline?: components["schemas"]["JsonValue"] | null;
             /** Socket */
@@ -782,13 +905,10 @@ export interface components {
         };
         /** WsNodePreview */
         WsNodePreview: {
-            /**
-             * Image
-             * @description base64 데이터 URI 이거나 에셋 해시
-             */
-            image: string;
             /** Node Id */
             node_id: string;
+            /** Preview */
+            preview: components["schemas"]["InlinePreviewModel"] | components["schemas"]["AssetPreviewModel"];
             /** Run Id */
             run_id: string;
             /**
@@ -959,6 +1079,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description 계약은 확정됐지만 아직 구현되지 않았다 (M3) */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     get_asset_api_assets__asset_hash__get: {
@@ -1009,6 +1138,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description 계약은 확정됐지만 아직 구현되지 않았다 (M3) */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     list_extensions_api_extensions_get: {
@@ -1027,6 +1165,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExtensionsResponse"];
+                };
+            };
+        };
+    };
+    graph_from_png_api_graph_from_png_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_graph_from_png_api_graph_from_png_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphFromPngResponse"];
+                };
+            };
+            /** @description 요청이 잘못됐다 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 대상이 없다 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 그래프 검증 실패. `issues` 가 어느 노드·어느 소켓인지 지목한다 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 계약은 확정됐지만 아직 구현되지 않았다 (M3) */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -1073,6 +1271,15 @@ export interface operations {
             };
             /** @description 그래프 검증 실패. `issues` 가 어느 노드·어느 소켓인지 지목한다 */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 계약은 확정됐지만 아직 구현되지 않았다 (M3) */
+            501: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1203,6 +1410,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description 계약은 확정됐지만 아직 구현되지 않았다 (M3) */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     get_run_api_runs__run_id__get: {
@@ -1253,6 +1469,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description 계약은 확정됐지만 아직 구현되지 않았다 (M3) */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     cancel_run_api_runs__run_id__delete: {
@@ -1296,6 +1521,15 @@ export interface operations {
             };
             /** @description 그래프 검증 실패. `issues` 가 어느 노드·어느 소켓인지 지목한다 */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 계약은 확정됐지만 아직 구현되지 않았다 (M3) */
+            501: {
                 headers: {
                     [name: string]: unknown;
                 };

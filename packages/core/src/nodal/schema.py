@@ -49,7 +49,7 @@ from dataclasses import dataclass, field
 from typing import Any as TypingAny
 from typing import ClassVar, Self, TypeVar
 
-from .types import BOOL, FLOAT, INT, STRING, Type
+from .types import BOOL, FLOAT, INT, STRING, CatalogType, Type, as_type
 
 __all__ = [
     "Bool",
@@ -632,6 +632,10 @@ def _as_socket_type(value: TypingAny) -> Type | None:
     """어노테이션이나 `returns` 항목을 소켓 타입으로 푼다. 해석 못 하면 `None`."""
     if isinstance(value, Type):
         return value
+    if isinstance(value, type) and issubclass(value, CatalogType):
+        # 카탈로그 이름은 클래스다 (M3 계약). `image: Image` 어노테이션과
+        # `returns = Image` 가 여기로 들어온다.
+        return as_type(value)
     if isinstance(value, InputDescriptor):
         return value.type
     if isinstance(value, type) and issubclass(value, InputDescriptor):

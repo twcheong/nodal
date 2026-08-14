@@ -20,7 +20,11 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol, runtime_checkable
 
+from .assets import AssetRef, AssetStore, NullAssetStore
+from .preview import Preview, encode_preview
+
 __all__ = [
+    "AssetRef",
     "CancelToken",
     "Cancelled",
     "Event",
@@ -98,18 +102,21 @@ class OutputRef:
         socket: 출력 소켓 이름. 캐논 그래프의 링크가 이 이름으로 참조한다.
         type: `types.json` 카탈로그의 타입 이름 (`INT`, `Image` ...).
         inline: JSON 으로 표현되는 작은 값. 아니면 `None`.
-        asset: `AssetStore` 의 content-addressed 해시 (M3). 아직 없으면 `None`.
+        asset: 저장소에 있는 값의 참조 (M3). 아직 없으면 `None`.
 
     Note:
-        M3 이전에는 JSON 으로 표현되지 않는 값의 `inline` 과 `asset` 이 **둘 다**
-        비어 있다. 그 값은 아직 전송 수단이 없다는 뜻이다 — `AssetStore` 가
-        들어오면 `asset` 이 채워진다.
+        `asset` 은 M2 까지 해시 **문자열**이었다. M3 계약에서 `AssetRef` 로 바꿨다 —
+        프론트가 노드 안에 프리뷰를 그리려면 이미지를 받기 **전에** 크기를 알아야
+        레이아웃이 튀지 않는데, 해시만으로는 알 수 없었다.
+
+        둘 다 비어 있으면 그 값은 전송 수단이 없다는 뜻이다 (JSON 도 아니고
+        저장소에도 넣지 않은 값).
     """
 
     socket: str
     type: str
     inline: Any = None
-    asset: str | None = None
+    asset: AssetRef | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -137,12 +144,17 @@ class NodeProgress:
 
 @dataclass(frozen=True, slots=True)
 class NodePreview:
-    """`image` 는 base64 이거나 에셋 참조다. core 는 어느 쪽인지 해석하지 않는다."""
+    """노드가 보여주는 프리뷰 이미지.
+
+    M2 까지는 `image: str` 하나였고 주석이 "base64 or asset ref" 라고만 적혀
+    있었다. 받는 쪽이 둘 중 무엇인지 **구분할 방법이 없었다.** M3 계약에서
+    판별 가능한 `Preview` 로 바꿨다 (`preview.py`).
+    """
 
     t: Literal["node.preview"]
     run_id: str
     node_id: str
-    image: str
+    preview: Preview
 
 
 @dataclass(frozen=True, slots=True)
@@ -291,11 +303,13 @@ class NodeContext:
         run_id: str,
         events: EventSink,
         cancel_token: CancelToken,
+        assets: AssetStore | None = None,
     ) -> None:
         self._node_id = node_id
         self._run_id = run_id
         self._events = events
         self._cancel_token = cancel_token
+        self._assets: AssetStore = assets if assets is not None else NullAssetStore()
 
     @property
     def node_id(self) -> str:
@@ -310,6 +324,14 @@ class NodeContext:
     def cancel_token(self) -> CancelToken:
         return self._cancel_token
 
+    @property
+    def assets(self) -> AssetStore:
+        """에셋 저장소 (M3). 저장소 없이 실행 중이면 `put` 이 명시적으로 실패한다.
+
+        노드 팩이 `core` 만 의존하면서도 저장소에 닿는 유일한 통로다.
+        """
+        return self._assets
+
     def progress(self, step: int, total: int, *, preview: Any = None) -> None:
         """진행률을 보고한다. 서버가 WS 로 중계한다."""
         self._events.emit(
@@ -322,14 +344,30 @@ class NodeContext:
             )
         )
         if preview is not None:
-            self._events.emit(
-                NodePreview(
-                    t="node.preview",
-                    run_id=self._run_id,
-                    node_id=self._node_id,
-                    image=preview,
-                )
+            self.preview(preview)
+
+    def preview(self, value: Any) -> None:
+        """프리뷰를 보낸다 (M3).
+
+        `value` 는 런타임 값(ndarray 등)이거나 이미 만들어진 `Preview` 다.
+        등록된 인코더가 처리하지 못하면 **이벤트를 보내지 않는다** — 빈 프리뷰를
+        보내는 것보다 낫다 (`preview.py`).
+
+        `ctx.progress(preview=...)` 와 `NodeResult(preview=...)` 가 전부 이 한
+        지점으로 모인다. 프리뷰가 여러 군데서 다르게 만들어지면 프론트가 여러
+        모양을 다뤄야 한다.
+        """
+        encoded = encode_preview(value)
+        if encoded is None:
+            return
+        self._events.emit(
+            NodePreview(
+                t="node.preview",
+                run_id=self._run_id,
+                node_id=self._node_id,
+                preview=encoded,
             )
+        )
 
     def raise_if_cancelled(self) -> None:
         """`cancel_token.raise_if_cancelled()` 의 축약. 장기 루프가 매 스텝 호출한다."""

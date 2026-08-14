@@ -335,6 +335,77 @@
   `docs/dev.md`, `AGENTS.md` 코딩 컨벤션
 - **되돌릴 수 있나**: 예 — 파일 하나와 dev 의존성 하나다
 
+### 2026-08-14 · Claude Code · M3 이미지 계약 (사용자 확인 후 확정)
+
+`docs/design.md` §4.3 과 roadmap M3 만으로는 답이 안 나오는 지점 7개를 **사용자에게
+물어 확정**했다. 임의 해석하지 않았다. 산출물은 `design.md` §4.4~4.6 · §6 과
+`schemas/openapi.json` 이다. **계약만 확정했고 구현은 다음 단계다.**
+
+- **Image 런타임 표현 = numpy `(B,H,W,C)` float32 0..1.** `types.json` 은 이미
+  `Tensor[uint8|float32, (B,H,W,C)]` 였는데 §4.2 예제는 `image.resize(...)` 를
+  불렀다 — 그건 PIL API 라 배치가 없다. **둘이 모순이었다.** types.json 이 이미
+  프론트가 쓰는 계약이라 그쪽을 살리고 예제를 고쳤다. PIL 은 Load/Save 안에서만 쓴다
+- **`Image.T` 때문에 카탈로그 이름이 클래스가 됐다.** design.md 가 `Image.T` 를 쓰는데
+  코드에 없었다. 그런데 **mypy 는 인스턴스 속성을 타입 어노테이션으로 받지 않는다**
+  (`Name "Image.T" is not defined`). 클래스 속성이어야만 하고, 노드 팩도 mypy 범위라
+  (2026-08-13 결정) 우회할 수 없다. 실제로 4가지 형태를 만들어 검증하고 확인했다.
+  프리미티브와 `Any` 는 인스턴스로 남는다 — 런타임 타입이 `int` 등이라 `.T` 가 무의미
+- **M1 동결 표면은 `as_type()` 강제변환으로 지켰다.** Codex 의 M1 테스트가
+  `is_compatible(Image, Image)` · `ListType(Image)` 로 **이름을 값으로** 쓴다.
+  이름을 클래스로 바꾸면 깨지는데 그 테스트는 동결 계약이라 손댈 수 없다.
+  `is_compatible` · `ListType` · `UnionType` · `to_type_expr` 네 입구에서 정규화해
+  **M1 테스트를 한 줄도 고치지 않고** 통과시켰다
+- **AssetStore = core 인터페이스 + server 구현.** 이미지 저장 노드가 저장소에 닿아야
+  하는데 노드 팩은 `core` 만 의존한다. 구현까지 core 에 넣으면 도메인 중립 엔진에
+  파일시스템 정책이 들어온다. 노드는 `ctx.assets` 로 접근한다.
+  **픽셀 크기는 넣는 쪽이 알려준다** — 저장소가 이미지를 해석하면 범용 바이트
+  저장소가 아니게 된다
+- **`OutputRef.asset` 을 해시 문자열 → `AssetRef` 구조체로.** 프론트가 노드 안에
+  프리뷰를 그리려면 이미지를 **받기 전에** 크기를 알아야 레이아웃이 안 튄다
+- **`node.preview` 를 판별 가능한 유니온으로.** `image: string` 에 "base64 or asset
+  ref" 주석만 있었다 — 받는 쪽이 구분할 방법이 **없었다.** `kind` 로 나눈다.
+  중간 프리뷰는 `inline`, 최종 출력은 `asset` — 스텝마다 나오는 프리뷰를 저장소에
+  넣으면 content-addressed 저장소가 오염된다
+- **프리뷰 인코딩은 노드 팩이 등록한다.** core 는 numpy 를 모르고 server 도 `core` 만
+  의존한다. `register_preview_encoder()` 로 노드 팩이 넣고 core 는 부르기만 한다 —
+  `register_combo_provider()` 와 같은 패턴이다
+- **PNG tEXt: 키워드 `nodal_workflow`, 복원은 서버.** `workflow` 는 다른 노드 도구가
+  흔히 쓴다. 파서를 Python·TS 양쪽에 두면 "규칙을 두 번 쓰지 않는다" 위반이라
+  `POST /api/graph/from-png` 한 곳에 둔다 (지금은 501)
+
+**발견한 것 — `NodeResult.preview` 는 M2 까지 아무 데도 가지 않았다.** `_classify` 가
+값만 꺼내고 프리뷰를 버렸다. 경로가 "약하다"가 아니라 **아예 없었다.**
+`run_node` 가 `ctx.preview()` 를 부르도록 이었다.
+
+**다른 에이전트 파일을 건드린 것 (AGENTS.md 협업 규칙 6)**:
+- `apps/web/src/state/editorStore.ts` 1줄 (`event.image` → `previewSrc(event.preview)`)
+  과 `api/types.ts` 에 `previewSrc`·`previewSize` 추가. 계약이 바뀌면 프론트가
+  컴파일되지 않아 CI 가 빨개진다. **최소 수정만** 했고 렌더링 로직은 그대로다
+- `packages/server/tests/test_openapi_export.py` 의 왕복 테스트를 `as_type(Image)` 로
+  정규화. 이 파일은 내가 M2 계약에서 쓴 것이다
+- `packages/core/tests` 는 **한 줄도 건드리지 않았다**
+
+**`__all__` 에 `# noqa: RUF022`**: 그룹이 하나 늘자 RUF022 가 전역 알파벳 정렬을
+요구했다. 그러면 `# --- 캐시` 아래 `MISS` 만 남고 `Cache` 는 다른 그룹으로 흩어진다.
+그 목록은 M1 계약의 목차라고 파일이 스스로 적어 두었으므로 목차를 지켰다. 그룹 **안**은
+정렬을 유지한다.
+
+**의존성 추가 없음.** numpy·Pillow 는 M3 **구현** 단계에서 `nodes-image` 에 들어간다.
+core 는 여전히 `pydantic` 하나뿐이다.
+
+- **영향 범위**: `packages/core/src/nodal/{types,schema,events,executor,assets,preview,__init__}.py`,
+  `packages/server/src/nodal_server/{schemas,app,wire}.py`, `schemas/openapi.json`,
+  `apps/web/src/api/{types.ts,generated.ts}`, `apps/web/src/state/editorStore.ts`,
+  `docs/design.md` §4.2·§4.4~4.6·§6
+- **되돌릴 수 있나**: **아니오** — M3 프론트를 다른 에이전트가 이 산출물로 작성한다.
+  바꾸려면 사용자 확인이 필요하다 (AGENTS.md 협업 규칙 7)
+
+> ⚠️ **프론트 담당에게**: `schemas/openapi.json` 이 바뀌었다. `generated.ts` 는 이
+> 커밋에서 재생성해 두었다. `OutputRef.asset` 이 **문자열이 아니라 객체**이고
+> `node.preview` 가 `image: string` 이 아니라 `preview: {kind, ...}` 다.
+> `previewSrc()` · `previewSize()` 를 `api/types.ts` 에 넣어 뒀으니 프리뷰 위젯은
+> 그것을 쓰면 된다.
+
 ### 2026-08-14 · Claude Code · 라이선스 Apache-2.0 확정 (사용자 결정)
 
 - **결정**: 라이선스를 **Apache-2.0** 으로 확정했다. 저작권자는 정태우 (twcheong99@gmail.com).

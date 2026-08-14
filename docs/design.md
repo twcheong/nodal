@@ -202,7 +202,7 @@ class Resize:
     returns = Image
 
     def run(self, image: Image.T, width: int, height: int, method: str) -> NodeResult:
-        out = image.resize((width, height), RESAMPLE[method])
+        out = resample(image, (height, width), method)   # (B, H, W, C) 유지
         return NodeResult(out, preview=out)
 ```
 
@@ -210,6 +210,7 @@ class Resize:
 - `run`은 평범한 함수 시그니처 → 엔진 없이 단위 테스트 가능
 - `async def run`도 지원 (엔진이 코루틴 여부 감지)
 - `NodeResult`가 값과 UI 사이드채널(프리뷰, 텍스트 배지)을 분리
+- `Image.T`는 **런타임 값의 타입**이다. core 에서는 언제나 `Any` — core 는 numpy 를 모른다 (§4.4)
 
 `Combo.from_provider("checkpoints")`처럼 실행 시점에 옵션을 조회하는 입력은
 `register_combo_provider("checkpoints", provider)`로 공급자를 먼저 등록한다.
@@ -266,6 +267,97 @@ Opaque    : 이름 있는 불투명 핸들 (Model, VAE, Scheduler) + 능력 태�
 위치는 `packages/core/src/nodal/types.json` — 패키지 안에 있어야 배포본에서도 로드된다. 로더는 `nodal.types`(Python)와 `apps/web/src/graph/typesystem.ts`(TS) 둘뿐이다.
 
 파일에는 `conformance` 절이 있어 (출처, 대상, 기대 판정) 케이스를 담는다. 양쪽 구현이 **같은 케이스로 같은 답**을 내야 하며, 이것이 두 언어가 규칙 하나를 공유한다는 유일한 증거다. Python은 `tools/check_types.py`, TS는 `typesystem.test.ts`가 돌린다.
+
+---
+
+### 4.4 Image 런타임 표현 (M3 계약)
+
+`types.json` 의 서술자는 `Image = Tensor[uint8|float32, (B, H, W, C)]` 다. 그것은
+**소켓에 무엇이 흐르는지에 대한 서술**이고, 아래는 그 값의 **실제 파이썬 표현**이다.
+
+| 항목 | 확정 |
+|---|---|
+| 컨테이너 | `numpy.ndarray` |
+| 축 순서 | `(B, H, W, C)` — 배치가 언제나 있다. 이미지 한 장도 `B=1` |
+| 정본 dtype | `float32`, 값 범위 **0..1** |
+| 허용 dtype | `uint8` (0..255) — **파일 입출력 경계에서만** |
+| 채널 | `C ∈ {1, 3, 4}` (L, RGB, RGBA) |
+| PIL | Load/Save 노드 **안에서만**. 소켓으로 흐르지 않는다 |
+
+배치 축을 언제나 두는 이유는 배치가 특별 케이스가 되지 않게 하기 위해서다.
+"한 장일 때만 다른 shape" 는 M4 의 샘플러가 배치를 돌려주는 순간 전부 분기가 된다.
+
+`Mask` 는 `(B, H, W)` 로 채널 축이 없고, `Latent` 는 `(B, C, H, W)` 로 채널이 앞이다
+(diffusers 관례). 셋의 축 순서가 다른 것은 의도적이며 `types.json` 이 그 사실을 담는다.
+
+**`Image.T`** — 노드의 `run` 시그니처가 쓰는 런타임 타입 표기다. core 에서는 언제나
+`Any` 로 평가된다. core 는 도메인 중립 그래프 엔진이라 numpy 를 import 하지 않기
+때문이다. `.T` 는 노드 저자가 "여기 들어오는 것은 이 소켓의 런타임 값" 이라고 적을
+자리를 줄 뿐이고, core 가 그 타입을 안다는 뜻이 아니다.
+
+이 때문에 카탈로그 이름(`Image`·`Mask`·`Latent`·`Model`·`CLIP`·`VAE`·`Scheduler`)은
+**클래스**다. mypy 는 인스턴스의 속성을 타입 어노테이션으로 받지 않아서
+(`Name "Image.T" is not defined`) 클래스 속성이어야만 한다. 프리미티브
+(`INT`·`FLOAT`·`STRING`·`BOOL`)와 `Any` 는 인스턴스로 남는다 — 그 런타임 타입은
+`int`·`float`·`str`·`bool` 이라 `.T` 를 붙여도 얻는 것이 없다.
+
+M1 이 동결한 `is_compatible(Image, Image)` · `ListType(Image)` 표면은 그대로다.
+`nodal.as_type()` 이 입구에서 이름 클래스를 서술자로 바꾼다.
+
+---
+
+### 4.5 AssetStore (M3 계약)
+
+content-addressed 바이트 저장소. 같은 내용이면 같은 해시이므로 같은 이미지를 두 번
+저장해도 하나만 남는다. 해시는 캐시 키와 같은 계열(blake2b-128)을 쓴다 — 암호학적
+보증이 필요 없고 결정성과 충돌 회피만 필요하다.
+
+**인터페이스는 `packages/core`(`nodal.assets`), 구현은 `packages/server`.** core 에
+인터페이스를 두는 이유는 하나다: 이미지를 저장하는 노드가 저장소에 닿아야 하는데
+노드 팩은 `core` 만 의존한다. 구현까지 core 에 넣으면 도메인 중립 그래프 엔진에
+파일시스템 정책이 들어온다.
+
+노드는 `ctx.assets` 로 접근한다. `ctx` 를 선언하지 않은 노드는 저장소를 모르며
+그것이 정상이다 — 순수 함수로 남아 엔진 없이 단위 테스트가 된다. 저장소 없이
+실행하면 `NullAssetStore` 가 `put` 에서 **명시적으로 실패한다.** 저장했다고 믿었는데
+사라지는 것보다 그 자리에서 터지는 편이 낫다.
+
+```python
+class AssetStore(Protocol):
+    def put(self, data: bytes, *, media_type: str = ..., filename: str | None = ...,
+            width: int | None = ..., height: int | None = ...) -> AssetRef: ...
+    def get(self, digest: str) -> bytes | None: ...
+    def ref(self, digest: str) -> AssetRef | None: ...
+```
+
+**픽셀 크기는 넣는 쪽이 알려준다.** 저장소는 바이트와 미디어 타입만 안다 — 저장소가
+이미지를 해석하기 시작하면 그것은 더 이상 범용 바이트 저장소가 아니다.
+
+### 4.6 프리뷰 경로 (M3 계약)
+
+**M2 까지 `NodeResult.preview` 는 아무 데도 가지 않았다.** `_classify` 가 값만 꺼내
+쓰고 프리뷰를 버렸다. M3 이 그 경로를 만든다.
+
+```
+NodeResult(out, preview=out)          ctx.progress(step, total, preview=out)
+              └────────────┬───────────────────────┘
+                    ctx.preview(value)
+                    encode_preview(value)     ← 등록된 인코더가 ndarray → PNG
+                    node.preview 이벤트
+```
+
+인코딩을 core 가 직접 하지 않는 이유는 core 가 numpy 를 모르기 때문이다. `server` 도
+`core` 만 의존하므로 마찬가지다. 그래서 **노드 팩이 인코더를 등록하고 core 는 부르기만**
+한다 — `register_combo_provider()` 와 같은 패턴이다.
+
+```python
+@register_preview_encoder
+def encode_ndarray(value: Any) -> Preview | None: ...
+```
+
+등록된 인코더가 아무도 처리하지 못하면 **이벤트를 보내지 않는다.** 빈 프리뷰를 보내는
+것보다 낫다. 두 진입점이 한 지점으로 모이는 이유는 프리뷰가 여러 군데서 다르게
+만들어지면 프론트가 여러 모양을 다뤄야 하기 때문이다.
 
 ---
 
@@ -344,6 +436,7 @@ ComfyUI가 여러 캐시 구현을 병렬 운영하며 도달한 결론을 압�
 |---|---|
 | `GET  /api/nodes` | 전체 노드 스키마 (프론트 팔레트 소스) |
 | `POST /api/graph/validate` | 실행 없이 타입 검증만 |
+| `POST /api/graph/from-png` | PNG `tEXt` 에서 워크플로 복원 (M3) |
 | `POST /api/runs` | 실행 큐 등록 → `{run_id}` |
 | `GET  /api/runs/{id}` | 상태 · 결과 |
 | `DELETE /api/runs/{id}` | 취소 |
@@ -360,7 +453,7 @@ type Event =
   | { t: "run.started";  run_id: string; node_count: number }
   | { t: "node.started"; run_id: string; node_id: string }
   | { t: "node.progress"; node_id: string; step: number; total: number }
-  | { t: "node.preview"; node_id: string; image: string }   // base64 or asset ref
+  | { t: "node.preview"; node_id: string; preview: Preview }
   | { t: "node.cached";  node_id: string }                   // 캐시 히트 시각화
   | { t: "node.done";    node_id: string; outputs: OutputRef[] }
   | { t: "node.error";   node_id: string; message: string; traceback: string[] }
@@ -375,11 +468,23 @@ type Event =
 ```typescript
 type OutputRef = {
   socket: string        // 출력 소켓 이름 — 캐논 그래프의 링크가 참조하는 그 이름
-  type: string          // types.json 카탈로그 표기 (INT, Image, List[Image])
+  type: TypeExpr        // types.json 의 타입 표현식
   inline?: JsonValue    // JSON으로 표현되는 작은 값
-  asset?: string        // content-addressed 해시. GET /api/assets/{hash} (M3)
+  asset?: AssetRef      // 저장소에 있는 값 (M3)
+}
+
+type AssetRef = {
+  hash: string          // GET /api/assets/{hash}
+  media_type: string
+  size_bytes: number
+  width?: number | null   // 이미지가 아니면 null
+  height?: number | null
 }
 ```
+
+**`asset` 은 M2 까지 해시 문자열이었다. M3 계약에서 `AssetRef` 로 바꿨다.** 프론트가
+노드 안에 프리뷰를 그리려면 이미지를 **받기 전에** 크기를 알아야 레이아웃이 튀지
+않는데, 해시만으로는 알 수 없었다.
 
 **모든 이벤트가 `run_id`를 싣는다** (`queue` 제외 — 특정 실행에 속하지 않는다). `/ws`는 전역 스트림이고 프론트는 히스토리와 여러 탭을 동시에 본다.
 
@@ -394,6 +499,19 @@ type OutputRef = {
 | `run.done` | `succeeded` |
 | `run.failed` | `failed` |
 | `run.cancelled` | `cancelled` |
+
+**프리뷰는 판별 가능한 유니온이다 (M3).** 위 정의는 `image: string` 에 "base64 or
+asset ref" 라는 주석만 달려 있었다 — 받는 쪽이 둘 중 무엇인지 **구분할 방법이 없었다.**
+
+```typescript
+type Preview =
+  | { kind: "inline"; data_uri: string; width?: number | null; height?: number | null }
+  | { kind: "asset";  asset: AssetRef }
+```
+
+`inline` 은 버려질 프리뷰(샘플링 중간 이미지)를 위한 것이다. 그것까지 저장소에 넣으면
+스텝마다 쌓여 content-addressed 저장소가 오염된다. `asset` 은 어차피 저장소에 있는
+최종 출력이라 WS 로 바이트를 다시 흘릴 이유가 없다.
 
 **소켓 타입은 `types.json`의 타입 표현식으로 전송한다.** 사람이 읽는 렌더링(`describe()`)이 아니다 — 그것은 복원할 수 없다. `Tensor[float32, (?, 3)]`는 `?`가 라벨(`B`)이었는지 `null`이었는지 지운다.
 
@@ -433,6 +551,28 @@ type OutputRef = {
 | `GET /api/runs` | `{running, queued[], history[], limit}` |
 
 `executed`와 `cached`를 REST에도 두는 이유는 WS를 놓친 클라이언트(새로고침·늦은 접속)도 무엇이 재실행됐는지 알아야 하기 때문이다.
+
+### PNG `tEXt` 워크플로 (M3 계약)
+
+이미지 파일 자체가 재현 가능한 레시피가 된다 (§1.2). 확정한 것:
+
+| 항목 | 확정 |
+|---|---|
+| 청크 종류 | PNG `tEXt` |
+| 키워드 | **`nodal_workflow`** — 캐논 그래프 JSON |
+| 부가 키워드 | `nodal_version` — 나중에 포맷이 바뀔 때 마이그레이션 근거 |
+| 임베딩 | Save 노드 |
+| 복원 | **서버** — `POST /api/graph/from-png` |
+
+키워드를 `workflow` 가 아니라 `nodal_workflow` 로 둔 이유는 다른 노드 도구가 흔히
+`workflow` 를 쓰기 때문이다. 남의 PNG 를 삼켜 이상한 그래프를 만들거나 반대로 nodal
+PNG 를 남이 오해하는 일이 없어야 한다.
+
+**복원을 서버가 하는 이유**: tEXt 파서가 Python·TS 양쪽에 생기면 그것이 곧 "규칙을 두
+번 쓰지 않는다" 위반이다. 프론트의 드래그앤드롭은 파일을 이 엔드포인트로 던지고
+캐논 그래프를 받는다. 스키마 검증도 서버가 한 번에 한다.
+
+---
 
 `node.cached`를 명시적 이벤트로 두는 게 포인트. 어느 노드가 재실행됐고 어느 노드가 스킵됐는지 색으로 보이면 캐시가 마법이 아니라 이해 가능한 도구가 된다. ComfyUI에는 이게 없어서 사용자가 캐시 동작을 추측한다.
 

@@ -42,6 +42,7 @@ export type ValidateResponse = Schemas["ValidateResponse"];
 
 export type RunStatus = Schemas["RunStatus"];
 export type OutputRef = Schemas["OutputRefModel"];
+export type AssetRef = Schemas["AssetRefModel"];
 export type CreateRunRequest = Schemas["CreateRunRequest"];
 export type CreateRunResponse = Schemas["CreateRunResponse"];
 export type RunDetail = Schemas["RunDetail"];
@@ -104,5 +105,26 @@ export const API_PATHS = {
   assets: "/api/assets",
   asset: (hash: string) => `/api/assets/${hash}`,
   extensions: "/api/extensions",
+  graphFromPng: "/api/graph/from-png",
   ws: "/ws",
 } as const satisfies Record<string, string | ((arg: string) => string)>;
+
+// ---------------------------------------------------------------- 프리뷰 (M3)
+
+export type Preview = Schemas["InlinePreviewModel"] | Schemas["AssetPreviewModel"];
+
+/**
+ * 프리뷰를 `<img src>` 에 쓸 문자열로 만든다.
+ *
+ * M2 까지 `node.preview` 는 `image: string` 하나였고 그것이 base64 인지 에셋
+ * 해시인지 구분할 방법이 없었다. M3 계약에서 `kind` 로 판별되는 유니온이 됐다.
+ */
+export function previewSrc(preview: Preview): string {
+  return preview.kind === "inline" ? preview.data_uri : API_PATHS.asset(preview.asset.hash);
+}
+
+/** 프리뷰의 픽셀 크기. 모르면 `null` — 프론트는 그때만 자리를 추정한다. */
+export function previewSize(preview: Preview): { width: number | null; height: number | null } {
+  const source = preview.kind === "inline" ? preview : preview.asset;
+  return { width: source.width ?? null, height: source.height ?? null };
+}

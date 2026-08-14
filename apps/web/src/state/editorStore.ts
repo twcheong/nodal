@@ -2,6 +2,7 @@ import type { Connection, Edge, NodeChange, Viewport, XYPosition } from "@xyflow
 import { create } from "zustand";
 
 import type { Issue, NodeSchema, RunStatus, WsEvent } from "../api/types";
+import { previewSrc } from "../api/types";
 import type { GraphDocument, GraphNode, JsonValue } from "../graph/types";
 import { isLink, makeLink } from "../graph/types";
 import { createGraphNode, createStarterGraph, normalizeGraph } from "../editor/graph";
@@ -247,7 +248,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             runtime: withRuntime(state.runtime, event.node_id, {
               ...state.runtime[event.node_id],
               status: "running",
-              preview: event.image,
+              preview: previewSrc(event.preview),
             }),
           };
         case "node.cached":

@@ -27,6 +27,8 @@ from nodal import Graph
 
 __all__ = [
     "AssetInfo",
+    "AssetPreviewModel",
+    "AssetRefModel",
     "CancelRunResponse",
     "CreateRunRequest",
     "CreateRunResponse",
@@ -34,6 +36,8 @@ __all__ = [
     "ErrorResponse",
     "ExtensionInfo",
     "ExtensionsResponse",
+    "GraphFromPngResponse",
+    "InlinePreviewModel",
     "InputSocketModel",
     "IssueModel",
     "ModelEntry",
@@ -42,6 +46,7 @@ __all__ = [
     "NodesResponse",
     "OutputRefModel",
     "OutputSocketModel",
+    "PreviewModel",
     "RunDetail",
     "RunListResponse",
     "RunStatus",
@@ -220,19 +225,34 @@ class RunStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+class AssetRefModel(_Model):
+    """`nodal.AssetRef` 의 전송 형태 — 저장소에 있는 값에 대한 참조 (M3).
+
+    `width` · `height` 가 참조에 들어 있는 이유는 프론트가 이미지를 **받기 전에**
+    자리를 잡아야 하기 때문이다. 해시만 주면 GET 이 끝날 때까지 노드 레이아웃이
+    튄다. 이미지가 아닌 에셋에서는 둘 다 `null` 이다.
+    """
+
+    hash: str = Field(description="내용 해시. `GET /api/assets/{hash}` 의 키")
+    media_type: str = Field(description="`image/png` 처럼")
+    size_bytes: int
+    width: int | None = Field(default=None, description="픽셀 너비. 이미지가 아니면 null")
+    height: int | None = Field(default=None, description="픽셀 높이. 이미지가 아니면 null")
+
+
 class OutputRefModel(_Model):
     """`nodal.OutputRef` 의 전송 형태 — 값이 아니라 **참조**다 (design.md §6).
 
     이미지나 텐서를 그대로 실으면 메가바이트가 나간다. 작은 값만 `inline` 에
-    싣고 큰 값은 `asset` 해시로 가리킨다.
+    싣고 큰 값은 `asset` 참조로 가리킨다.
     """
 
     socket: str
     type: TypeExpr
     inline: JsonValue | None = Field(default=None, description="JSON 으로 표현되는 작은 값")
-    asset: str | None = Field(
+    asset: AssetRefModel | None = Field(
         default=None,
-        description="content-addressed 해시. `GET /api/assets/{hash}` 로 받는다 (M3)",
+        description="저장소에 있는 값의 참조 (M3). M2 까지는 해시 문자열이었다",
     )
 
 
@@ -336,6 +356,25 @@ class AssetInfo(_Model):
     size_bytes: int
     media_type: str
     filename: str | None = None
+    width: int | None = Field(default=None, description="픽셀 너비. 이미지가 아니면 null")
+    height: int | None = Field(default=None, description="픽셀 높이. 이미지가 아니면 null")
+
+
+class GraphFromPngResponse(_Model):
+    """`POST /api/graph/from-png` 의 응답 (M3).
+
+    PNG 의 `nodal_workflow` tEXt 청크에서 캐논 그래프를 꺼낸 결과다.
+    파싱을 서버 한 곳에만 두는 이유는 tEXt 파서가 Python·TS 양쪽에 생기면
+    그것이 곧 "규칙을 두 번 쓰지 않는다" 위반이기 때문이다.
+
+    청크가 없거나 JSON 이 깨졌으면 이 응답이 아니라 `ErrorResponse` 가 나간다.
+    """
+
+    graph: Graph = Field(description="복원된 캐논 그래프")
+    nodal_version: str | None = Field(
+        default=None,
+        description="PNG 에 함께 박힌 `nodal_version` tEXt. 없으면 null",
+    )
 
 
 class ExtensionInfo(_Model):
@@ -391,11 +430,35 @@ class WsNodeProgress(_Model):
     total: int
 
 
+class InlinePreviewModel(_Model):
+    """버려질 프리뷰를 data URI 로 그대로 싣는다 (샘플링 중간 프리뷰)."""
+
+    kind: Literal["inline"]
+    data_uri: str
+    width: int | None = None
+    height: int | None = None
+
+
+class AssetPreviewModel(_Model):
+    """저장소에 있는 프리뷰를 참조로 가리킨다 (노드의 최종 출력 이미지)."""
+
+    kind: Literal["asset"]
+    asset: AssetRefModel
+
+
+#: `kind` 로 판별한다. M2 까지는 `image: str` 하나였고 받는 쪽이 base64 인지
+#: 해시인지 **구분할 방법이 없었다**.
+PreviewModel = Annotated[
+    InlinePreviewModel | AssetPreviewModel,
+    Field(discriminator="kind"),
+]
+
+
 class WsNodePreview(_Model):
     t: Literal["node.preview"]
     run_id: str
     node_id: str
-    image: str = Field(description="base64 데이터 URI 이거나 에셋 해시")
+    preview: PreviewModel
 
 
 class WsNodeCached(_Model):

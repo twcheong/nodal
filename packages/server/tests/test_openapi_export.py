@@ -34,6 +34,7 @@ import export_openapi  # noqa: E402
 EXPECTED_OPERATIONS = {
     ("get", "/api/nodes"),
     ("post", "/api/graph/validate"),
+    ("post", "/api/graph/from-png"),  # M3 — PNG tEXt 에서 워크플로 복원
     ("post", "/api/runs"),
     ("get", "/api/runs"),
     ("get", "/api/runs/{run_id}"),
@@ -222,12 +223,15 @@ def test_type_expressions_round_trip_through_core() -> None:
         OpaqueType,
         TensorType,
         UnionType,
+        as_type,
         parse_type_expr,
         to_type_expr,
     )
 
+    # `Image` 는 M3 계약에서 **이름 클래스**가 됐다 (`Image.T` 를 위해).
+    # 왕복 성질은 서술자에 대한 것이므로 서술자로 정규화해서 본다.
     cases = [
-        Image,
+        as_type(Image),
         INT,
         ListType(Image),
         UnionType((INT, FLOAT)),

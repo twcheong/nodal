@@ -825,6 +825,13 @@ async def run_node(
     except Exception as exc:
         return Failure(exc)
 
+    # `NodeResult(preview=...)` 가 WS 로 나가는 지점 (M3 계약).
+    # M2 까지 이 필드는 여기서 조용히 버려졌다 — `_classify` 는 값만 꺼낸다.
+    # `ctx` 를 선언하지 않은 노드도 프리뷰를 보낼 수 있어야 하므로 (design.md
+    # §4.2 의 `Resize` 가 그렇다) 엔진이 대신 부른다.
+    if isinstance(raw, NodeResult) and raw.preview is not None:
+        ctx.preview(raw.preview)
+
     return _classify(raw, schema)
 
 

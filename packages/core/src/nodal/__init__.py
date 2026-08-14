@@ -9,6 +9,7 @@
 노드를 정의해서 실행하기까지의 경로는 `nodal.executor` 모듈 문서에 있다.
 """
 
+from .assets import AssetRef, AssetStore, NullAssetStore
 from .cache import (
     MISS,
     Cache,
@@ -70,6 +71,14 @@ from .graph import (
     parse_graph,
     validate_graph,
 )
+from .preview import (
+    AssetPreview,
+    InlinePreview,
+    Preview,
+    PreviewEncoder,
+    encode_preview,
+    register_preview_encoder,
+)
 from .registry import (
     DuplicateNodeTypeError,
     NodeRegistry,
@@ -104,6 +113,7 @@ from .types import (
     VAE,
     Any,
     AnyType,
+    CatalogType,
     Image,
     Latent,
     ListType,
@@ -117,6 +127,7 @@ from .types import (
     TypeCatalog,
     TypeSpecError,
     UnionType,
+    as_type,
     builtin,
     explain_incompatibility,
     is_compatible,
@@ -127,6 +138,11 @@ from .types import (
 
 # 알파벳순 대신 모듈별로 묶는다. 이 목록은 M1 계약의 목차이고, 무엇이 구현됐고
 # 무엇이 아직 시그니처뿐인지가 한눈에 보여야 한다.
+#
+# RUF022 를 끄는 이유: 이 규칙은 전역 알파벳 정렬을 요구해서 위 그룹 구분을
+# 무너뜨린다 (`# --- 캐시` 아래에 `MISS` 하나만 남고 `Cache` 는 다른 그룹으로
+# 흩어진다). M3 에서 그룹이 하나 늘자 규칙이 걸렸는데, 목차를 포기하는 것보다
+# 규칙을 끄는 편이 낫다. 그룹 **안**은 정렬을 유지한다.
 __all__ = [  # noqa: RUF022
     # --- 캐논 그래프 (구현됨)
     "GRAPH_VERSION",
@@ -151,6 +167,7 @@ __all__ = [  # noqa: RUF022
     "VAE",
     "Any",
     "AnyType",
+    "CatalogType",
     "Image",
     "Latent",
     "ListType",
@@ -164,12 +181,23 @@ __all__ = [  # noqa: RUF022
     "TypeCatalog",
     "TypeSpecError",
     "UnionType",
+    "as_type",
     "builtin",
     "explain_incompatibility",
     "is_compatible",
     "load_catalog",
     "parse_type_expr",
     "type_names",
+    # --- 에셋 · 프리뷰 (M3 계약 — 인터페이스만, 구현은 server)
+    "AssetPreview",
+    "AssetRef",
+    "AssetStore",
+    "InlinePreview",
+    "NullAssetStore",
+    "Preview",
+    "PreviewEncoder",
+    "encode_preview",
+    "register_preview_encoder",
     # --- 노드 스키마 (M1 계약)
     "Bool",
     "Combo",

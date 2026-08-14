@@ -18,10 +18,12 @@ from nodal import Event, GraphIssue, NodeSchema
 
 # `OutputRef` 는 아직 nodal 최상위로 export 되지 않았다. M2 계약에서 core 이벤트를
 # 동결했으므로 여기서는 서브모듈에서 직접 가져온다 — core 를 건드리지 않는다.
+from nodal.assets import AssetRef
 from nodal.events import OutputRef
 from nodal.types import to_type_expr
 
 from .schemas import (
+    AssetRefModel,
     ErrorBody,
     InputSocketModel,
     IssueModel,
@@ -66,9 +68,27 @@ def error_body(code: str, message: str, issues: Sequence[GraphIssue] = ()) -> Er
     return ErrorBody(code=code, message=message, issues=issue_models(issues))
 
 
+def asset_ref_model(ref: AssetRef | None) -> AssetRefModel | None:
+    """core 의 `AssetRef` → 전송 모델. 변환 레이어가 아니라 직렬화다."""
+    if ref is None:
+        return None
+    return AssetRefModel(
+        hash=ref.hash,
+        media_type=ref.media_type,
+        size_bytes=ref.size_bytes,
+        width=ref.width,
+        height=ref.height,
+    )
+
+
 def output_refs(refs: Sequence[OutputRef]) -> list[OutputRefModel]:
     return [
-        OutputRefModel(socket=ref.socket, type=ref.type, inline=ref.inline, asset=ref.asset)
+        OutputRefModel(
+            socket=ref.socket,
+            type=ref.type,
+            inline=ref.inline,
+            asset=asset_ref_model(ref.asset),
+        )
         for ref in refs
     ]
 

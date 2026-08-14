@@ -21,7 +21,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Any as TypingAny
-from typing import Final, Self
+from typing import ClassVar, Final, Self, TypeAlias
 
 __all__ = [
     "BOOL",
@@ -32,6 +32,7 @@ __all__ = [
     "VAE",
     "Any",
     "AnyType",
+    "CatalogType",
     "Image",
     "Latent",
     "ListType",
@@ -45,6 +46,7 @@ __all__ = [
     "TypeCatalog",
     "TypeSpecError",
     "UnionType",
+    "as_type",
     "builtin",
     "check_conformance",
     "explain_incompatibility",
@@ -137,6 +139,11 @@ class ListType(Type):
 
     item: Type
 
+    def __post_init__(self) -> None:
+        # 카탈로그 이름은 클래스다 (`CatalogType` 주석 참조). `ListType(Image)` 처럼
+        # 이름을 그대로 넘길 수 있게 여기서 서술자로 바꾼다.
+        object.__setattr__(self, "item", as_type(self.item))
+
     def describe(self) -> str:
         return f"List[{self.item.describe()}]"
 
@@ -146,6 +153,9 @@ class UnionType(Type):
     """`Union[A, B, ...]`."""
 
     members: tuple[Type, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "members", tuple(as_type(m) for m in self.members))
 
     def describe(self) -> str:
         return f"Union[{', '.join(m.describe() for m in self.members)}]"
@@ -272,7 +282,7 @@ def parse_type_expr(expr: TypingAny, catalog: TypeCatalog | None = None) -> Type
 # -------------------------------------------------------------------- 호환성
 
 
-def is_compatible(source: Type, target: Type, catalog: TypeCatalog | None = None) -> bool:
+def is_compatible(source: TypingAny, target: TypingAny, catalog: TypeCatalog | None = None) -> bool:
     """출력 소켓 `source` 를 입력 소켓 `target` 에 연결할 수 있는지 판정한다.
 
     방향이 있다. `is_compatible(a, b)` 와 `is_compatible(b, a)` 는 다른 질문이다.
@@ -281,8 +291,8 @@ def is_compatible(source: Type, target: Type, catalog: TypeCatalog | None = None
 
 
 def explain_incompatibility(
-    source: Type,
-    target: Type,
+    source: TypingAny,
+    target: TypingAny,
     catalog: TypeCatalog | None = None,
 ) -> str | None:
     """호환되면 `None`, 아니면 사람이 읽는 이유를 돌려준다.
@@ -291,10 +301,14 @@ def explain_incompatibility(
     문자열을 "어느 노드의 어느 소켓" 에 붙여 쓴다 (AGENTS.md 코딩 컨벤션).
     """
     cat = catalog or load_catalog()
-    why = _incompatible_reason(source, target, cat)
+    # 카탈로그 이름은 클래스다. M1 이 동결한 `is_compatible(Image, Image)` 표면을
+    # 유지하려고 입구에서 한 번 서술자로 바꾼다 (`as_type` 주석 참조).
+    src = as_type(source)
+    dst = as_type(target)
+    why = _incompatible_reason(src, dst, cat)
     if why is None:
         return None
-    return f"{source.describe()} → {target.describe()}: {why}"
+    return f"{src.describe()} → {dst.describe()}: {why}"
 
 
 def _incompatible_reason(source: Type, target: Type, cat: TypeCatalog) -> str | None:
@@ -409,7 +423,7 @@ def check_conformance(catalog: TypeCatalog | None = None) -> list[str]:
     return failures
 
 
-def to_type_expr(socket_type: Type, catalog: TypeCatalog | None = None) -> TypingAny:
+def to_type_expr(socket_type: TypingAny, catalog: TypeCatalog | None = None) -> TypingAny:
     """`Type` → `types.json` 의 타입 표현식. `parse_type_expr` 의 역함수다.
 
     전송용이다. `describe()` 는 **사람이 읽는 렌더링**이라 복원할 수 없다
@@ -419,6 +433,7 @@ def to_type_expr(socket_type: Type, catalog: TypeCatalog | None = None) -> Typin
     카탈로그에 있는 타입은 **이름 문자열**로 짧게 나간다 — `Image`, `INT`.
     """
     cat = catalog or load_catalog()
+    socket_type = as_type(socket_type)
 
     if isinstance(socket_type, AnyType):
         return "Any"
@@ -476,14 +491,95 @@ FLOAT: Final[Type] = builtin("FLOAT")
 STRING: Final[Type] = builtin("STRING")
 BOOL: Final[Type] = builtin("BOOL")
 
-Image: Final[Type] = builtin("Image")
-Mask: Final[Type] = builtin("Mask")
-Latent: Final[Type] = builtin("Latent")
 
-Model: Final[Type] = builtin("Model")
-CLIP: Final[Type] = builtin("CLIP")
-VAE: Final[Type] = builtin("VAE")
-Scheduler: Final[Type] = builtin("Scheduler")
+class CatalogType:
+    """카탈로그 타입 이름을 **클래스**로 노출하는 기반 (M3 계약).
+
+    왜 인스턴스가 아니라 클래스인가 — mypy 는 **인스턴스의 속성을 타입
+    어노테이션으로 받지 않는다.** `Image` 가 인스턴스면 design.md §4.2 의
+    `def run(self, image: Image.T, ...)` 가 `Name "Image.T" is not defined` 로
+    거부된다. 클래스 속성일 때만 통한다. 노드 팩도 mypy 검사 범위이므로
+    (`pyproject.toml` 의 `packages`) 이것을 우회할 수 없다.
+
+    `T` 는 **런타임 값의 타입**이고 core 에서는 언제나 `Any` 다. core 는 도메인
+    중립 그래프 엔진이라 실제 값(numpy 배열, 모델 핸들)의 타입을 모른다.
+    `.T` 는 노드 저자가 "여기 들어오는 것은 이 소켓의 런타임 값"이라고 적을
+    자리를 주는 것이지, core 가 그 타입을 안다는 뜻이 **아니다.**
+
+    프리미티브(`INT`·`FLOAT`·`STRING`·`BOOL`)와 `Any` 는 인스턴스로 남는다.
+    그 런타임 타입은 `int`·`float`·`str`·`bool` 이라 파이썬으로 그냥 쓸 수 있고,
+    `.T` 를 붙여도 얻는 것이 없기 때문이다.
+    """
+
+    #: 런타임 값의 타입. core 는 모르므로 언제나 `Any` 다.
+    T: TypeAlias = TypingAny
+
+    #: `types.json` 에서 온 서술자. 판정은 전부 이것으로 한다.
+    descriptor: ClassVar[Type]
+
+    def __init_subclass__(cls, catalog: str = "", **kwargs: TypingAny) -> None:
+        super().__init_subclass__(**kwargs)
+        if catalog:
+            cls.descriptor = builtin(catalog)
+
+    def __new__(cls) -> Self:
+        raise TypeError(f"{cls.__name__} 은 소켓 타입 **이름**이다. 인스턴스를 만들지 않는다")
+
+
+class Image(CatalogType, catalog="Image"):
+    """이미지 소켓.
+
+    서술자는 `Tensor[uint8|float32, (B, H, W, C)]` 다 (`types.json`).
+    런타임 값은 **채널 마지막 numpy 배열**이고 배치 축이 언제나 있다 (M3 계약,
+    `design.md` §4.4). 정본은 `float32` 0..1 이며 `uint8` 0..255 는 파일 입출력
+    경계에서만 나타난다. PIL 은 Load/Save 노드 안에서만 쓰고 소켓으로 흐르지 않는다.
+    """
+
+
+class Mask(CatalogType, catalog="Mask"):
+    """마스크 소켓. `Tensor[float32, (B, H, W)]` — 채널 축이 없다."""
+
+
+class Latent(CatalogType, catalog="Latent"):
+    """잠재 텐서 소켓. `Tensor[float16|float32, (B, C, H, W)]` — 채널이 앞이다."""
+
+
+class Model(CatalogType, catalog="Model"):
+    """확산 모델 핸들."""
+
+
+class CLIP(CatalogType, catalog="CLIP"):
+    """텍스트 인코더 핸들."""
+
+
+class VAE(CatalogType, catalog="VAE"):
+    """VAE 핸들."""
+
+
+class Scheduler(CatalogType, catalog="Scheduler"):
+    """샘플링 스케줄러 핸들."""
+
+
+def as_type(value: TypingAny) -> Type:
+    """카탈로그 이름 클래스나 `Type` 을 `Type` 으로 정규화한다 (M3 계약).
+
+    `Image` 는 클래스이고 `Image.descriptor` 가 서술자다. 그런데 M1 이 동결한
+    표면은 `is_compatible(Image, Image)` · `ListType(Image)` 처럼 **이름을 값으로**
+    받는다. 그 계약을 깨지 않으려고 입구에서 한 번 변환한다.
+
+    Raises:
+        TypeSpecError: 타입으로 해석할 수 없는 값일 때.
+    """
+    if isinstance(value, Type):
+        return value
+    if isinstance(value, type) and issubclass(value, CatalogType):
+        descriptor: Type | None = value.__dict__.get("descriptor") or getattr(
+            value, "descriptor", None
+        )
+        if not isinstance(descriptor, Type):
+            raise TypeSpecError(f"{value.__name__} 에 카탈로그 서술자가 없다")
+        return descriptor
+    raise TypeSpecError(f"타입으로 해석할 수 없다: {value!r}")
 
 
 def iter_named_types(catalog: TypeCatalog | None = None) -> Iterable[tuple[str, Type]]:
