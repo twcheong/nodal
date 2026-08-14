@@ -94,21 +94,26 @@ export function graphToFlow(
   measurements: Readonly<Record<string, { width: number; height: number }>> = {},
 ): FlowProjection {
   const issueMap = groupIssues(issues);
-  const nodes: NodalFlowNode[] = Object.entries(graph.nodes ?? {}).map(([nodeId, graphNode], index) => ({
-    id: nodeId,
-    type: "nodal",
-    measured: measurements[nodeId] ?? { width: 244, height: estimatedNodeHeight(graphNode, schemas.get(graphNode.type)) },
-    position: readNodePosition(graph.ui?.[nodeId]) ?? defaultPosition(index),
-    selected: selected.has(nodeId),
-    data: {
-      nodeId,
-      graphNode,
-      schema: schemas.get(graphNode.type) ?? unknownSchema(graphNode.type),
-      runtime: runtime[nodeId] ?? IDLE_RUNTIME,
-      issues: issueMap.get(nodeId) ?? [],
-      connectionSourceType: connection?.type ?? null,
-    },
-  }));
+  const nodes: NodalFlowNode[] = Object.entries(graph.nodes ?? {}).map(
+    ([nodeId, graphNode], index) => ({
+      id: nodeId,
+      type: "nodal",
+      measured: measurements[nodeId] ?? {
+        width: 244,
+        height: estimatedNodeHeight(graphNode, schemas.get(graphNode.type)),
+      },
+      position: readNodePosition(graph.ui?.[nodeId]) ?? defaultPosition(index),
+      selected: selected.has(nodeId),
+      data: {
+        nodeId,
+        graphNode,
+        schema: schemas.get(graphNode.type) ?? unknownSchema(graphNode.type),
+        runtime: runtime[nodeId] ?? IDLE_RUNTIME,
+        issues: issueMap.get(nodeId) ?? [],
+        connectionSourceType: connection?.type ?? null,
+      },
+    }),
+  );
 
   const edges: NodalFlowEdge[] = [];
   Object.entries(graph.nodes ?? {}).forEach(([target, node]) => {

@@ -12,16 +12,27 @@ export function Inspector(): React.JSX.Element {
 
   return (
     <aside className="inspector">
-      <div className="panel-heading"><span>INSPECTOR</span></div>
+      <div className="panel-heading">
+        <span>INSPECTOR</span>
+      </div>
       {node && selectedId ? (
         <div className="inspector-body">
           <small>선택한 노드</small>
           <h2>{node.meta?.title || node.type}</h2>
           <code>{selectedId}</code>
           <dl>
-            <div><dt>타입</dt><dd>{node.type}</dd></div>
-            <div><dt>상태</dt><dd>{runtime[selectedId]?.status ?? "idle"}</dd></div>
-            <div><dt>입력</dt><dd>{Object.keys(node.inputs ?? {}).length}</dd></div>
+            <div>
+              <dt>타입</dt>
+              <dd>{node.type}</dd>
+            </div>
+            <div>
+              <dt>상태</dt>
+              <dd>{runtime[selectedId]?.status ?? "idle"}</dd>
+            </div>
+            <div>
+              <dt>입력</dt>
+              <dd>{Object.keys(node.inputs ?? {}).length}</dd>
+            </div>
           </dl>
           <button
             className={`output-toggle${graph.outputs?.includes(selectedId) ? " active" : ""}`}
@@ -35,9 +46,16 @@ export function Inspector(): React.JSX.Element {
         <p className="empty-state">노드를 선택하면 세부정보가 표시됩니다.</p>
       )}
       <div className="activity">
-        <div className="panel-heading"><span>RUN ACTIVITY</span><b>{runStatus ?? "idle"}</b></div>
+        <div className="panel-heading">
+          <span>RUN ACTIVITY</span>
+          <b>{runStatus ?? "idle"}</b>
+        </div>
         {issues.length ? (
-          issues.map((issue) => <p className="activity-error" key={`${issue.code}:${issue.location}`}>{issue.message}</p>)
+          issues.map((issue) => (
+            <p className="activity-error" key={`${issue.code}:${issue.location}`}>
+              {issue.message}
+            </p>
+          ))
         ) : (
           <p className="empty-state">오류가 없습니다.</p>
         )}

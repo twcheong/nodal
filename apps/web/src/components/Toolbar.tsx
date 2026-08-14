@@ -32,14 +32,27 @@ export function Toolbar({
         </span>
       </div>
       <nav>
-        <button type="button" onClick={onSave}>저장</button>
-        <button type="button" onClick={onLoad}>불러오기</button>
-        <button type="button" onClick={onBenchmark}>200 노드 측정</button>
-        {fps !== null ? <output className={fps >= 55 ? "fps good" : "fps warn"}>{fps} fps</output> : null}
+        <button type="button" onClick={onSave}>
+          저장
+        </button>
+        <button type="button" onClick={onLoad}>
+          불러오기
+        </button>
+        <button type="button" onClick={onBenchmark}>
+          200 노드 측정
+        </button>
+        {fps !== null ? (
+          <output className={fps >= 55 ? "fps good" : "fps warn"}>{fps} fps</output>
+        ) : null}
       </nav>
       <div className="run-controls">
         <span className={`api-mode ${mode}`}>{mode === "mock" ? "MOCK DATA" : "LIVE API"}</span>
-        <button className="run-secondary" type="button" disabled={busy} onClick={() => onRun(false)}>
+        <button
+          className="run-secondary"
+          type="button"
+          disabled={busy}
+          onClick={() => onRun(false)}
+        >
           캐시 없이
         </button>
         <button className="run-primary" type="button" disabled={busy} onClick={() => onRun(true)}>

@@ -13,10 +13,7 @@ export function parseSocketType(expr: SocketTypeExpr): SocketType {
 }
 
 /** 호환 규칙을 복제하지 않고 기존 타입 시스템에 위임한다. */
-export function socketTypesCompatible(
-  source: SocketTypeExpr,
-  target: SocketTypeExpr,
-): boolean {
+export function socketTypesCompatible(source: SocketTypeExpr, target: SocketTypeExpr): boolean {
   try {
     return isCompatible(parseSocketType(source), parseSocketType(target));
   } catch (error) {

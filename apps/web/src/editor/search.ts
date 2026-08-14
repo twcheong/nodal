@@ -6,13 +6,18 @@ export function searchSchemas(schemas: readonly NodeSchema[], query: string): No
   return schemas
     .map((schema) => ({ schema, score: schemaScore(schema, needle) }))
     .filter((entry) => entry.score >= 0)
-    .sort((left, right) => right.score - left.score || left.schema.title.localeCompare(right.schema.title))
+    .sort(
+      (left, right) =>
+        right.score - left.score || left.schema.title.localeCompare(right.schema.title),
+    )
     .map((entry) => entry.schema);
 }
 
 function schemaScore(schema: NodeSchema, needle: string): number {
   const fields = [schema.title, schema.id, schema.category, ...(schema.aliases ?? [])];
-  return Math.max(...fields.map((field, index) => fuzzyScore(normalize(field), needle) - index * 2));
+  return Math.max(
+    ...fields.map((field, index) => fuzzyScore(normalize(field), needle) - index * 2),
+  );
 }
 
 function fuzzyScore(text: string, needle: string): number {
@@ -32,5 +37,8 @@ function fuzzyScore(text: string, needle: string): number {
 }
 
 function normalize(value: string): string {
-  return value.trim().toLocaleLowerCase("ko-KR").replace(/[\s._-]+/g, "");
+  return value
+    .trim()
+    .toLocaleLowerCase("ko-KR")
+    .replace(/[\s._-]+/g, "");
 }

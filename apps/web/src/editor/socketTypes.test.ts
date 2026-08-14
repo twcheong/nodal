@@ -31,8 +31,8 @@ describe("OpenAPI 구조화 소켓 타입", () => {
   });
 
   it("Tensor의 dtype과 심볼 차원을 그대로 보존한다", () => {
-    expect(
-      describeSocketType({ tensor: { dtypes: ["float32"], shape: [null, "channels"] } }),
-    ).toBe("Tensor[float32, (?, channels)]");
+    expect(describeSocketType({ tensor: { dtypes: ["float32"], shape: [null, "channels"] } })).toBe(
+      "Tensor[float32, (?, channels)]",
+    );
   });
 });

@@ -25,7 +25,9 @@ export const NodalNode = memo(function NodalNode({ data, selected }: NodeProps<N
   );
 
   return (
-    <article className={`nodal-node status-${data.runtime.status}${selected ? " is-selected" : ""}`}>
+    <article
+      className={`nodal-node status-${data.runtime.status}${selected ? " is-selected" : ""}`}
+    >
       <header className="node-header">
         <span className="node-category">{data.schema.category}</span>
         <span className="node-status" aria-label={`상태: ${STATUS_LABEL[data.runtime.status]}`}>
@@ -38,7 +40,9 @@ export const NodalNode = memo(function NodalNode({ data, selected }: NodeProps<N
       {data.runtime.progress ? (
         <div className="node-progress" aria-label="노드 진행률">
           <span
-            style={{ width: `${(data.runtime.progress.step / data.runtime.progress.total) * 100}%` }}
+            style={{
+              width: `${(data.runtime.progress.step / data.runtime.progress.total) * 100}%`,
+            }}
           />
         </div>
       ) : null}

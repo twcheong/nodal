@@ -30,7 +30,8 @@ export function App(): React.JSX.Element {
 
   useEffect(() => {
     let active = true;
-    api.listNodes()
+    api
+      .listNodes()
       .then((response) => {
         if (active) setSchemas(response.nodes ?? []);
       })
@@ -83,23 +84,26 @@ export function App(): React.JSX.Element {
     }
   };
 
-  const run = useCallback(async (useCache: boolean) => {
-    if (!beginRunSubmission()) return;
-    try {
-      const validation = await api.validateGraph(graph);
-      setIssues(validation.issues ?? []);
-      if (!validation.valid) {
-        setMessage("실행 전 검증에서 문제가 발견됐습니다");
-        return;
+  const run = useCallback(
+    async (useCache: boolean) => {
+      if (!beginRunSubmission()) return;
+      try {
+        const validation = await api.validateGraph(graph);
+        setIssues(validation.issues ?? []);
+        if (!validation.valid) {
+          setMessage("실행 전 검증에서 문제가 발견됐습니다");
+          return;
+        }
+        const response = await api.createRun(graph, useCache);
+        startRun(response.run_id);
+      } catch (error) {
+        setMessage(`실행 요청 실패: ${readError(error)}`);
+      } finally {
+        finishRunSubmission();
       }
-      const response = await api.createRun(graph, useCache);
-      startRun(response.run_id);
-    } catch (error) {
-      setMessage(`실행 요청 실패: ${readError(error)}`);
-    } finally {
-      finishRunSubmission();
-    }
-  }, [api, beginRunSubmission, finishRunSubmission, graph, setIssues, setMessage, startRun]);
+    },
+    [api, beginRunSubmission, finishRunSubmission, graph, setIssues, setMessage, startRun],
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -130,7 +134,10 @@ export function App(): React.JSX.Element {
           <Inspector />
         </div>
         {message ? (
-          <button className="toast" type="button" onClick={() => setMessage(null)}>{message}<span>×</span></button>
+          <button className="toast" type="button" onClick={() => setMessage(null)}>
+            {message}
+            <span>×</span>
+          </button>
         ) : null}
         <input
           ref={fileInput}

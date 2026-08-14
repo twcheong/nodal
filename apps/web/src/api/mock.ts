@@ -126,11 +126,7 @@ export const MOCK_NODE_SCHEMAS: readonly NodeSchema[] = [
     cacheable: true,
     output_node: false,
     doc: "값을 최소·최대 범위 안으로 제한합니다.",
-    inputs: [
-      input("value", "INT", 0),
-      input("low", "INT", 0),
-      input("high", "INT", 100),
-    ],
+    inputs: [input("value", "INT", 0), input("low", "INT", 0), input("high", "INT", 100)],
     outputs: [output("value", "INT")],
   },
   {
@@ -243,10 +239,7 @@ export class MockGraphApiClient implements GraphApiClient {
             node_id: nodeId,
             socket: "b",
             message: "0으로 나눌 수 없습니다",
-            traceback: [
-              "math.Divide.run(left, right)",
-              "ZeroDivisionError: division by zero",
-            ],
+            traceback: ["math.Divide.run(left, right)", "ZeroDivisionError: division by zero"],
           });
           return;
         }

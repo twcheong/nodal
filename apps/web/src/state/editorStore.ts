@@ -1,10 +1,4 @@
-import type {
-  Connection,
-  Edge,
-  NodeChange,
-  Viewport,
-  XYPosition,
-} from "@xyflow/react";
+import type { Connection, Edge, NodeChange, Viewport, XYPosition } from "@xyflow/react";
 import { create } from "zustand";
 
 import type { Issue, NodeSchema, RunStatus, WsEvent } from "../api/types";
@@ -305,7 +299,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setBenchmarkFps: (benchmarkFps) => set({ benchmarkFps }),
 }));
 
-function withNodePosition(graph: GraphDocument, nodeId: string, position: XYPosition): GraphDocument {
+function withNodePosition(
+  graph: GraphDocument,
+  nodeId: string,
+  position: XYPosition,
+): GraphDocument {
   return {
     ...graph,
     ui: { ...(graph.ui ?? {}), [nodeId]: { pos: [position.x, position.y] } },
