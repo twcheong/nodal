@@ -12,6 +12,11 @@ node_modules/
 dist/
 .vite/
 
+# 개인 설정. `apps/web/.env` 는 비밀이 아닌 기본값이라 커밋한다 —
+# 각자의 덮어쓰기는 `.env.local` 로 (vite 규약).
+.env.local
+.env.*.local
+
 # 런타임 산출물 (M3~)
 /outputs/
 /models/

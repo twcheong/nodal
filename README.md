@@ -167,8 +167,10 @@ uv run nodal nodes                                      # 등록된 노드 18개
 
 ### B. 브라우저에서 이미지 워크플로 — 3분
 
-1. 왼쪽 팔레트의 **IMAGE/IO → Load Image** 를 캔버스로 끌어다 놓고, `path` 에 아무 PNG/JPEG
-   경로를 적는다
+> 팔레트 항목은 **캔버스로 끌어다 놓거나 더블클릭**하면 추가된다 (팔레트 아래에도 적혀 있다).
+> 캔버스 빈 곳을 더블클릭하면 퍼지 검색이 열린다 — `이미지`, `크기` 같은 한글 별칭도 찾는다.
+
+1. **IMAGE/IO → Load Image** 를 추가하고, 노드 안의 `path` 칸에 아무 PNG/JPEG 경로를 적는다
 2. **IMAGE/TRANSFORM → Resize Image** 를 놓고 `Load` 의 `image` 출력을 `Resize` 의 `image`
    입력에 연결한다 — 드래그하는 동안 **호환되는 소켓만 밝게** 표시된다
 3. **IMAGE/IO → Save Image** 를 붙이고 우상단 **실행** 을 누른다
