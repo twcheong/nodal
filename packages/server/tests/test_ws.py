@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 from typing import Any
 
@@ -19,9 +20,12 @@ from conftest import simple_graph, slow_graph, wait_for
 from fastapi.testclient import TestClient
 from pydantic import TypeAdapter
 
-from nodal import NodeRegistry
+from nodal import AssetRef, NodeDone, NodePreview, NodeRegistry
+from nodal.events import OutputRef
+from nodal.preview import AssetPreview
 from nodal_server.app import create_app
 from nodal_server.schemas import WsEvent
+from nodal_server.wire import event_to_wire
 
 _EVENTS: TypeAdapter[Any] = TypeAdapter(WsEvent)
 
@@ -128,6 +132,40 @@ def test_node_done_carries_output_refs(client: TestClient) -> None:
 
     done = next(m for m in messages if m["t"] == "node.done" and m["node_id"] == "add")
     assert done["outputs"] == [{"socket": "sum", "type": "INT", "inline": 30, "asset": None}]
+
+
+def test_asset_refs_are_json_serialisable_in_preview_and_output_events() -> None:
+    """M3 이미지 참조가 WS 송신 직전에 불투명 Python 객체로 남지 않는다."""
+    asset = AssetRef("abc123", "image/png", 42, width=16, height=9)
+    expected = {
+        "hash": "abc123",
+        "media_type": "image/png",
+        "size_bytes": 42,
+        "width": 16,
+        "height": 9,
+    }
+    events = (
+        NodePreview(
+            t="node.preview",
+            run_id="run-1",
+            node_id="image-1",
+            preview=AssetPreview(kind="asset", asset=asset),
+        ),
+        NodeDone(
+            t="node.done",
+            run_id="run-1",
+            node_id="image-1",
+            outputs=(OutputRef(socket="image", type="Image", asset=asset),),
+        ),
+    )
+
+    messages = [event_to_wire(event) for event in events]
+
+    assert messages[0]["preview"]["asset"] == expected
+    assert messages[1]["outputs"][0]["asset"] == expected
+    for message in messages:
+        json.dumps(message)
+        _EVENTS.validate_python(message)
 
 
 def test_progress_events_reach_the_socket(client: TestClient) -> None:

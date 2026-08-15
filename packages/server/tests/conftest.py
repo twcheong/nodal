@@ -13,7 +13,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from nodal import Int, NodeRegistry, NodeResult, node
+from nodal import Combo, Int, NodeRegistry, NodeResult, node
 from nodal_server.app import create_app
 
 
@@ -72,7 +72,19 @@ class Slow:
         return NodeResult(steps)
 
 
-TEST_NODES: tuple[type, ...] = (Const, Add, Boom, Slow)
+@node(id="test.Choice", title="Choice", category="test")
+class Choice:
+    """Combo 옵션이 JSON 배열로 전송되는지 확인하는 노드."""
+
+    mode: Combo = Combo("first", options=["first", "second"])
+
+    returns = {"value": Int}
+
+    def run(self, mode: str) -> NodeResult:
+        return NodeResult(len(mode))
+
+
+TEST_NODES: tuple[type, ...] = (Const, Add, Boom, Slow, Choice)
 
 
 @pytest.fixture

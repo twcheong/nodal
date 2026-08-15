@@ -77,11 +77,10 @@
 
 - [x] `Image` 텐서 타입 — numpy `(B,H,W,C)` float32 0..1 (`design.md` §4.4)
 - [x] 노드: Load / Save / Resize / Crop / Blend / Mask / Composite (`packages/nodes-image`)
-- [ ] 노드 내 이미지 프리뷰 위젯 — **프론트**. 백엔드는 `node.preview` 로 이미 내보낸다
+- [x] 노드 내 이미지 프리뷰 위젯 — 구조화 프리뷰와 이미지 출력 에셋을 노드 안에 표시
 - [x] `AssetStore` (content-addressed, 해시 파일명) — `nodal_server.assets.FileAssetStore`
 - [x] PNG `iTXt` 메타데이터에 UTF-8 워크플로 임베딩 — Save 노드
-- [~] PNG 드래그앤드롭 → 워크플로 복원 — **백엔드 완료** (`POST /api/graph/from-png`),
-      드래그앤드롭 UX 는 프론트
+- [x] PNG 드래그앤드롭 → 워크플로 복원 (`POST /api/graph/from-png` + 캔버스 인라인 UX)
 
 **완료 기준**: GPU 없이도 쓸모 있는 이미지 처리 도구가 된다.
 

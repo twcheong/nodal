@@ -7,6 +7,7 @@ import { GraphCanvas, type CanvasHandle } from "./components/GraphCanvas";
 import { Inspector } from "./components/Inspector";
 import { NodePalette } from "./components/NodePalette";
 import { Toolbar } from "./components/Toolbar";
+import { isPngFile } from "./editor/pngDrop";
 import { validateGraphDocument } from "./graph/schema";
 import { useEditorStore } from "./state/editorStore";
 
@@ -164,10 +165,13 @@ export function App(): React.JSX.Element {
             ref={fileInput}
             hidden
             type="file"
-            accept=".json,.nodal.json,application/json"
+            accept=".json,.nodal.json,.png,application/json,image/png"
             onChange={(event) => {
               const file = event.target.files?.[0];
-              if (file) void openGraph(file);
+              if (file) {
+                if (isPngFile(file)) void canvas.current?.restorePng(file);
+                else void openGraph(file);
+              }
               event.target.value = "";
             }}
           />

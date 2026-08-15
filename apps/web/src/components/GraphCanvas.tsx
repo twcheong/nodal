@@ -21,6 +21,7 @@ import { NodeSearch } from "./NodeSearch";
 
 export interface CanvasHandle {
   benchmark: () => Promise<number | null>;
+  restorePng: (file: File) => Promise<void>;
 }
 
 interface GraphCanvasProps {
@@ -103,6 +104,22 @@ export const GraphCanvas = forwardRef<CanvasHandle, GraphCanvasProps>(function G
     [graph.nodes, schemaMap],
   );
 
+  const restorePng = useCallback(
+    async (file: File) => {
+      setDropState("loading");
+      setDropMessage("PNG에서 워크플로를 확인하고 있습니다…");
+      try {
+        await onPngDrop(file);
+        setDropState("idle");
+        setDropMessage(null);
+      } catch (error) {
+        setDropState("error");
+        setDropMessage(`워크플로 복원 실패: ${readError(error)}`);
+      }
+    },
+    [onPngDrop],
+  );
+
   const handleDrop = useCallback(
     async (event: React.DragEvent<HTMLElement>) => {
       event.preventDefault();
@@ -113,16 +130,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, GraphCanvasProps>(function G
           setDropMessage("PNG 파일만 캔버스에서 워크플로로 복원할 수 있습니다.");
           return;
         }
-        setDropState("loading");
-        setDropMessage("PNG에서 워크플로를 확인하고 있습니다…");
-        try {
-          await onPngDrop(file);
-          setDropState("idle");
-          setDropMessage(null);
-        } catch (error) {
-          setDropState("error");
-          setDropMessage(`워크플로 복원 실패: ${readError(error)}`);
-        }
+        await restorePng(file);
         return;
       }
 
@@ -132,12 +140,13 @@ export const GraphCanvas = forwardRef<CanvasHandle, GraphCanvasProps>(function G
         addNode(schema, flow.screenToFlowPosition({ x: event.clientX, y: event.clientY }));
       }
     },
-    [addNode, flow, onPngDrop, schemaMap],
+    [addNode, flow, restorePng, schemaMap],
   );
 
   useImperativeHandle(
     ref,
     () => ({
+      restorePng,
       benchmark: async () => {
         if (document.hidden) {
           setBenchmarkFps(null);
@@ -165,7 +174,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, GraphCanvasProps>(function G
         return fps;
       },
     }),
-    [flow, loadGraph, setBenchmarkFps, setMessage],
+    [flow, loadGraph, restorePng, setBenchmarkFps, setMessage],
   );
 
   return (

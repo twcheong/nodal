@@ -43,7 +43,10 @@ __all__ = [
 
 def event_to_wire(event: Event) -> dict[str, Any]:
     """core 이벤트를 WS 로 내보낼 딕셔너리로. 필드 이름을 그대로 유지한다."""
-    return dataclasses.asdict(event)
+    message = _wire_value(event)
+    if not isinstance(message, dict):
+        raise TypeError(f"이벤트는 dataclass 여야 한다: {type(event).__name__}")
+    return message
 
 
 def issue_models(issues: Sequence[GraphIssue]) -> list[IssueModel]:
@@ -138,10 +141,10 @@ def node_schema_model(schema: NodeSchema) -> NodeSchemaModel:
                 name=spec.name,
                 type=to_type_expr(spec.type),
                 required=spec.required,
-                default=spec.default if _is_json_safe(spec.default) else None,
+                default=_json_value(spec.default) if _is_json_safe(spec.default) else None,
                 lazy=spec.lazy,
                 doc=spec.doc,
-                widget={k: v for k, v in spec.widget.items() if _is_json_safe(v)},
+                widget={k: _json_value(v) for k, v in spec.widget.items() if _is_json_safe(v)},
             )
             for spec in schema.inputs.values()
         ],
@@ -164,3 +167,39 @@ def _is_json_safe(value: Any) -> bool:
     if isinstance(value, list | tuple):
         return all(_is_json_safe(item) for item in value)
     return False
+
+
+def _json_value(value: Any) -> Any:
+    """JSON 이 구분하지 않는 Python 컨테이너를 전송 형태로 정규화한다."""
+    if isinstance(value, Mapping):
+        return {key: _json_value(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return [_json_value(item) for item in value]
+    return value
+
+
+def _wire_value(value: Any) -> Any:
+    """이벤트 안의 계약 값까지 재귀적으로 JSON 형태로 직렬화한다.
+
+    `dataclasses.asdict()` 는 dataclass 가 아닌 `AssetRef` 를 그대로 남긴다. M3 에서
+    그 참조가 프리뷰와 출력 이벤트 안에 들어오므로, 필드 이름을 바꾸지 않은 채
+    명시적으로 펼쳐야 한다.
+    """
+    if isinstance(value, AssetRef):
+        return {
+            "hash": value.hash,
+            "media_type": value.media_type,
+            "size_bytes": value.size_bytes,
+            "width": value.width,
+            "height": value.height,
+        }
+    if dataclasses.is_dataclass(value):
+        return {
+            field.name: _wire_value(getattr(value, field.name))
+            for field in dataclasses.fields(value)
+        }
+    if isinstance(value, Mapping):
+        return {key: _wire_value(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return [_wire_value(item) for item in value]
+    return value

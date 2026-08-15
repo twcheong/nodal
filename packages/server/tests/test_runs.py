@@ -34,6 +34,9 @@ def test_nodes_endpoint_feeds_the_palette(client: TestClient) -> None:
     assert add["inputs"][0]["type"] == "INT"
     assert add["aliases"] == ["더하기"]
 
+    choice = next(node for node in payload["nodes"] if node["id"] == "test.Choice")
+    assert choice["inputs"][0]["widget"]["options"] == ["first", "second"]
+
 
 def test_validate_accepts_a_good_graph(client: TestClient) -> None:
     response = client.post("/api/graph/validate", json={"graph": simple_graph()})
