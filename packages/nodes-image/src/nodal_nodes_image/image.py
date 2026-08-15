@@ -15,11 +15,15 @@
 
 from __future__ import annotations
 
+from typing import Any, TypeAlias
+
 import numpy as np
 from PIL import Image as PILImage
 
 __all__ = [
     "CHANNELS",
+    "ImageArray",
+    "MaskArray",
     "clip01",
     "ensure_batch",
     "from_pil",
@@ -28,6 +32,21 @@ __all__ = [
     "to_uint8",
 ]
 
+#: 소켓을 흐르는 이미지의 **실제** 파이썬 타입.
+#:
+#: `nodal.Image.T` 는 core 쪽 표기이고 언제나 `Any` 다 — core 는 numpy 를 모른다
+#: (design.md §4.4). 노드 팩 안에서는 이 별칭을 쓴다. dtype 이 타입에 박혀 있어서
+#: `a / 255.0` 처럼 **float64 로 승격되는 실수를 mypy 가 잡는다** — 0..1 정규화에서
+#: 가장 흔한 버그다.
+#:
+#: 랭크(4)와 shape 은 타입으로 표현되지 않는다. numpy 의 타입 시스템이 아직 shape 을
+#: 검사하지 못하기 때문이다. 그쪽은 `ensure_batch` · `to_float32` 의 런타임 검증이
+#: 담당한다 — 둘은 대체재가 아니라 분담이다.
+ImageArray: TypeAlias = np.ndarray[Any, np.dtype[np.float32]]
+
+#: 마스크. `(B, H, W)` 로 채널 축이 없다 (design.md §4.4).
+MaskArray: TypeAlias = np.ndarray[Any, np.dtype[np.float32]]
+
 #: 허용 채널 수 — L(1) · RGB(3) · RGBA(4).
 CHANNELS = (1, 3, 4)
 
@@ -35,12 +54,13 @@ CHANNELS = (1, 3, 4)
 _DTYPE = np.float32
 
 
-def clip01(array: np.ndarray) -> np.ndarray:
+def clip01(array: np.ndarray[Any, Any]) -> ImageArray:
     """0.0..1.0 으로 클립한다. 소켓으로 내보내기 직전에 부른다."""
-    return np.clip(array, 0.0, 1.0, dtype=_DTYPE, casting="unsafe")
+    clipped: ImageArray = np.clip(array, 0.0, 1.0, dtype=_DTYPE, casting="unsafe")
+    return clipped
 
 
-def ensure_batch(array: np.ndarray) -> np.ndarray:
+def ensure_batch(array: np.ndarray[Any, Any]) -> np.ndarray[Any, Any]:
     """`(H, W, C)` 를 `(1, H, W, C)` 로 만든다. 이미 4D 면 그대로.
 
     Raises:
@@ -53,7 +73,7 @@ def ensure_batch(array: np.ndarray) -> np.ndarray:
     raise ValueError(f"이미지는 (B, H, W, C) 또는 (H, W, C) 여야 한다. 받은 shape: {array.shape}")
 
 
-def to_float32(array: np.ndarray) -> np.ndarray:
+def to_float32(array: np.ndarray[Any, Any]) -> ImageArray:
     """어떤 이미지 배열이든 계약 형태(`float32` 0..1, `(B,H,W,C)`)로 만든다.
 
     `uint8` 은 255 로 나눠 정규화한다. 이미 실수형이면 값 범위만 맞춘다.
@@ -62,26 +82,28 @@ def to_float32(array: np.ndarray) -> np.ndarray:
         ValueError: 채널 수가 1·3·4 가 아닐 때.
     """
     batched = ensure_batch(array)
-    if batched.dtype == np.uint8:
-        normalized = batched.astype(_DTYPE) / 255.0
-    else:
-        normalized = batched.astype(_DTYPE, copy=False)
+    normalized: ImageArray = (
+        (batched / np.float32(255.0)).astype(_DTYPE)
+        if batched.dtype == np.uint8
+        else batched.astype(_DTYPE, copy=False)
+    )
     channels = normalized.shape[-1]
     if channels not in CHANNELS:
         raise ValueError(f"채널 수는 {CHANNELS} 중 하나여야 한다. 받은 값: {channels}")
     return clip01(normalized)
 
 
-def to_uint8(array: np.ndarray) -> np.ndarray:
+def to_uint8(array: np.ndarray[Any, Any]) -> np.ndarray[Any, np.dtype[np.uint8]]:
     """계약 형태 → `uint8` 0..255. 파일로 나갈 때만 쓴다.
 
     반올림 후 클립한다. 0.5 를 그냥 자르면 흰색이 254 가 되어 왕복이 어긋난다.
     """
     scaled = clip01(to_float32(array)) * 255.0
-    return np.rint(scaled).astype(np.uint8)
+    rounded: np.ndarray[Any, np.dtype[np.uint8]] = np.rint(scaled).astype(np.uint8)
+    return rounded
 
 
-def from_pil(image: PILImage.Image) -> np.ndarray:
+def from_pil(image: PILImage.Image) -> ImageArray:
     """PIL 이미지를 계약 형태로. **Load 노드 경계에서만 쓴다.**
 
     팔레트·1비트 같은 모드는 RGB(A) 로 펼친다. 알파가 있으면 RGBA 를 유지한다 —
@@ -96,7 +118,7 @@ def from_pil(image: PILImage.Image) -> np.ndarray:
     return to_float32(array)
 
 
-def to_pil(array: np.ndarray, index: int = 0) -> PILImage.Image:
+def to_pil(array: ImageArray, index: int = 0) -> PILImage.Image:
     """계약 형태의 배치에서 한 장을 PIL 로. **Save/인코딩 경계에서만 쓴다.**
 
     Args:

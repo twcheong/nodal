@@ -336,6 +336,63 @@
 - **영향 범위**: `apps/web/src/editor/socketTypes.ts`
 - **되돌릴 수 있나**: 예 — OpenAPI가 구조화 `TypeExpr`을 보내면 문자열 어댑터를 제거할 수 있다.
 
+### 2026-08-15 · Claude Code · numpy 타입 검사 복구 (선택지 4개 비교 후 결정)
+
+M3 백엔드에서 numpy 스텁을 mypy 검사에서 제외했던 것을 되돌렸다. 선택지를 **실제로
+돌려 보고** 골랐다.
+
+- **결정: numpy 를 `>=2.1,<2.5` 로 고정한다.** mypy 예외를 제거했다
+- **결정적 근거**: numpy 2.5 는 **자체가 `requires-python >= 3.12`** 다. 우리는
+  `requires-python = ">=3.11"` 이므로 `numpy>=2.1` 이라고만 쓴 것은 **처음부터
+  일관되지 않은 선언**이었다. 상한을 두는 것이 오히려 선언을 정직하게 만든다.
+  2.4 계열은 3.11 을 지원하고 스텁도 3.11 로 파싱된다 (직접 확인)
+- **탈락 1 — mypy `python_version` 만 3.12 로**: 3.12 전용 문법(PEP 695 `type` 문)을
+  우리 코드에 써도 mypy 가 통과시킨다. 실제로 만들어 확인했다 — mypy 는 통과,
+  3.11 인터프리터는 `SyntaxError`. **3.11 을 지킨다는 보증이 사라진다**
+- **탈락 2 — `requires-python` 을 3.12 로**: 지금 얻을 것이 numpy 상한 해제뿐인데,
+  그 대가로 3.11 지원을 버린다. M4 에서 torch·diffusers 의 지원 범위를 볼 때
+  다시 판단하는 편이 낫다. 올리는 것은 언제든 되지만 내리는 것은 어렵다
+- **탈락 3 — 런타임 검증으로 대체**: 대체재가 아니다. 아래처럼 **분담**이다
+
+**numpy 타입 검사가 실제로 잡는 것과 못 잡는 것** (직접 실험한 결과)
+
+| 실수 | 잡히나 |
+|---|---|
+| `a / 255.0` 이 float64 로 승격 | ✅ — 0..1 정규화에서 가장 흔한 버그 |
+| `uint8` 배열을 `float32` 자리에 전달 | ✅ |
+| 배열이 아닌 값(str 등) 전달 | ✅ |
+| `a[..., 0]` 로 랭크가 줄어듦 | ❌ numpy 타입 시스템이 shape 을 모른다 |
+| `np.zeros(..., dtype=np.uint8)` 리터럴의 dtype 추론 | ❌ |
+
+그래서 **dtype 은 타입이, shape 은 런타임이** 담당한다. `ensure_batch` · `to_float32`
+가 랭크와 채널 수를 검사하고 있고 그것이 shape 쪽의 보증이다. 선택지 4를 "대신"이
+아니라 "함께" 로 둔 이유다.
+
+**`ImageArray` · `MaskArray` 별칭을 `nodal_nodes_image.image` 에 추가**했다.
+`np.ndarray[Any, np.dtype[np.float32]]` 라 dtype 이 타입에 박힌다.
+
+**`Image.T` 에 대해** — 계약 때 정한 것은 "**core 에 두되 순수 별칭**" 이고
+`design.md` §4.4 가 "core 에서는 언제나 `Any`" 라고 명시한다. 실제 타입으로 하기로
+한 적이 없다. 바꾸려면 **core 가 numpy 를 import** 해야 하는데 그것은 "core 는
+도메인 중립 그래프 엔진" 규칙 위반이고, `Image.T` 를 고른 근거(mypy 가 인스턴스
+속성을 타입으로 못 씀) 와도 무관하다. 대신 노드 팩이 `ImageArray` 를 노출해
+**팩 안에서는 진짜 타입 검사**를 받게 했다 — core 의 도메인 중립성과 노드 저자의
+타입 안전을 둘 다 가져가는 방법이다.
+
+- **영향 범위**: `packages/nodes-image/{pyproject.toml,src/nodal_nodes_image/image.py}`,
+  `pyproject.toml`(mypy 예외 제거), `uv.lock`
+- **되돌릴 수 있나**: 예 — 상한 하나다. `requires-python` 을 3.12 로 올리면 뗀다
+
+### 2026-08-15 · Claude Code · 생성물은 원본과 같은 커밋에서 재생성
+
+- **결정**: `AGENTS.md` 협업 규칙 8 추가. `schemas/openapi.json` 을 바꾼 커밋이
+  `apps/web/src/api/generated.ts` 도 함께 재생성한다
+- **이유**: "손으로 편집하지 않는다" 와 "재생성하지 않는다" 는 다르다. 나누면 그
+  사이 커밋마다 CI 의 drift 검사가 실패한다. M3 계약 커밋에서 실제로 이 혼동으로
+  설명 문구를 고치지 못한 채 남겨 뒀었다
+- **영향 범위**: `AGENTS.md`, `schemas/openapi.json`, `apps/web/src/api/generated.ts`
+- **되돌릴 수 있나**: 예
+
 ### 2026-08-14 · Claude Code · M3 백엔드 구현
 
 계약(`56baaad`·`374e6fd`)을 구현했다. 프론트가 병렬로 작업 중이라

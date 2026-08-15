@@ -118,13 +118,3 @@ plugins = ["pydantic.mypy"]
 init_forbid_extra = true
 init_typed = true
 warn_required_dynamic_aliases = true
-
-# numpy 2.5 의 스텁은 PEP 695 `type` 문을 쓴다. mypy 는 `python_version` 이 3.12
-# 미만이면 그 문법을 파싱하지 못해 스텁 자체에서 syntax error 를 낸다.
-# 우리는 `requires-python = ">=3.11"` 을 유지하고 싶으므로 (AGENTS.md 기술 스택)
-# 대상 버전을 올리는 대신 numpy 스텁만 따라가지 않는다.
-# 대가: nodes-image 안에서 `np.ndarray` 가 Any 가 된다.
-[[tool.mypy.overrides]]
-module = ["numpy", "numpy.*"]
-follow_imports = "skip"
-follow_imports_for_stubs = true

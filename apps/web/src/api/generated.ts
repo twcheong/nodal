@@ -74,7 +74,7 @@ export interface paths {
          * PNG 에서 워크플로 복원
          * @description PNG 의 `nodal_workflow` iTXt 청크에서 캐논 그래프를 꺼낸다. 프론트의 드래그앤드롭이 이 엔드포인트로 파일을 던진다 — iTXt 파서를 Python·TS 양쪽에 두지 않기 위해서다.
          *
-         *     **M3 계약 시점에는 아직 구현되지 않았다.** 501 을 돌려준다.
+         *     청크가 없으면 404, PNG 로 읽을 수 없으면 400, 청크의 그래프가 무효하면 422 다.
          */
         post: operations["graph_from_png_api_graph_from_png_post"];
         delete?: never;

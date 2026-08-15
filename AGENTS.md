@@ -47,6 +47,9 @@ ComfyUI(`Comfy-Org/ComfyUI`)는 **GPL-3.0**이다. **nodal은 Apache-2.0으로 �
 5. **아래 "핵심 설계 결정"을 벗어난 판단을 했으면** `docs/decisions.md`에 한 줄 기록한다 (날짜 · 결정 · 이유).
 6. **다른 에이전트가 만든 파일을 대규모로 재작성하지 않는다.** 스타일이 마음에 안 든다는 이유로는 절대 금지. 실제 결함이면 `docs/decisions.md`에 이유를 남기고 진행한다.
 7. **인터페이스 파일은 변경 전 사용자에게 확인한다**: `types.json`, 캐논 그래프 스키마, REST/WS API 스키마. 이 셋이 두 에이전트 사이의 계약이다.
+8. **생성물은 원본을 바꾼 커밋에서 함께 재생성한다.** `schemas/openapi.json` 을 바꾸면 같은 커밋에서 `pnpm --filter @nodal/web gen:api` 를 돌려 `apps/web/src/api/generated.ts` 를 재생성한다. 나누면 그 사이 커밋마다 CI 의 drift 검사가 실패한다.
+   - **손으로 편집하지 않는다 ≠ 재생성하지 않는다.** `generated.ts` 는 프론트 담당 영역이지만 생성 도구의 산출물이므로, 원본을 바꾼 쪽이 도구를 돌려 갱신하는 것이 맞다.
+   - 같은 규칙이 `schemas/graph.schema.json`(← `tools/export_schema.py`)에도 적용된다.
 
 ### 담당 경계 (단계별)
 

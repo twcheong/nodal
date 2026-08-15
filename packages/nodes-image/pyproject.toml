@@ -8,7 +8,11 @@ dependencies = [
     "nodal-core",
     # numpy 와 Pillow 는 **이 패키지에만** 있다. core 는 도메인 중립 그래프 엔진이라
     # 런타임 이미지 표현을 모른다 (AGENTS.md 아키텍처 절, design.md §4.4).
-    "numpy>=2.1",
+    # 상한 <2.5 는 타입 검사 때문이다. numpy 2.5 는 **자체가 Python >=3.12 를
+    # 요구**하고 스텁이 PEP 695 `type` 문을 써서, `requires-python = ">=3.11"` 인
+    # 이 저장소에서는 mypy 가 스텁을 파싱조차 못 한다. 2.4 계열은 3.11 을 지원하고
+    # 스텁도 3.11 로 파싱된다 — 상한을 올리려면 requires-python 을 먼저 올려야 한다.
+    "numpy>=2.1,<2.5",
     "pillow>=11.0",
 ]
 
