@@ -331,13 +331,16 @@ def _serve(args: argparse.Namespace) -> int:
     registry = _build_registry(args.pack, optional_packs=DEFAULT_OPTIONAL_PACKS)
     app = create_app(registry, assets_root=args.assets)
 
-    print(f"노드 {len(registry)}개 등록. http://{args.host}:{args.port}/docs")
+    # flush=True — uvicorn 은 stderr 로 로그를 내보내고, 파이프로 받으면 stdout 은
+    # 블록 버퍼링된다. 그대로 두면 이 두 줄이 uvicorn 출력보다 **뒤에** 찍혀서
+    # 로그를 파일로 받은 사람에게는 순서가 뒤집힌 것처럼 보인다.
+    print(f"노드 {len(registry)}개 등록. http://{args.host}:{args.port}/docs", flush=True)
     if args.assets is None:
         # 에셋이 메모리에만 있으면 서버를 끄는 순간 Save 결과가 사라진다.
         # 조용히 사라지는 것보다 시작할 때 말해 주는 편이 낫다.
-        print("에셋 저장소: 메모리 (재시작하면 사라진다 — 남기려면 --assets DIR)")
+        print("에셋 저장소: 메모리 (재시작하면 사라진다 — 남기려면 --assets DIR)", flush=True)
     else:
-        print(f"에셋 저장소: {args.assets}")
+        print(f"에셋 저장소: {args.assets}", flush=True)
     uvicorn.run(app, host=args.host, port=args.port, log_level=args.log_level)
     return 0
 
