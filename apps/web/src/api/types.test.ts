@@ -13,10 +13,20 @@ import { describe, expect, it } from "vitest";
 
 import openapi from "@nodal/schemas/openapi.json";
 
-import { API_PATHS, isEvent, runIdOf } from "./types";
+import {
+  API_PATHS,
+  assetSrc,
+  isEvent,
+  isImageAsset,
+  previewSize,
+  previewSrc,
+  runIdOf,
+} from "./types";
 import type {
+  GraphFromPngResponse,
   NodeCachedEvent,
   NodeDoneEvent,
+  Preview,
   RunStatus,
   ValidateResponse,
   WsEvent,
@@ -24,7 +34,7 @@ import type {
 } from "./types";
 
 describe("생성된 산출물", () => {
-  it("design.md §6 의 엔드포인트 10개가 모두 있다", () => {
+  it("design.md §6 과 M3의 엔드포인트가 모두 있다", () => {
     const declared = new Set<string>();
     for (const [path, operations] of Object.entries(openapi.paths)) {
       for (const verb of Object.keys(operations)) {
@@ -42,6 +52,7 @@ describe("생성된 산출물", () => {
       "POST /api/assets",
       "GET /api/assets/{asset_hash}",
       "GET /api/extensions",
+      "POST /api/graph/from-png",
     ]) {
       expect(declared).toContain(operation);
     }
@@ -145,5 +156,35 @@ describe("계약 형태", () => {
     expect(API_PATHS.asset("abc")).toBe("/api/assets/abc");
     expect(Object.keys(openapi.paths)).toContain(API_PATHS.nodes);
     expect(Object.keys(openapi.paths)).toContain(API_PATHS.validate);
+    expect(Object.keys(openapi.paths)).toContain(API_PATHS.graphFromPng);
+  });
+
+  it("인라인과 에셋 프리뷰를 kind로 나누고 크기를 보존한다", () => {
+    const inline: Preview = {
+      kind: "inline",
+      data_uri: "data:image/png;base64,abc",
+      width: 320,
+      height: 200,
+    };
+    const asset: Preview = {
+      kind: "asset",
+      asset: {
+        hash: "abc",
+        media_type: "image/png",
+        size_bytes: 123,
+        width: 640,
+        height: 400,
+      },
+    };
+
+    expect(previewSrc(inline)).toBe(inline.data_uri);
+    expect(previewSize(inline)).toEqual({ width: 320, height: 200 });
+    expect(previewSrc(asset)).toBe("/api/assets/abc");
+    expect(previewSize(asset)).toEqual({ width: 640, height: 400 });
+    expect(isImageAsset(asset.asset)).toBe(true);
+    expect(assetSrc(asset.asset)).toBe("/api/assets/abc");
+
+    const restored = { graph: { nodal_version: "1" } } satisfies GraphFromPngResponse;
+    expect(restored.graph.nodal_version).toBe("1");
   });
 });
