@@ -3,6 +3,8 @@ name = "nodal-nodes-core"
 version = "0.0.0"
 description = "nodal — 기본 노드 팩 (유틸 · 수학 · 문자열 · 파일)"
 license = "Apache-2.0"
+# 휠의 `.dist-info/licenses/` 에 실제 파일을 넣는다 — 근거는 packages/core/pyproject.toml.
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.11"
 dependencies = [
     "nodal-core",

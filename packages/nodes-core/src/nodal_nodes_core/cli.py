@@ -10,6 +10,9 @@ M1 은 UI 도 GPU 도 없이 완성한다. 이 CLI 가 M1 의 유일한 사용�
     nodal validate graph.json                  # 실행 없이 검증만
     nodal serve                                # 개발 서버 (M2)
 
+설치된 1st-party 노드 팩은 모든 명령에서 자동으로 올라간다
+(`DEFAULT_OPTIONAL_PACKS`). 서드파티 팩은 `--pack` 으로 이름을 댄다.
+
 이 CLI 가 `packages/core` 가 아니라 노드 팩에 있는 이유: core 는 노드를 하나도
 모른다. 실행하려면 레지스트리에 무언가 들어 있어야 하고, 그 "무언가"를 아는
 것은 노드 패키지다 (AGENTS.md 아키텍처 절).
@@ -129,25 +132,57 @@ def _load_graph(path: Path) -> Graph:
     return parse_graph(text)
 
 
-def _build_registry(packs: Sequence[str] = ()) -> NodeRegistry:
+#: 설치되어 있으면 모든 명령이 함께 올리는 1st-party 팩.
+#:
+#: **이것은 M6 의 팩 자동 발견이 아니다** — 이름이 여기 박혀 있고, 같은 워크스페이스에서
+#: 함께 배포되는 팩뿐이다. 발견 규칙이 아니라 이 애플리케이션이 무엇으로 이루어져
+#: 있는지에 대한 선언이다. 서드파티 팩은 여전히 `--pack` 으로만 들어온다.
+#:
+#: 모든 명령에 똑같이 적용하는 것이 요점이다. `nodes` 에는 보이는데 `run` 에서는
+#: "등록되지 않은 노드 타입" 이 나거나, CLI 로는 되는데 브라우저 팔레트에는 없는
+#: 상태가 가장 나쁘다 (docs/decisions.md 2026-08-16).
+DEFAULT_OPTIONAL_PACKS: tuple[str, ...] = ("nodal_nodes_image",)
+
+
+def _load_pack(registry: NodeRegistry, name: str) -> None:
+    """팩 모듈을 import 해서 레지스트리에 붓는다."""
+    module = importlib.import_module(name)
+    factory = getattr(module, "registry", None)
+    if not callable(factory):
+        raise SystemExit(f"{name} 에 registry(into=...) 가 없다. 노드 팩이 맞나?")
+    factory(into=registry)
+
+
+def _build_registry(
+    packs: Sequence[str] = (),
+    *,
+    optional_packs: Sequence[str] = (),
+) -> NodeRegistry:
     """기본 노드 팩 + `--pack` 으로 지정한 팩들.
 
     팩은 **모듈 이름으로 늦게** import 한다. 그래야 `nodal-nodes-core` 가
     `nodal-nodes-image` 를 정적으로 의존하지 않는다 — 노드 팩끼리는 서로를 몰라야
     한다 (AGENTS.md 아키텍처 절). 팩 자동 발견은 M6 확장 시스템의 몫이고, 여기서는
     사용자가 이름을 대는 것까지만 한다.
+
+    `optional_packs` 는 없으면 조용히 넘어간다 — 설치되지 않았을 수 있는 팩이다.
+    `packs`(사용자가 명시한 것)는 반대로 없으면 실패해야 한다. 사용자가 이름을
+    댔는데 조용히 무시하면 왜 노드가 없는지 알 수 없다.
     """
     registry = NodeRegistry()
     register_all(registry)
+    for name in optional_packs:
+        if name in packs:
+            continue  # 사용자가 이미 명시했다
+        try:
+            _load_pack(registry, name)
+        except ImportError:
+            continue
     for name in packs:
         try:
-            module = importlib.import_module(name)
+            _load_pack(registry, name)
         except ImportError as exc:
             raise SystemExit(f"노드 팩을 import 할 수 없다: {name} ({exc})") from exc
-        factory = getattr(module, "registry", None)
-        if not callable(factory):
-            raise SystemExit(f"{name} 에 registry(into=...) 가 없다. 노드 팩이 맞나?")
-        factory(into=registry)
     return registry
 
 
@@ -222,7 +257,7 @@ def _print_result(result: RunResult, *, color: bool) -> None:
 
 async def _run(args: argparse.Namespace) -> int:
     color = _supports_color() and not args.no_color
-    registry = _build_registry(getattr(args, "pack", []))
+    registry = _build_registry(args.pack, optional_packs=DEFAULT_OPTIONAL_PACKS)
     graph = _load_graph(args.graph)
     overridden = _apply_overrides(graph, args.set or [])
 
@@ -264,7 +299,7 @@ async def _run(args: argparse.Namespace) -> int:
 
 
 def _validate(args: argparse.Namespace) -> int:
-    registry = _build_registry()
+    registry = _build_registry(optional_packs=DEFAULT_OPTIONAL_PACKS)
     graph = _load_graph(args.graph)
     issues = validate_for_execution(graph, registry, list(graph.outputs))
     if not issues:
@@ -293,14 +328,22 @@ def _serve(args: argparse.Namespace) -> int:
             "`pip install nodal-nodes-core[serve]` 를 실행하라."
         ) from exc
 
-    registry = _build_registry()
+    registry = _build_registry(args.pack, optional_packs=DEFAULT_OPTIONAL_PACKS)
+    app = create_app(registry, assets_root=args.assets)
+
     print(f"노드 {len(registry)}개 등록. http://{args.host}:{args.port}/docs")
-    uvicorn.run(create_app(registry), host=args.host, port=args.port, log_level=args.log_level)
+    if args.assets is None:
+        # 에셋이 메모리에만 있으면 서버를 끄는 순간 Save 결과가 사라진다.
+        # 조용히 사라지는 것보다 시작할 때 말해 주는 편이 낫다.
+        print("에셋 저장소: 메모리 (재시작하면 사라진다 — 남기려면 --assets DIR)")
+    else:
+        print(f"에셋 저장소: {args.assets}")
+    uvicorn.run(app, host=args.host, port=args.port, log_level=args.log_level)
     return 0
 
 
 def _nodes(args: argparse.Namespace) -> int:
-    registry = _build_registry()
+    registry = _build_registry(args.pack, optional_packs=DEFAULT_OPTIONAL_PACKS)
     schemas = sorted(registry.search(args.query or "", limit=1000), key=lambda s: s.id)
     if not schemas:
         print(f"일치하는 노드가 없다: {args.query!r}")
@@ -380,10 +423,33 @@ def _parser() -> argparse.ArgumentParser:
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8188)
     serve.add_argument("--log-level", default="info")
+    serve.add_argument(
+        "--pack",
+        action="append",
+        default=[],
+        metavar="MODULE",
+        help=(
+            "추가 노드 팩 모듈. 설치되어 있으면 "
+            f"{', '.join(DEFAULT_OPTIONAL_PACKS)} 는 지정하지 않아도 올라간다"
+        ),
+    )
+    serve.add_argument(
+        "--assets",
+        type=Path,
+        metavar="DIR",
+        help="에셋 저장 디렉토리. 주지 않으면 메모리에만 두고 재시작 시 사라진다",
+    )
     serve.set_defaults(handler=_serve)
 
     nodes = sub.add_parser("nodes", help="등록된 노드를 보여준다")
     nodes.add_argument("query", nargs="?", help="퍼지 검색어 (별칭·한글 포함)")
+    nodes.add_argument(
+        "--pack",
+        action="append",
+        default=[],
+        metavar="MODULE",
+        help="추가 노드 팩 모듈. 목록에 함께 보여준다",
+    )
     nodes.set_defaults(handler=_nodes)
 
     return parser

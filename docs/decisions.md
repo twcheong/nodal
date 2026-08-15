@@ -645,3 +645,53 @@ core 는 여전히 `pydantic` 하나뿐이다.
   성공으로 덮는 것보다 노드 오류를 보존하는 해석이 사용자에게 안전하다.
 - **영향 범위**: `apps/web/src/state/editorStore.ts`, 목 실행 클라이언트
 - **되돌릴 수 있나**: 예 — `run.failed` 이벤트가 계약에 추가되면 그 이벤트로 전환한다.
+
+### 2026-08-16 · Claude Code · 1st-party 노드 팩을 모든 CLI 명령에서 기본 로드
+
+- **결정**: `DEFAULT_OPTIONAL_PACKS = ("nodal_nodes_image",)` 를 두고 `run`·`validate`·
+  `nodes`·`serve` 가 **설치되어 있으면** 이 팩을 자동으로 올린다. `serve` 에 `--pack` 과
+  `--assets` 를 추가했다 (`run` 에만 있었다). 서드파티 팩은 여전히 `--pack` 으로만 들어온다.
+- **이유**: `nodal serve` 가 `_build_registry()` 를 인자 없이 불러서 **브라우저 팔레트에
+  이미지 노드가 하나도 뜨지 않았다.** `/api/nodes` 가 팔레트의 유일한 출처이므로 M3 기능
+  전체(이미지 노드 · 프리뷰 · PNG 워크플로 복원)가 UI 에서 도달 불가였다. 깨끗한 체크아웃에서
+  확인한 실제 증상이고, 테스트는 레지스트리를 직접 만들어 넘기므로 잡히지 않았다.
+  - **왜 `serve` 만 고치지 않았나**: `nodes` 에는 보이는데 `run` 은 "등록되지 않은 노드
+    타입"으로 실패하거나, CLI 로는 되는데 브라우저에는 없는 상태가 가장 나쁘다.
+    명령마다 다른 레지스트리를 갖는 것 자체가 버그의 원인이다
+  - **M6 팩 자동 발견과 다르다**: 이름이 소스에 박혀 있고 같은 워크스페이스에서 함께
+    배포되는 팩뿐이다. 발견 *규칙* 이 아니라 이 애플리케이션의 구성 *선언* 이다
+  - **아키텍처 규칙은 유지된다**: 문자열로 늦게 import 하고 없으면 조용히 넘어간다.
+    `nodal-nodes-core` 는 `nodal-nodes-image` 를 정적으로 의존하지 않는다.
+    같은 파일의 `_build_asset_store()` 가 `nodal_server` 를 다루는 방식과 같다
+- **함께 고친 것**: `serve` 가 `create_app(assets_root=...)` 를 넘기지 않아 Save 결과가
+  메모리에만 남았다. `--assets` 를 주지 않으면 시작할 때 그렇다고 알린다
+- **영향 범위**: `packages/nodes-core/src/nodal_nodes_core/cli.py`
+- **되돌릴 수 있나**: 예 — 상수를 비우면 이전 동작이다
+
+### 2026-08-16 · Claude Code · 프론트 개발 서버 기본값을 live 로
+
+- **결정**: `apps/web/.env` 를 추가해 `VITE_NODAL_API_MODE` 의 기본값을 `live` 로 바꿨다.
+  목은 `VITE_NODAL_API_MODE=mock pnpm ... dev` 로 옵트인한다.
+- **이유**: 기본이 목이면 `pnpm dev` 로 띄운 화면이 실서버에 붙은 것처럼 보이지만 실제로는
+  아무것도 실행하지 않는다 — **조용히 틀린다.** `vite.config.ts` 가 이미 `/api` 와 `/ws` 를
+  `127.0.0.1:8188` 로 프록시하고 있고, 그 프록시는 live 모드에서만 의미가 있다.
+  즉 설정 파일이 이미 live 를 전제하고 있었고 기본값만 어긋나 있었다.
+  `roadmap.md` M2 완료 기준도 사람이 매번 손으로 env 를 붙여 확인한 기록이다.
+- **영향 범위**: `apps/web/.env` (신규). `createGraphApiClient()` 의 호출자는 `App.tsx`
+  하나뿐이고 테스트는 목/HTTP 클라이언트를 직접 만들므로 영향받지 않는다.
+- **되돌릴 수 있나**: 예 — 파일을 지우면 이전 동작(목 기본)이다
+
+### 2026-08-16 · Claude Code · 휠에 LICENSE·NOTICE 포함
+
+- **결정**: `LICENSE` 와 `NOTICE` 를 `packages/*` 각각에 복사하고 네 `pyproject.toml` 에
+  `license-files = ["LICENSE", "NOTICE"]` 를 추가했다. 사본이 루트와 같은지는 CI 의
+  `licence-guard` 가 `cmp` 로 검사한다.
+- **이유**: `docs/license.md` 가 "M3 배포 전에 할 일"로 남겨둔 항목이다. hatchling 은 각
+  패키지 디렉토리 안에서만 라이선스 파일을 찾으므로 휠의 `.dist-info/licenses/` 가 비어
+  있었고 (확인함), 그 상태로 배포하면 Apache-2.0 §4(a) 를 만족하지 못한다.
+  저장소를 남에게 넘기는 시점이므로 지금 닫는다.
+  - **사본을 두는 것이 "규칙을 두 번 쓰지 않는다"와 충돌하지 않나**: 충돌한다. 그래서
+    사람의 기억 대신 CI 검사를 붙였다. 심볼릭 링크는 Windows 에서 깨질 수 있어 피했다
+- **영향 범위**: `packages/*/LICENSE`, `packages/*/NOTICE` (신규 8개),
+  `packages/*/pyproject.toml`, `.github/workflows/ci.yml`, `docs/license.md`
+- **되돌릴 수 있나**: 예 — 다만 되돌리면 배포물이 §4(a) 를 위반한다

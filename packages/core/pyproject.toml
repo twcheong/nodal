@@ -3,6 +3,11 @@ name = "nodal-core"
 version = "0.0.0"
 description = "nodal — 도메인 중립 그래프 엔진 (torch 의존 없음)"
 license = "Apache-2.0"
+# 휠의 `.dist-info/licenses/` 에 실제 파일을 넣는다. hatchling 은 **패키지
+# 디렉토리 안에서만** 라이선스 파일을 찾으므로 루트의 것을 가리킬 수 없다.
+# 그래서 두 파일이 각 패키지에 복사되어 있고, 루트와 같은지는 CI 의
+# licence-guard 가 검사한다 (docs/license.md "실무 메모").
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.9",

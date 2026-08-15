@@ -105,12 +105,41 @@ WS 이벤트는 OpenAPI 가 다루지 않으므로 `tools/export_openapi.py` 가
 ```bash
 uv run nodal serve                  # http://127.0.0.1:8188 (--port 로 변경)
 uv run nodal serve --port 8199
+uv run nodal serve --assets ./assets   # Save 결과를 디스크에 남긴다
 ```
 
 `/docs` 에 OpenAPI UI 가 뜬다. WS 는 `ws://호스트/ws` 하나이고 전역 스트림이다.
 
 서버는 노드 팩을 import 하지 않는다 — `create_app(registry)` 가 레지스트리를
 주입받는다. `nodal serve` 가 그 둘을 붙이는 유일한 지점이다.
+
+`--assets` 를 주지 않으면 에셋이 **메모리에만** 있어서 서버를 끄면 사라진다.
+시작할 때 어느 쪽인지 찍어준다.
+
+## 노드 팩
+
+설치되어 있는 1st-party 팩(`nodal_nodes_image`)은 `run`·`validate`·`nodes`·`serve`
+**모든 명령에서 자동으로** 올라간다. 서드파티 팩은 이름을 댄다.
+
+```bash
+uv run nodal nodes                          # 등록된 노드 18개
+uv run nodal serve --pack my_custom_pack
+```
+
+명령마다 레지스트리가 다르면 안 된다 — `nodes` 에는 보이는데 `run` 이 "등록되지 않은
+노드 타입"으로 실패하거나, CLI 로는 되는데 브라우저 팔레트에는 없는 상태가 그 증상이다
+(`decisions.md` 2026-08-16). 팔레트는 `/api/nodes` 가 유일한 출처다.
+
+## 프론트 개발 서버
+
+```bash
+pnpm --filter @nodal/web dev                          # 실서버에 붙는다 (기본)
+VITE_NODAL_API_MODE=mock pnpm --filter @nodal/web dev # 백엔드 없이 프론트만
+```
+
+기본값은 `apps/web/.env` 에 있고 **live** 다. `vite.config.ts` 가 `/api` 와 `/ws` 를
+`127.0.0.1:8188` 로 프록시하므로 `nodal serve` 를 먼저 띄워야 한다. 화면 우상단
+`LIVE API` 배지로 어느 쪽인지 확인한다.
 
 ## 그래프 실행 (M1)
 

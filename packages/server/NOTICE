@@ -1,0 +1,18 @@
+nodal
+Copyright 2026 정태우 (twcheong99@gmail.com)
+
+This product includes software developed by the nodal project.
+
+Licensed under the Apache License, Version 2.0. See the LICENSE file
+in the root of this distribution for the full license text.
+
+--------------------------------------------------------------------
+이 파일은 Apache-2.0 §4(d) 가 요구하는 귀속 고지(attribution notice)다.
+재배포하는 사람은 이 파일을 함께 전달해야 한다.
+
+외부 프로젝트를 참조한 기록은 라이선스 고지가 아니라 provenance 기록이며
+`NOTICE-provenance.md` 에 따로 있다. 두 파일을 섞지 말 것 — 이 파일은
+법적 고지이고, 그 파일은 "코드를 이식하지 않았다"는 내부 증빙이다.
+
+서드파티 의존성이 자체 NOTICE 를 요구하면(현재는 없다) 아래에 절을
+추가한다. 의존성 라이선스 목록은 `docs/license.md` 참조.

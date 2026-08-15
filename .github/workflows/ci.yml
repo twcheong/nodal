@@ -109,6 +109,25 @@ jobs:
           fi
           echo "LICENSE · NOTICE 존재 확인."
 
+      # 각 패키지 안의 사본이 루트와 같은지. hatchling 은 패키지 디렉토리에서만
+      # 라이선스 파일을 찾으므로 (docs/license.md), 사본 없이는 휠의
+      # `.dist-info/licenses/` 가 비어 §4(a) 를 만족하지 못한다. 사본이 필요하다면
+      # 최소한 갈라지지는 않아야 한다 — 기억이 아니라 이 검사가 그것을 보장한다.
+      - name: 패키지 안의 LICENSE · NOTICE 사본이 루트와 같은지 확인
+        run: |
+          drift=0
+          for pkg in packages/*/; do
+            [ -f "$pkg/pyproject.toml" ] || continue
+            for f in LICENSE NOTICE; do
+              if ! cmp -s "$f" "$pkg$f"; then
+                echo "::error::$pkg$f 가 루트의 $f 와 다르다 (또는 없다). 루트에서 복사하라."
+                drift=1
+              fi
+            done
+          done
+          [ "$drift" = 0 ] || exit 1
+          echo "패키지 라이선스 사본 일치."
+
       # 라이선스 표기가 SPDX 로 일관되는지. 확정 전의 LicenseRef-UNDECIDED 가
       # 어딘가에 남아 있으면 패키지 메타데이터가 LICENSE 파일과 어긋난다.
       - name: 패키지 메타데이터가 Apache-2.0 인지 확인
