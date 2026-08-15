@@ -21,7 +21,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Any as TypingAny
-from typing import ClassVar, Final, Self, TypeAlias
+from typing import ClassVar, Final, Self
 
 __all__ = [
     "BOOL",
@@ -493,26 +493,24 @@ BOOL: Final[Type] = builtin("BOOL")
 
 
 class CatalogType:
-    """카탈로그 타입 이름을 **클래스**로 노출하는 기반 (M3 계약).
+    """카탈로그 타입 이름을 **클래스**로 노출하는 기반.
 
-    왜 인스턴스가 아니라 클래스인가 — mypy 는 **인스턴스의 속성을 타입
-    어노테이션으로 받지 않는다.** `Image` 가 인스턴스면 design.md §4.2 의
-    `def run(self, image: Image.T, ...)` 가 `Name "Image.T" is not defined` 로
-    거부된다. 클래스 속성일 때만 통한다. 노드 팩도 mypy 검사 범위이므로
-    (`pyproject.toml` 의 `packages`) 이것을 우회할 수 없다.
+    클래스인 이유는 **타입마다 문서가 붙을 자리**가 필요하기 때문이다. 각 하위
+    클래스의 docstring 이 그 소켓의 런타임 계약(축 순서·dtype·범위)을 적어 두는
+    유일한 곳이다. `Image` 가 인스턴스였다면 그 서술이 갈 곳이 없다.
 
-    `T` 는 **런타임 값의 타입**이고 core 에서는 언제나 `Any` 다. core 는 도메인
-    중립 그래프 엔진이라 실제 값(numpy 배열, 모델 핸들)의 타입을 모른다.
-    `.T` 는 노드 저자가 "여기 들어오는 것은 이 소켓의 런타임 값"이라고 적을
-    자리를 주는 것이지, core 가 그 타입을 안다는 뜻이 **아니다.**
+    **core 는 런타임 타입을 제공하지 않는다.** 한때 `T = Any` 별칭이 있었지만
+    없앴다 — `Any` 인데 타입처럼 보여서, 이미지가 흐르는 바로 그 자리에서
+    타입 검사를 조용히 껐다. 런타임 타입은 그 표현을 **소유한 노드 팩**이
+    준다 (design.md §4.4):
+
+        from nodal_nodes_image import ImageArray   # np.ndarray[..., float32]
+
+        def run(self, image: ImageArray) -> NodeResult: ...
 
     프리미티브(`INT`·`FLOAT`·`STRING`·`BOOL`)와 `Any` 는 인스턴스로 남는다.
-    그 런타임 타입은 `int`·`float`·`str`·`bool` 이라 파이썬으로 그냥 쓸 수 있고,
-    `.T` 를 붙여도 얻는 것이 없기 때문이다.
+    런타임 타입이 `int`·`float`·`str`·`bool` 이라 파이썬으로 그냥 적으면 된다.
     """
-
-    #: 런타임 값의 타입. core 는 모르므로 언제나 `Any` 다.
-    T: TypeAlias = TypingAny
 
     #: `types.json` 에서 온 서술자. 판정은 전부 이것으로 한다.
     descriptor: ClassVar[Type]

@@ -91,6 +91,12 @@
 
 ## M4 — Diffusion (3주)
 
+> ⚠️ **시작 전 확인**: torch·diffusers 가 요구하는 numpy 하한. `numpy<2.5` 상한이
+> `requires-python = ">=3.11"` 과 묶여 있어, `numpy>=2.5` 를 요구하는 의존성이
+> 들어오면 **Python 3.12 가 강제된다**. 근거와 판단 절차는 `decisions.md`
+> (2026-08-15 · numpy 타입 검사 복구)의 "M4 시작 시 확인할 것" 참조.
+
+
 - [ ] `ModelManager` + `diffusers` 통합 (`design.md` §9)
 - [ ] 모델 스캐너 (체크포인트/LoRA/VAE 디렉토리 발견)
 - [ ] 노드: LoadCheckpoint / CLIPTextEncode / EmptyLatent / KSampler / VAEDecode

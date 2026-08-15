@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from nodal import Combo, Image, Socket, as_type, register_combo_provider
 
 COMBO_PROVIDER_NAME = "tests.dynamic-models"
@@ -29,8 +27,13 @@ def test_socket_normalizes_catalog_name_classes() -> None:
 
 
 def test_image_contract_keeps_core_alias_neutral_and_socket_float32_only() -> None:
-    """core의 `Image.T`는 Any이고 실제 소켓 정본은 float32 하나다."""
+    """core는 런타임 타입을 제공하지 않고, 소켓 정본은 float32 하나다.
+
+    `Image.T`(항상 `Any`)는 없앴다 — 타입처럼 보이는데 `Any`라 이미지가 흐르는
+    자리에서 검사를 조용히 껐다. 런타임 타입은 표현을 소유한 노드 팩이 준다
+    (`nodal_nodes_image.ImageArray`). design.md §4.4.
+    """
     descriptor = as_type(Image)
 
-    assert Image.T is Any
+    assert not hasattr(Image, "T")
     assert descriptor.dtypes == frozenset({"float32"})  # type: ignore[attr-defined]

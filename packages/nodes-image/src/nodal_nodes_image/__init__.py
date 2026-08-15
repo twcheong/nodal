@@ -17,7 +17,7 @@ import numpy as np
 
 from nodal import EncodedPreview, NodeRegistry, register_preview_encoder
 
-from .image import to_float32
+from .image import ImageArray, MaskArray, to_float32
 from .nodes import (
     NODES,
     BlendImages,
@@ -37,7 +37,9 @@ __all__ = [
     "BlendImages",
     "CompositeImages",
     "CropImage",
+    "ImageArray",
     "LoadImage",
+    "MaskArray",
     "MaskFromImage",
     "ResizeImage",
     "SaveImage",

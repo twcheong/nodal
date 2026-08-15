@@ -186,6 +186,7 @@ ComfyUI에는 두 개의 그래프 표현이 있다. 프론트가 저장하는 �
 
 ```python
 from nodal import node, Image, Int, Combo, NodeResult
+from nodal_nodes_image import ImageArray        # 런타임 타입은 노드 팩이 준다 (§4.4)
 
 @node(
     id="image.Resize",
@@ -194,23 +195,31 @@ from nodal import node, Image, Int, Combo, NodeResult
     aliases=["scale", "크기 조정"],
 )
 class Resize:
-    image:  Image
+    image:  Image                                # ← 소켓 **타입**(core 서술자)
     width:  Int   = Int(512, min=1, max=16384, step=8)
     height: Int   = Int(512, min=1, max=16384, step=8)
     method: Combo = Combo("lanczos", options=["nearest", "bilinear", "bicubic", "lanczos"])
 
     returns = Image
 
-    def run(self, image: Image.T, width: int, height: int, method: str) -> NodeResult:
+    def run(
+        self, image: ImageArray, width: int, height: int, method: str
+    ) -> NodeResult:                             # ← run 은 **런타임 타입**을 쓴다
         out = resample(image, (height, width), method)   # (B, H, W, C) 유지
         return NodeResult(out, preview=out)
 ```
+
+**클래스 어노테이션과 `run` 시그니처는 서로 다른 것을 가리킨다.** 위에서
+`image: Image` 는 소켓 타입 서술자이고(팔레트·연결 판정이 이것을 쓴다),
+`run` 의 `image: ImageArray` 는 실제로 들어오는 파이썬 값의 타입이다.
+같은 이름을 두 번 쓰는 것이 아니라 **다른 층위**를 각각 적는 것이다.
 
 - 클래스 어노테이션이 곧 입력 스키마 → 중복 선언 없음
 - `run`은 평범한 함수 시그니처 → 엔진 없이 단위 테스트 가능
 - `async def run`도 지원 (엔진이 코루틴 여부 감지)
 - `NodeResult`가 값과 UI 사이드채널(프리뷰, 텍스트 배지)을 분리
-- `Image.T`는 **런타임 값의 타입**이다. core 에서는 언제나 `Any` — core 는 numpy 를 모른다 (§4.4)
+- **`run` 파라미터에 `Any` 를 쓰지 않는다.** `ImageArray` 를 쓰면 dtype 실수를
+  mypy 가 잡는다 — 대표적으로 `uint8 / 255.0` 이 float64 가 되는 정규화 버그 (§4.4)
 
 `Combo.from_provider("checkpoints")`처럼 실행 시점에 옵션을 조회하는 입력은
 `register_combo_provider("checkpoints", provider)`로 공급자를 먼저 등록한다.
@@ -290,16 +299,70 @@ Opaque    : 이름 있는 불투명 핸들 (Model, VAE, Scheduler) + 능력 태�
 `Mask` 는 `(B, H, W)` 로 채널 축이 없고, `Latent` 는 `(B, C, H, W)` 로 채널이 앞이다
 (diffusers 관례). 셋의 축 순서가 다른 것은 의도적이며 `types.json` 이 그 사실을 담는다.
 
-**`Image.T`** — 노드의 `run` 시그니처가 쓰는 런타임 타입 표기다. core 에서는 언제나
-`Any` 로 평가된다. core 는 도메인 중립 그래프 엔진이라 numpy 를 import 하지 않기
-때문이다. `.T` 는 노드 저자가 "여기 들어오는 것은 이 소켓의 런타임 값" 이라고 적을
-자리를 줄 뿐이고, core 가 그 타입을 안다는 뜻이 아니다.
+#### 런타임 타입은 **소유한 노드 팩**이 준다 (일반 규칙)
 
-이 때문에 카탈로그 이름(`Image`·`Mask`·`Latent`·`Model`·`CLIP`·`VAE`·`Scheduler`)은
-**클래스**다. mypy 는 인스턴스의 속성을 타입 어노테이션으로 받지 않아서
-(`Name "Image.T" is not defined`) 클래스 속성이어야만 한다. 프리미티브
-(`INT`·`FLOAT`·`STRING`·`BOOL`)와 `Any` 는 인스턴스로 남는다 — 그 런타임 타입은
-`int`·`float`·`str`·`bool` 이라 `.T` 를 붙여도 얻는 것이 없다.
+이것은 `Image` 만의 이야기가 아니다. M4 의 `Model`·`VAE`·`CLIP`, M6 의 확장 타입까지
+같은 규칙을 따른다.
+
+| 층위 | 무엇 | 어디 | 예 |
+|---|---|---|---|
+| 소켓 타입 | 연결 판정·팔레트용 **서술자** | `core` (`types.json`) | `Image`, `Model` |
+| 런타임 타입 | `run` 이 실제로 받는 파이썬 값 | **표현을 소유한 노드 팩** | `ImageArray`, `MaskArray` |
+
+```python
+from nodal import Image                          # 소켓 타입 — 클래스 어노테이션에
+from nodal_nodes_image import ImageArray         # 런타임 타입 — run 시그니처에
+```
+
+**core 는 런타임 타입을 제공하지 않는다.** 도메인 중립 그래프 엔진이라 numpy 도
+torch 도 import 하지 않기 때문이다 (`AGENTS.md` 아키텍처 절). 그래서 core 가 줄 수
+있는 것은 `Any` 뿐이고, `Any` 를 타입처럼 생긴 이름으로 감싸는 것은 **해롭다** —
+아래 항목이 그 이유다.
+
+> **`Image.T` 는 없앴다 (2026-08-15).** 한때 core 가 `Image.T = Any` 를 노출했다.
+> 문제는 `Any` 라는 사실이 사용하는 쪽에서 보이지 않는다는 것이다. `Image.T` 라고
+> 적으면 타입을 적은 것처럼 보이는데 실제로는 **이미지가 흐르는 바로 그 자리에서
+> 타입 검사를 끈다.** §4.2 의 예제가 그 표기를 쓰고 있었으므로 노드 저자가 그대로
+> 따라 하면 전부 검사 밖이 됐다. `Model.T`·`VAE.T` 도 M4 에서 같은 함정이 되므로
+> 규칙 자체를 없앴다.
+>
+> `Any` 가 정말 맞는 자리라면 `typing.Any` 를 그대로 쓴다. 그러면 최소한 **`Any`
+> 라는 사실이 읽는 사람에게 보인다.**
+
+**팩이 제공하는 별칭의 이름 규칙**: 소켓 타입 이름 + 표현. 텐서면 `<Type>Array`
+(`ImageArray`·`MaskArray`·`LatentArray`), 불투명 핸들이면 `<Type>Handle`
+(M4 의 `ModelHandle`·`VAEHandle`). 팩은 이 별칭을 **최상위에서 export** 한다 —
+노드 저자가 내부 모듈 경로를 알 필요가 없어야 한다.
+
+**타입이 잡는 것과 못 잡는 것**은 나눠서 이해해야 한다.
+
+`ImageArray` 는 `np.ndarray[Any, np.dtype[np.float32]]` 라 **dtype 승격**을 잡는다.
+대표적인 것이 Load 경계의 정규화다:
+
+```python
+def load(u8: np.ndarray[Any, np.dtype[np.uint8]]) -> ImageArray:
+    return u8 / 255.0        # ❌ uint8 / float → float64. mypy 가 잡는다
+```
+
+`float32 / 255.0` 은 **float32 그대로**이므로 (NEP 50 — 파이썬 스칼라는 약한 타입)
+정상이고 잡히지 않는다. 함정은 `uint8` 이 섞이는 자리에만 있다.
+
+반면 **shape·랭크는 타입으로 잡히지 않는다.** numpy 의 타입 시스템이 아직 shape 을
+모른다. `a[..., 0]` 로 채널 축을 떨어뜨려도 타입은 그대로 통과한다. 그쪽은
+`to_float32` · `ensure_batch` 의 **런타임 검증**이 담당한다. 둘은 대체재가 아니라
+분담이다 — dtype 은 타입이, shape 은 런타임이 지킨다.
+
+#### 카탈로그 이름이 클래스인 이유
+
+`Image`·`Mask`·`Latent`·`Model`·`CLIP`·`VAE`·`Scheduler` 는 클래스이고, 프리미티브
+(`INT`·`FLOAT`·`STRING`·`BOOL`)와 `Any` 는 인스턴스다.
+
+클래스인 이유는 **타입마다 문서가 붙을 자리**가 필요해서다. 각 클래스의 docstring 이
+그 소켓의 런타임 계약(축 순서·dtype·범위)을 적어 두는 유일한 곳이다.
+
+> 원래는 `Image.T` 를 mypy 가 받아들이게 하려면 클래스 속성이어야 했기 때문이다.
+> `.T` 를 없앤 지금 그 근거는 사라졌지만, 위 문서 자리라는 이유로 클래스를 유지한다.
+> 인스턴스로 되돌리는 것은 가능하되 M1 이 동결한 표면을 다시 건드리는 값을 하지 않는다.
 
 M1 이 동결한 `is_compatible(Image, Image)` · `ListType(Image)` 표면은 그대로다.
 `nodal.as_type()` 이 입구에서 이름 클래스를 서술자로 바꾼다.

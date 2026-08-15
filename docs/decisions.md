@@ -358,10 +358,12 @@ M3 백엔드에서 numpy 스텁을 mypy 검사에서 제외했던 것을 되돌�
 
 | 실수 | 잡히나 |
 |---|---|
-| `a / 255.0` 이 float64 로 승격 | ✅ — 0..1 정규화에서 가장 흔한 버그 |
+| `uint8 / 255.0` 이 float64 로 승격 | ✅ — Load 경계 정규화의 대표 버그 |
+| `float32 / 255.0` | (정상) NEP 50 상 float32 그대로다. 함정이 아니다 |
 | `uint8` 배열을 `float32` 자리에 전달 | ✅ |
 | 배열이 아닌 값(str 등) 전달 | ✅ |
 | `a[..., 0]` 로 랭크가 줄어듦 | ❌ numpy 타입 시스템이 shape 을 모른다 |
+| `a.astype(np.float64)` 명시적 승격 | ❌ 스텁이 `dtype[Any]` 를 돌려준다 |
 | `np.zeros(..., dtype=np.uint8)` 리터럴의 dtype 추론 | ❌ |
 
 그래서 **dtype 은 타입이, shape 은 런타임이** 담당한다. `ensure_batch` · `to_float32`
@@ -382,6 +384,49 @@ M3 백엔드에서 numpy 스텁을 mypy 검사에서 제외했던 것을 되돌�
 - **영향 범위**: `packages/nodes-image/{pyproject.toml,src/nodal_nodes_image/image.py}`,
   `pyproject.toml`(mypy 예외 제거), `uv.lock`
 - **되돌릴 수 있나**: 예 — 상한 하나다. `requires-python` 을 3.12 로 올리면 뗀다
+
+> ### 📌 M4 시작 시 확인할 것 — numpy 상한과 torch·diffusers
+>
+> **`numpy<2.5` 상한은 `requires-python = ">=3.11"` 과 한 묶음이다.** M4 에서
+> torch·diffusers·transformers 를 넣을 때 그 중 하나라도 **`numpy>=2.5` 를 요구하면
+> 상한과 충돌**한다. 그 순간 선택지는 둘뿐이다:
+>
+> 1. **`requires-python` 을 3.12 로 올린다** — numpy 2.5 자체가 `>=3.12` 를
+>    요구하므로 상한을 떼는 것은 곧 3.11 지원을 버리는 것이다. 둘을 따로 정할 수 없다
+> 2. 그 의존성을 낮은 버전으로 고정한다 — M4 에서 잘 늙지 않는 선택이다
+>
+> **M4 를 시작하면 제일 먼저 이것을 확인하라** (해석 순서상 나중에 발견하면
+> 패키지 구성을 다시 짜야 한다):
+>
+> ```bash
+> uv add --dry-run torch diffusers transformers   # numpy 하한이 얼마인지 본다
+> ```
+>
+> 확인 결과가 "3.12 강제" 라면 그것은 `AGENTS.md` 기술 스택("Python 3.11+")을
+> 바꾸는 일이므로 **사용자 확인이 필요하다.** 에이전트가 임의로 올리지 말 것.
+
+### 2026-08-15 · Claude Code · `Image.T` 제거 — 런타임 타입은 소유한 팩이 준다
+
+- **결정**: `CatalogType.T` 를 **없앴다.** 런타임 타입은 그 표현을 소유한 노드 팩이
+  제공한다 (`nodal_nodes_image.ImageArray`). `design.md` §4.2 예제와 §4.4 를 갱신했다
+- **이유**: `.T` 는 core 에서 언제나 `Any` 인데 **`Any` 라는 사실이 쓰는 쪽에서
+  보이지 않는다.** `Image.T` 라고 적으면 타입을 적은 것처럼 보이지만 실제로는
+  이미지가 흐르는 바로 그 자리에서 검사를 끈다. §4.2 예제가 그 표기를 쓰고 있었으니
+  노드 저자가 따라 하면 전부 검사 밖이 됐다 — 사용자가 이 점을 지적했다.
+  `Any` 가 맞는 자리라면 `typing.Any` 를 그대로 쓰는 편이 낫다. 최소한 보이니까
+- **일반 규칙으로 정한 이유**: `Model.T`·`VAE.T` 도 M4 에서 똑같은 함정이 된다.
+  개별 사례가 아니라 규칙 자체를 없애는 것이 맞다. 팩이 제공하는 별칭의 이름 규칙도
+  같이 정했다 — 텐서는 `<Type>Array`, 불투명 핸들은 `<Type>Handle`, 최상위 export
+- **카탈로그 이름은 클래스로 유지한다.** 원래 근거(`.T` 를 mypy 가 받게 하려면
+  클래스 속성이어야 함)는 사라졌지만, **타입마다 docstring 이 붙을 자리**라는 다른
+  근거가 있다. 인스턴스로 되돌리는 것은 가능하되 M1 동결 표면을 다시 건드리는 값을
+  하지 않는다. `design.md` §4.4 에 이 사정을 그대로 적어 뒀다
+- **사용자 정정**: 사용자가 "계약 때 실제 타입으로 하기로 했다" 고 했으나 계약은
+  "core 에 두되 순수 별칭"(= `Any`)이었다. 확인 후 사용자가 정정했고 core 중립성을
+  우선하기로 했다
+- **영향 범위**: `packages/core/src/nodal/types.py`, `packages/core/tests/test_schema.py`,
+  `packages/nodes-image/src/nodal_nodes_image/__init__.py`, `docs/design.md` §4.2·§4.4
+- **되돌릴 수 있나**: 예 — 다만 되돌릴 이유가 없다
 
 ### 2026-08-15 · Claude Code · 생성물은 원본과 같은 커밋에서 재생성
 
