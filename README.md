@@ -173,8 +173,9 @@ uv run nodal nodes                                      # 등록된 노드 18개
 3. 다시 **실행** 을 누르면 `Load` 와 `Resize` 는 `캐시` 로 넘어간다.
    `Save` 는 부수효과라 캐시하지 않으므로 매번 실행된다
 
-<!-- 📸 스크린샷 자리 — 이미지 노드 3개가 연결되고 프리뷰가 보이는 상태 -->
-> **[스크린샷: Load → Resize → Save 가 연결되고 노드 안에 프리뷰가 뜬 모습]**
+![Load → Resize → Save 파이프라인. 위 두 노드는 캐시, Save만 재실행](docs/images/m3-image-pipeline.jpg)
+
+*입력이 바뀌지 않은 Load와 Resize는 건너뛰고, 부수효과가 있는 Save만 다시 실행한다.*
 
 읽어들이는 `examples/sample.png` 는 색 밴드 · 그라디언트 · 원 · 체커보드로 이루어진
 테스트 패턴이다. 축소했을 때 무엇이 달라지는지 보이라고 그렇게 만들었다
