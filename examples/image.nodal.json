@@ -1,0 +1,49 @@
+{
+  "nodal_version": "1",
+  "id": "018f2c00-0000-7000-8000-0000000c0001",
+  "nodes": {
+    "source": {
+      "type": "image.Load",
+      "inputs": { "path": "examples/sample.png" },
+      "meta": {
+        "title": "샘플 읽기",
+        "notes": "경로가 저장소 루트 기준 상대 경로다. 루트에서 실행해야 찾는다 — 다른 이미지를 보려면 이 칸만 바꾸면 된다"
+      }
+    },
+
+    "half": {
+      "type": "image.Resize",
+      "inputs": {
+        "image": { "$link": ["source", "image"] },
+        "width": 256,
+        "height": 256,
+        "method": "lanczos"
+      },
+      "meta": {
+        "title": "512 → 256",
+        "notes": "체커보드 모서리에서 축소 품질이 바로 보인다"
+      }
+    },
+
+    "result": {
+      "type": "image.Save",
+      "inputs": {
+        "image": { "$link": ["half", "image"] },
+        "embed_workflow": true
+      },
+      "meta": {
+        "title": "저장",
+        "notes": "embed_workflow 가 켜져 있어 결과 PNG 의 iTXt 에 이 그래프가 통째로 들어간다. 그 PNG 를 캔버스에 떨어뜨리면 워크플로가 복원된다"
+      }
+    }
+  },
+
+  "outputs": ["result"],
+
+  "ui": {
+    "source": { "pos": [80, 120] },
+    "half": { "pos": [420, 120] },
+    "result": { "pos": [760, 120] },
+    "viewport": { "x": 0, "y": 0, "zoom": 0.9 }
+  }
+}
