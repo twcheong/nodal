@@ -1,0 +1,47 @@
+[project]
+name = "nodal-nodes-diffusion"
+version = "0.0.0"
+description = "nodal — diffusion 노드 팩 (LoadCheckpoint · CLIPTextEncode · KSampler · VAEDecode)"
+license = "Apache-2.0"
+# 휠의 `.dist-info/licenses/` 에 실제 파일을 넣는다 — 근거는 packages/core/pyproject.toml.
+license-files = ["LICENSE", "NOTICE"]
+requires-python = ">=3.11"
+dependencies = [
+    "nodal-core",
+    # diffusers 에 모델 계층을 위임한다. 직접 구현하지 않는다 (design.md §9).
+    "diffusers>=0.35",
+    "transformers>=4.46",
+    "safetensors>=0.4",
+    # 상한 <2.5 는 nodes-image 와 같은 이유(mypy 스텁 파싱)이고 같은 값이어야
+    # 한다 — 워크스페이스는 락파일 하나를 공유하므로 두 하한/상한이 갈라지면
+    # 해석이 실패한다.
+    "numpy>=2.1,<2.5",
+]
+
+# **torch 와 accelerate 가 여기 없는 것은 실수가 아니다.**
+#
+# torch 휠은 CPU 빌드와 CUDA 빌드가 같은 이름·같은 버전으로 서로 다른 인덱스에
+# 있다. 어느 쪽을 받을지는 패키지 메타데이터가 아니라 **설치하는 사람의 하드웨어**
+# 가 정하는 문제라서, 루트 워크스페이스의 `[tool.uv.sources]` 가 결정한다
+# (`uv sync --group diffusion` = CPU, `uv sync --extra cuda` = CUDA).
+#
+# 여기에 `torch` 를 평범한 의존성으로 적으면 그룹도 엑스트라도 켜지 않은 해석
+# 분기가 **PyPI 기본 인덱스로 떨어져 CUDA 휠을 끌고 온다.** 실제로 락파일에
+# `torch <- pypi.org/simple` 항목이 생기는 것을 확인했다. 그 문을 닫으려면
+# 여기에 적지 않는 수밖에 없다.
+#
+# `accelerate` 도 같은 이유로 여기 없다 — **`torch>=2.0.0` 을 마커 없이 하드
+# 의존성으로 건다.** 한 단계 건너 같은 누출이 생긴다. `diffusers` ·
+# `transformers` · `safetensors` 는 torch 를 extra 뒤에만 두므로 여기 남는다.
+# (누출은 추측이 아니라 락파일에서 확인하고 고쳤다. 다시 확인하려면:
+# `uv lock` 후 uv.lock 에 `name = "torch"` + `pypi.org/simple` 항목이 있는지 본다.)
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nodal_nodes_diffusion"]
+
+[tool.uv.sources]
+nodal-core = { workspace = true }

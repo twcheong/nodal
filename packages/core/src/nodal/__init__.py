@@ -71,6 +71,15 @@ from .graph import (
     parse_graph,
     validate_graph,
 )
+from .models import (
+    DTYPES,
+    Device,
+    DeviceKind,
+    DevicePlan,
+    ModelLoadError,
+    ModelStore,
+    NullModelStore,
+)
 from .preview import (
     AssetPreview,
     EncodedPreview,
@@ -99,6 +108,7 @@ from .schema import (
     NodeSchema,
     OutputSpec,
     SchemaError,
+    Seed,
     Socket,
     Str,
     get_schema,
@@ -204,6 +214,14 @@ __all__ = [  # noqa: RUF022
     "clear_preview_encoders",
     "encode_preview",
     "register_preview_encoder",
+    # --- 모델 · 디바이스 (M4 계약 — 인터페이스만, 구현은 nodes-diffusion)
+    "DTYPES",
+    "Device",
+    "DeviceKind",
+    "DevicePlan",
+    "ModelLoadError",
+    "ModelStore",
+    "NullModelStore",
     # --- 노드 스키마 (M1 계약)
     "Bool",
     "Combo",
@@ -215,6 +233,7 @@ __all__ = [  # noqa: RUF022
     "NodeSchema",
     "OutputSpec",
     "SchemaError",
+    "Seed",
     "Socket",
     "Str",
     "get_schema",

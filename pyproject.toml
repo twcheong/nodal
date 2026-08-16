@@ -13,17 +13,54 @@ dependencies = [
     "nodal-server",
 ]
 
+# diffusion 노드 팩은 **옵트인**이다. 기본 `uv sync` 에 넣지 않는 이유는 torch
+# 휠이 리눅스에서 191.8 MB 이고, lint · typecheck · 프론트만 만지는 사람과 기존
+# CI 잡이 그 값을 치를 이유가 없기 때문이다. 설치법은 아래 [tool.uv.sources] 주석.
+[project.optional-dependencies]
+cuda = ["nodal-nodes-diffusion", "torch>=2.6", "accelerate>=1.0"]
+
 [tool.uv]
 package = false
+# 같은 이름·같은 버전의 torch 가 두 인덱스에 있으므로 둘을 동시에 켤 수 없다.
+# 선언하지 않으면 uv 가 "모든 마커 환경에서 인덱스가 충돌한다" 며 해석을 거부한다.
+conflicts = [[{ group = "diffusion" }, { extra = "cuda" }]]
 
 [tool.uv.workspace]
 members = ["packages/*"]
 
+# torch 휠은 CPU 빌드와 CUDA 빌드가 **같은 패키지 이름·같은 버전**으로 서로 다른
+# 인덱스에 있다. 어느 쪽을 받을지는 패키지 메타데이터가 아니라 설치하는 사람의
+# 하드웨어가 정하는 문제라서, 결정을 여기 한 곳에 모은다.
+#
+#   uv sync                     → torch 없음 (기본. 빠르다)
+#   uv sync --group diffusion   → CPU 휠 (맥 개발 · CI)
+#   uv sync --extra cuda        → CUDA 휠 (NVIDIA 리눅스 장비)
+#
+# `explicit = true` 라서 이 인덱스들은 여기서 지목한 패키지에만 쓰인다 — 다른
+# 의존성이 실수로 PyTorch 인덱스에서 해석되지 않는다.
+#
+# **루트의 `[tool.uv.sources]` 는 워크스페이스 멤버의 요구사항에도 적용된다.**
+# 그래서 `packages/nodes-diffusion` 은 인덱스를 몰라도 되고, 실제로 모른다.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
 [tool.uv.sources]
 nodal-core = { workspace = true }
 nodal-nodes-core = { workspace = true }
+nodal-nodes-diffusion = { workspace = true }
 nodal-nodes-image = { workspace = true }
 nodal-server = { workspace = true }
+torch = [
+    { index = "pytorch-cpu", group = "diffusion" },
+    { index = "pytorch-cuda", extra = "cuda" },
+]
 
 [dependency-groups]
 dev = [
@@ -35,6 +72,8 @@ dev = [
     "httpx>=0.28.1",
     "pyyaml>=6.0",
 ]
+# 기본 그룹이 **아니다** (`default-groups` 에 넣지 않았다). 켜야 들어온다.
+diffusion = ["nodal-nodes-diffusion", "torch>=2.6", "accelerate>=1.0"]
 
 # ---------------------------------------------------------------- ruff
 
@@ -46,6 +85,7 @@ src = [
     "packages/server/src",
     "packages/nodes-core/src",
     "packages/nodes-image/src",
+    "packages/nodes-diffusion/src",
 ]
 # ruff 0.16+ 는 마크다운 안의 python 코드 블록도 포맷한다. docs/ 는 스펙 문서이므로
 # 손대지 않는다 — 문서의 정렬은 의도된 것이고, 예제 코드는 실행 대상이 아니다.
@@ -88,13 +128,29 @@ ignore = [
 # (design.md §4.2). RUF012 를 켜 두면 노드 저자가 전부 ClassVar 로 감싸야 하고,
 # "선언형 + 중복 선언 없음"이라는 노드 SDK 의 요점이 사라진다.
 "packages/nodes-*/**" = ["RUF012"]
+# torch 금지의 **유일한** 면제 대상 (M4 계약). 이 한 줄이 아키텍처 경계 그
+# 자체다 — 넓히려면 AGENTS.md 아키텍처 절을 먼저 고쳐야 한다.
+#
+# 이 면제는 "torch 를 import 해도 된다" 까지다. 그 안에서 **어느 백엔드인지 묻는
+# 것**은 `devices.py` 한 파일로 더 좁히는데, 그것은 여기서 강제할 수 없다:
+# banned-api 는 import 문만 보고 `torch.cuda.is_available()` 같은 속성 접근은
+# 지나친다. 게다가 모든 banned-api 위반이 TID251 하나로 보고되므로
+# per-file-ignores 로 `torch` 는 풀고 `torch.cuda` 는 막는 것이 불가능하다.
+# 그래서 그 검사는 CI 의 grep 가드가 한다 (`ci.yml` 의 "디바이스 경계").
+"packages/nodes-diffusion/**" = ["TID251"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 # 의존성 규칙 강제 (AGENTS.md 아키텍처 절). core는 torch를 모른다.
 "torch".msg = "packages/core 와 packages/server 는 torch 를 import 하지 않는다. torch 는 packages/nodes-diffusion 전용."
 
 [tool.ruff.lint.isort]
-known-first-party = ["nodal", "nodal_server", "nodal_nodes_core", "nodal_nodes_image"]
+known-first-party = [
+    "nodal",
+    "nodal_server",
+    "nodal_nodes_core",
+    "nodal_nodes_diffusion",
+    "nodal_nodes_image",
+]
 
 # ---------------------------------------------------------------- pytest
 
@@ -110,9 +166,19 @@ asyncio_mode = "auto"
 [tool.mypy]
 python_version = "3.11"
 strict = true
-mypy_path = "packages/core/src:packages/server/src:packages/nodes-core/src:packages/nodes-image/src"
+mypy_path = "packages/core/src:packages/server/src:packages/nodes-core/src:packages/nodes-image/src:packages/nodes-diffusion/src"
+# `nodal_nodes_diffusion` 은 여기 **없다.** 기본 `uv sync` 에 torch 가 없으므로
+# 넣으면 기본 환경에서 mypy 가 `import torch` 를 풀지 못해 실패한다. 대신 CI 의
+# diffusion 잡이 `uv run mypy -p nodal_nodes_diffusion` 을 따로 돌린다 — 그
+# 잡만 `--group diffusion` 으로 torch 를 설치한다.
 packages = ["nodal", "nodal_server", "nodal_nodes_core", "nodal_nodes_image"]
 plugins = ["pydantic.mypy"]
+
+# accelerate 만 `py.typed` 를 넣지 않았다 (diffusers · transformers · peft 는
+# 있다). strict 모드라 이 예외가 없으면 import 자체가 에러다.
+[[tool.mypy.overrides]]
+module = ["accelerate.*"]
+ignore_missing_imports = true
 
 [tool.pydantic-mypy]
 init_forbid_extra = true

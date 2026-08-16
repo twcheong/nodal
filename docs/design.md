@@ -715,6 +715,11 @@ python = ["opencv-python>=4.9"]
 
 **`diffusers`를 쓴다. 직접 구현하지 않는다.**
 
+이 절은 M4 계약이다. `ModelStore` · `DevicePlan` · `Seed` 는 `packages/core` 에
+있고 구현은 `packages/nodes-diffusion` 에 있다.
+
+### 9.1 노드가 보는 것
+
 ```python
 @node(id="diffusion.LoadCheckpoint", category="diffusion/loaders")
 class LoadCheckpoint:
@@ -726,16 +731,109 @@ class LoadCheckpoint:
         return NodeResult(handle.unet, handle.text_encoder, handle.vae)
 ```
 
-**`ModelManager` 책임**
+`ctx.models` 는 `ctx.assets` 와 같은 모양이고 같은 이유로 존재한다 — 체크포인트를
+로드하는 노드는 `core` 만 의존하므로 다른 통로가 없다 (§4.5).
+
+`load()` 가 돌려주는 핸들은 **core 에게 불투명**하다. 실제 타입은 그 표현을
+소유한 노드 팩이 `ModelHandle` 로 노출한다 (§4.4 의 `<Type>Handle` 규칙).
+
+### 9.2 두 로더는 다른 경로다
+
+| `loader` | 읽는 것 | 아키텍처를 |
+|---|---|---|
+| `diffusers.single_file` | `.safetensors` 한 덩어리 | **텐서 키에서 추론한다** |
+| `diffusers.pretrained` | `model_index.json` 이 있는 폴더 | 파일이 명시한다 |
+
+**`single_file` 의 추론이 실사용에서 가장 자주 깨진다.** 그래서 실패는 반드시
+`ModelLoadError` 로 나가고 **네 가지를 싣는다**:
+
+- `ref` — 무엇을 읽었는지
+- `loader` — 어느 로더로
+- `inferred` — 무엇으로 추론했는지. **추론 자체가 실패했으면 `None`**
+- `expected` — 이 로더가 인식할 수 있는 아키텍처들
+
+`evidence` 는 있으면 싣는다 — 파일에서 실제로 관찰한 텐서 키 접두사 같은 것으로,
+사용자가 "아 이건 그 모델이 아니구나" 를 스스로 판단할 유일한 재료다.
+
+"체크포인트 로드 실패" 라고만 하면 파일이 깨진 것인지, 지원하지 않는
+아키텍처인지, 컴포넌트가 빠진 것인지 구분할 수 없다. 익명 에러 금지 규칙
+(`AGENTS.md` 코딩 컨벤션)이 여기서 구체적으로 뜻하는 바다.
+
+노드 ID 는 `ModelLoadError` 가 붙이지 않는다 — 실행 루프가 `NodeExecutionError`
+로 감싸며 붙인다. 저장소는 자기를 누가 불렀는지 모른다.
+
+### 9.3 디바이스 — 노드는 백엔드 이름을 모른다
+
+`if device == "cuda"` 를 노드가 쓸 수 있게 두면 백엔드 분기가 노드마다 흩어진다.
+한 번 흩어지면 되돌릴 수 없고, 빠뜨린 자리는 그 하드웨어를 가진 사람만 발견한다.
+
+그래서 노드가 보는 것은 **이미 해석이 끝난** `DevicePlan` 하나뿐이다:
+
+| 필드 | 뜻 |
+|---|---|
+| `compute` | forward 가 도는 곳 |
+| `offload` | 안 쓰는 가중치가 앉아 있는 곳. `compute` 와 같으면 오프로드가 꺼진 것 |
+| `dtype` | `types.json` 과 같은 어휘의 문자열 (`float16` · `bfloat16` · `float32`) |
+
+오프로드 여부를 별도 불리언으로 두지 않는다 — 두 상태가 어긋날 수 있다.
+
+**강제 수단**: `torch.cuda` · `torch.mps` · `torch.backends.mps` 는
+`nodal_nodes_diffusion/devices.py` **한 파일에만** 등장한다. ruff 의 `banned-api`
+는 import 문만 보므로 속성 접근을 놓친다 — 그래서 CI 의 grep 가드가 검사한다
+(`ci.yml` 의 "디바이스 경계").
+
+정책은 주입된다. `NODAL_DEVICE` (`auto` · `cuda` · `mps` · `cpu`) 로 덮어쓰고,
+`auto` 는 cuda → mps → cpu 순으로 찾는다. **명시한 백엔드가 없으면 조용히 cpu 로
+떨어지지 않고 실패한다** — cuda 를 지정했는데 cpu 로 도는 것은 거의 언제나 사고다.
+
+정책이 값으로 주입되는 덕분에 "mps 에서 어떻게 되는가" 를 맥이 아닌 곳에서도
+단위 테스트할 수 있다. 저자가 맥에서 개발하고 GPU 가 별도 장비인 이 프로젝트에서
+이것은 편의가 아니라 필수다.
+
+### 9.4 시드는 백엔드와 무관하게 재현된다
+
+`torch.Generator` 의 device 처리는 백엔드마다 다르다. 그것을 그대로 두면 "같은
+시드 → 같은 결과" 라는 약속이 백엔드를 건널 때 깨진다.
+
+**규칙: 시드는 언제나 cpu 제너레이터에서 만들고 latent 를 `compute` 로 옮긴다.**
+나중에 바꾸면 기존 그래프의 출력이 전부 달라지므로 처음부터 고정한다.
+
+**서버는 시드를 굴리지 않는다.** `Seed` 위젯의 `control`
+(`fixed` · `increment` · `randomize`) 을 읽어 값을 바꾸는 것은 **프론트**이고,
+백엔드는 넘어온 정수를 그대로 쓴다. 서버가 몰래 굴리면 캐시 키가 매번 달라지고
+`.nodal.json` 이 재현 가능한 레시피라는 성질이 사라진다 (§1.2).
+
+`control` 값 셋은 프론트 코드에 박히므로 **에이전트 사이의 계약**이다.
+
+### 9.5 `ModelManager` 책임
 
 - 참조 카운팅 — 여러 노드가 같은 체크포인트를 공유하면 한 번만 로드
 - `accelerate`의 `cpu_offload` / `sequential_offload`로 VRAM 압박 처리 (1차)
 - 사용 안 하는 모델 LRU 언로드
 - `safetensors` mmap 로딩
 
+**이 중 어느 것도 `ModelStore` Protocol 에 없다.** 노드가 부르지 않기 때문이다.
+Protocol 은 메서드 추가가 비파괴적이므로 작게 시작해서 필요할 때 넓힌다 — 반대로
+넓힌 것을 좁히면 노드 팩이 깨진다.
+
 지원 범위 1차: SD1.5, SDXL, SD3, FLUX (전부 `diffusers` 커버).
 
 > 오프로딩 오버헤드가 참을 수 없어지면 레이어 단위 부분 오프로드를 직접 구현한다. **단 ComfyUI 코드 복사 금지 — `../AGENTS.md` 참조.**
+
+### 9.6 테스트는 tiny 체크포인트로 돈다
+
+`hf-internal-testing/tiny-sd-pipe` (8.7 MB) · `tiny-sdxl-pipe` (11.2 MB) 는 채널
+수만 32/64 로 줄인 **진짜 `UNet2DConditionModel` + `AutoencoderKL`** 이다. 목이
+아니라서 스케줄러 루프 · cross-attention · `scaling_factor` 가 실제로 돈다. CPU
+에서 초 단위로 끝난다.
+
+**검증되지 않는 것**: 가중치가 랜덤이라 **출력의 의미는 검증하지 못한다.** 잡히는
+것은 배선 · shape · dtype · 캐시 · 취소 · 프리뷰 경로다. 이미지 품질은 GPU 장비의
+수동 확인 몫이지 CI 의 몫이 아니다.
+
+이 픽스처들은 전부 **diffusers 폴더 포맷**이라 `diffusers.pretrained` 경로만
+검증한다. `single_file` 은 GPU 장비의 실제 체크포인트로 수동 확인한다 — 그것이
+§9.2 의 에러가 특히 자세해야 하는 이유이기도 하다.
 
 ---
 

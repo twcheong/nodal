@@ -75,7 +75,8 @@ nodal 은 그 지점들을 처음부터 다르게 잡았다.
 | Node.js | 20+ | |
 | `pnpm` | 11+ | `corepack enable` 하면 버전이 자동으로 맞는다 |
 
-GPU 는 **필요 없다.** M4 전까지는 torch 조차 설치되지 않는다.
+GPU 는 **필요 없다.** 기본 설치에는 torch 가 들어가지 않는다 — 아래에서 되는
+것들은 전부 CPU 로 돈다.
 
 ### 1. 설치
 
@@ -88,6 +89,25 @@ pnpm install
 ```
 
 두 락파일(`uv.lock`, `pnpm-lock.yaml`)이 커밋되어 있으므로 버전은 그대로 재현된다.
+
+<details>
+<summary>NVIDIA GPU 장비에서 diffusion 노드를 쓰려면 (M4, 아직 구현 중)</summary>
+
+torch 는 옵트인이다. CPU 휠이 기본이고 CUDA 는 따로 켠다:
+
+```bash
+uv sync --group diffusion
+```
+
+```bash
+uv sync --extra cuda
+```
+
+위가 CPU(맥 개발 · CI), 아래가 CUDA(NVIDIA 리눅스/윈도우 장비)다. 둘은 동시에
+켤 수 없다 — 같은 이름의 torch 가 다른 인덱스에 있어서 배타 관계다. 자세한
+것은 [`docs/dev.md`](docs/dev.md).
+
+</details>
 
 ### 2. 백엔드 서버
 

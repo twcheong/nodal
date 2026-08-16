@@ -17,8 +17,34 @@
 ## 설치
 
 ```bash
-uv sync          # Python 워크스페이스 (core · server · nodes-core)
+uv sync          # Python 워크스페이스 (core · server · nodes-core · nodes-image)
 pnpm install     # JS 워크스페이스 (apps/web)
+```
+
+### diffusion 노드 팩 (M4) — 옵트인
+
+기본 `uv sync` 에는 **torch 가 들어 있지 않다.** 리눅스 휠이 191.8 MB 라서,
+lint · 타입 체크 · 프론트만 만지는 사람이 그 값을 치를 이유가 없다.
+
+```bash
+uv sync --group diffusion   # CPU 휠 — 맥 개발 · CI
+uv sync --extra cuda        # CUDA 휠 — NVIDIA 리눅스/윈도우 장비
+```
+
+**둘은 동시에 켤 수 없다.** 같은 이름·같은 버전의 torch 가 서로 다른 인덱스에
+있어서 uv 가 `conflicts` 로 배타 관계를 강제한다 (루트 `pyproject.toml`).
+바꿔 켤 때는 그냥 다른 명령을 돌리면 된다 — `uv` 가 환경을 맞춰 준다.
+
+맥에서 `--extra cuda` 를 돌리면 **에러로 거부된다.** CUDA 휠에 macOS 빌드가
+없기 때문이고, 조용히 CPU 로 떨어지는 것보다 낫다 — cuda 를 지정했는데 cpu 로
+도는 것은 거의 언제나 사고다.
+
+디바이스는 `NODAL_DEVICE` 로 덮어쓴다 (`auto` · `cuda` · `mps` · `cpu`).
+기본값 `auto` 는 cuda → mps → cpu 순으로 찾는다. 명시한 백엔드가 없으면
+실패한다 (같은 이유).
+
+```bash
+NODAL_DEVICE=cpu uv run pytest packages/nodes-diffusion/tests
 ```
 
 ## 일상 명령

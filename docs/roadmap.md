@@ -95,21 +95,29 @@
 
 ## M4 — Diffusion (3주)
 
-> ⚠️ **시작 전 확인**: torch·diffusers 가 요구하는 numpy 하한. `numpy<2.5` 상한이
-> `requires-python = ">=3.11"` 과 묶여 있어, `numpy>=2.5` 를 요구하는 의존성이
-> 들어오면 **Python 3.12 가 강제된다**. 근거와 판단 절차는 `decisions.md`
-> (2026-08-15 · numpy 타입 검사 복구)의 "M4 시작 시 확인할 것" 참조.
+> ✅ **해소됨 (2026-08-16)**: numpy 상한과 torch·diffusers 의 충돌 걱정은
+> 발생하지 않았다. 셋 다 numpy 하한이 `1.17` · `1.24.6` 수준이거나 아예 없어서
+> `<2.5` 상한과 7 메이저 버전 이상 떨어져 있다. **`requires-python = ">=3.11"`
+> 유지, 상한 유지, 전부 최신 버전으로 해석된다.** 근거는 `decisions.md`
+> (2026-08-16 · M4 diffusion 계약).
 
 
-- [ ] `ModelManager` + `diffusers` 통합 (`design.md` §9)
+- [x] **계약**: `ModelStore` · `DevicePlan` · `ModelLoadError` · `Seed` (`design.md` §9)
+- [x] **빌드**: torch 인덱스 분기 (CPU 기본 / `--extra cuda` 옵트인)
+- [ ] `ModelManager` + `diffusers` 통합 (`design.md` §9.5)
 - [ ] 모델 스캐너 (체크포인트/LoRA/VAE 디렉토리 발견)
 - [ ] 노드: LoadCheckpoint / CLIPTextEncode / EmptyLatent / KSampler / VAEDecode
 - [ ] 스텝별 latent 프리뷰 스트리밍
 - [ ] LoRA 로더
 - [ ] ControlNet
-- [ ] 시드 컨트롤 위젯 (고정/증가/랜덤)
+- [ ] 시드 컨트롤 위젯 (고정/증가/랜덤) — 백엔드 힌트는 계약에 있고, 값을 굴리는
+      쪽은 프론트다 (`design.md` §9.4)
 
 **완료 기준**: txt2img 워크플로가 SDXL에서 돌고 스텝 프리뷰가 보인다.
+
+**CI 검증**: `hf-internal-testing/tiny-sd-pipe` (8.7 MB) · `tiny-sdxl-pipe`
+(11.2 MB) 로 CPU 에서 돈다. 출력의 **의미**는 검증하지 못한다 (가중치가
+랜덤) — 배선 · shape · 캐시 · 취소 · 프리뷰 경로가 대상이다 (`design.md` §9.6).
 
 > ⚠️ VRAM 관리에서 ComfyUI `model_management.py`를 참조하고 싶어지는 지점. **코드 복사 금지.** 1차는 `accelerate`에 위임한다.
 

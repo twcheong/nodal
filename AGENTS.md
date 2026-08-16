@@ -64,7 +64,16 @@ ComfyUI(`Comfy-Org/ComfyUI`)는 **GPL-3.0**이다. **nodal은 Apache-2.0으로 �
 4. **커밋 메시지에 무엇을/왜를 쓴다.** 다음 에이전트가 읽을 유일한 인수인계 문서다.
 5. **아래 "핵심 설계 결정"을 벗어난 판단을 했으면** `docs/decisions.md`에 한 줄 기록한다 (날짜 · 결정 · 이유).
 6. **다른 에이전트가 만든 파일을 대규모로 재작성하지 않는다.** 스타일이 마음에 안 든다는 이유로는 절대 금지. 실제 결함이면 `docs/decisions.md`에 이유를 남기고 진행한다.
-7. **인터페이스 파일은 변경 전 사용자에게 확인한다**: `types.json`, 캐논 그래프 스키마, REST/WS API 스키마. 이 셋이 두 에이전트 사이의 계약이다.
+7. **인터페이스 파일은 변경 전 사용자에게 확인한다.** 계약은 **두 층**이고, 층마다 깨졌을 때 나타나는 방식이 다르다.
+
+   | 층 | 무엇 | 누구 사이 | 깨지면 |
+   |---|---|---|---|
+   | **패키지 간** | `nodal.models` 의 `ModelStore` · `DevicePlan` · `ModelLoadError`, `nodal.assets` 의 `AssetStore` | `packages/core` ↔ 노드 팩 | Python import 시점에 터진다. **CI 가 잡는다** |
+   | **에이전트 간** | `types.json`, 캐논 그래프 스키마, `schemas/openapi.json` → `generated.ts`, 위젯 힌트 어휘 (`Seed.CONTROLS` 등) | Claude Code ↔ Codex (백엔드 ↔ 프론트) | **조용히 어긋난다.** 양쪽이 각자 컴파일되므로 런타임에야 드러난다 |
+
+   **아래 칸이 더 위험하다.** 위 칸은 타입 체커가 즉시 잡지만, 아래 칸은 프론트가 `"randomize"` 를 기대하는데 백엔드가 `"random"` 을 보내도 두 저장소가 다 초록이다. 그래서 `types.json` · OpenAPI 는 drift 검사를, 위젯 힌트 어휘는 **상수를 한 곳에만 두는 것**을 규칙으로 삼는다 (`Seed.CONTROLS`).
+
+   위 칸(패키지 간)은 Protocol 이라 **메서드 추가가 비파괴적**이다. 작게 시작해서 필요할 때 넓히고, 넓힌 것을 좁히지 않는다.
 8. **생성물은 원본을 바꾼 커밋에서 함께 재생성한다.** `schemas/openapi.json` 을 바꾸면 같은 커밋에서 `pnpm --filter @nodal/web gen:api` 를 돌려 `apps/web/src/api/generated.ts` 를 재생성한다. 나누면 그 사이 커밋마다 CI 의 drift 검사가 실패한다.
    - **손으로 편집하지 않는다 ≠ 재생성하지 않는다.** `generated.ts` 는 프론트 담당 영역이지만 생성 도구의 산출물이므로, 원본을 바꾼 쪽이 도구를 돌려 갱신하는 것이 맞다.
    - 같은 규칙이 `schemas/graph.schema.json`(← `tools/export_schema.py`)에도 적용된다.

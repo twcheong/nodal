@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol, runtime_checkable
 
 from .assets import AssetRef, AssetStore, NullAssetStore
+from .models import ModelStore, NullModelStore
 from .preview import Preview, encode_preview
 
 __all__ = [
@@ -305,6 +306,7 @@ class NodeContext:
         cancel_token: CancelToken,
         assets: AssetStore | None = None,
         graph: Any = None,
+        models: ModelStore | None = None,
     ) -> None:
         self._node_id = node_id
         self._run_id = run_id
@@ -312,6 +314,7 @@ class NodeContext:
         self._cancel_token = cancel_token
         self._assets: AssetStore = assets if assets is not None else NullAssetStore()
         self._graph = graph
+        self._models: ModelStore = models if models is not None else NullModelStore()
 
     @property
     def node_id(self) -> str:
@@ -354,6 +357,18 @@ class NodeContext:
         노드 팩이 `core` 만 의존하면서도 저장소에 닿는 유일한 통로다.
         """
         return self._assets
+
+    @property
+    def models(self) -> ModelStore:
+        """모델 저장소 (M4, design.md §9). 저장소 없이 실행 중이면 `load` 가 실패한다.
+
+        `assets` 와 같은 모양이고 같은 이유로 여기에 있다 — 체크포인트를 로드하는
+        노드는 `core` 만 의존하므로 다른 통로가 없다.
+
+        디바이스 선택은 여기서 하지 않는다. `ctx.models.plan` 이 이미 해석된
+        계획을 준다 (`models.py` 의 "왜 노드가 디바이스를 고르지 않는가").
+        """
+        return self._models
 
     def progress(self, step: int, total: int, *, preview: Any = None) -> None:
         """진행률을 보고한다. 서버가 WS 로 중계한다."""

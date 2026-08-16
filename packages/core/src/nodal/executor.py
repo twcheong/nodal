@@ -84,6 +84,7 @@ from .events import (
     RunStarted,
 )
 from .graph import Graph, Link, Node
+from .models import ModelStore, NullModelStore
 from .preview import AssetPreview, encode_preview
 from .registry import NodeRegistry, NodeTypeNotFoundError
 from .schema import NodeResult, NodeSchema
@@ -618,6 +619,7 @@ async def execute(
     cancel_token: CancelToken,
     run_id: str | None = None,
     assets: AssetStore | None = None,
+    models: ModelStore | None = None,
 ) -> RunResult:
     """그래프를 실행한다 (design.md §5.1).
 
@@ -655,6 +657,7 @@ async def execute(
     started_at = time.perf_counter()
 
     asset_store = assets if assets is not None else NullAssetStore()
+    model_store = models if models is not None else NullModelStore()
     dyn = DynamicGraph(graph)
     plan = ExecutionList(dyn, cache, registry)
     for out_id in requested_outputs:
@@ -700,7 +703,9 @@ async def execute(
             events.emit(NodeStarted(t="node.started", run_id=identifier, node_id=visible))
 
             inputs = resolve_inputs(node_id, dyn, schema, results)
-            ctx = NodeContext(visible, identifier, events, cancel_token, asset_store, graph)
+            ctx = NodeContext(
+                visible, identifier, events, cancel_token, asset_store, graph, model_store
+            )
             outcome = await run_node(node_id, dyn, schema, inputs, ctx)
 
             match outcome:

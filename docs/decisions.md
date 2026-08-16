@@ -42,6 +42,114 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-16 · Claude Code · M4 diffusion 계약 (사용자 확인 후 확정)
+
+#### numpy 상한 — 걱정은 발생하지 않았다
+
+2026-08-15 항목의 "M4 시작 시 확인할 것" 을 실행했다. **충돌 없다.**
+
+`uv pip compile` 드라이런으로 기존 워크스페이스 의존성 전부 + torch · diffusers ·
+transformers · accelerate · safetensors · peft 를 py3.11 / py3.12 × mac / linux
+로 해석했고, 네 조합 모두 `numpy<2.5` 를 유지한 채 **전부 최신 버전**으로 풀렸다
+(numpy 2.4.6 · torch 2.13.0 · diffusers 0.39.0 · transformers 5.15.0).
+
+이유는 선언된 하한이 낮기 때문이다 — torch 는 numpy 를 의존성으로 **선언조차
+하지 않고**, transformers · accelerate 는 `numpy>=1.17`, safetensors 는
+`numpy>=1.24.6` (extra), diffusers 는 하한이 없다. 상한과 7 메이저 버전 이상
+떨어져 있다.
+
+- **결정**: `requires-python = ">=3.11"` 유지. `numpy>=2.1,<2.5` 유지.
+  Python 3.12 상향 **하지 않는다**
+- **영향 범위**: `docs/roadmap.md` M4 경고를 해소 표시로 교체
+- **되돌릴 수 있나**: 해당 없음 — 아무것도 바꾸지 않았다
+
+#### torch 인덱스 분기 — CPU 기본, CUDA 옵트인
+
+CPU 빌드와 CUDA 빌드는 **같은 패키지 이름·같은 버전**으로 서로 다른 인덱스에
+있다. 기본 PyPI 인덱스로 리눅스를 해석하면 `nvidia-*` · `cuda-*` 가 18개 딸려
+온다 (수 GB). PyTorch CPU 인덱스를 붙이면 0개가 된다.
+
+- **결정**: 루트 `pyproject.toml` 에 `[[tool.uv.index]]` 둘 + `[tool.uv.sources]`
+  의 group/extra 분기. `uv sync` = torch 없음 / `--group diffusion` = CPU /
+  `--extra cuda` = CUDA. `conflicts` 로 배타
+- **이유 (기본에서 뺀 것)**: 사용자 판단. 리눅스 휠이 191.8 MB 인데 lint ·
+  타입 체크 · 프론트만 만지는 사람과 기존 CI 잡이 그 값을 치를 이유가 없다
+- **누출을 하나 찾아 막았다**: `nodal-nodes-diffusion` 이 `torch` 를 평범한
+  의존성으로 선언하면, 그룹도 엑스트라도 안 켠 해석 분기가 **PyPI 기본 인덱스로
+  떨어져 CUDA 휠을 끌고 온다.** 락파일에 `torch <- pypi.org/simple` 항목이 실제로
+  생겼다. `accelerate` 는 `torch>=2.0.0` 을 **마커 없이** 하드 의존성으로 걸어
+  한 단계 건너 같은 누출을 만든다. 둘 다 패키지에서 빼서 루트 group/extra 로
+  옮겼더니 그 항목이 사라졌다. diffusers · transformers · safetensors 는 torch 를
+  extra 뒤에만 두므로 패키지에 남는다
+- **확인한 사실**: 워크스페이스 **루트의 `[tool.uv.sources]` 는 멤버 패키지의
+  요구사항에도 적용된다.** 그래서 `packages/nodes-diffusion` 은 인덱스를 모른다
+- **맥에서 `--extra cuda`** 는 에러로 거부된다 (CUDA 휠에 macOS 빌드가 없다).
+  조용히 CPU 로 떨어지는 것보다 낫다고 판단해 그대로 뒀다
+- **영향 범위**: `pyproject.toml`, `packages/nodes-diffusion/pyproject.toml`,
+  `uv.lock`, `.github/workflows/ci.yml`, `README.md`, `docs/dev.md`
+- **되돌릴 수 있나**: 예 — 인덱스 선언과 sources 분기를 떼면 PyPI 기본으로 돌아간다
+
+#### `ModelStore` · `DevicePlan` — 최소 표면
+
+- **결정**: `packages/core/src/nodal/models.py` 신설. `ModelStore` Protocol 은
+  `plan` 과 `load(ref, *, loader)` **둘뿐**이다. 참조 카운팅 · LRU 언로드 · mmap 은
+  노드가 부르지 않으므로 넣지 않았다
+- **이유**: 사용자 지시("노드 팩이 실제로 부르는 것만"). Protocol 은 메서드 추가가
+  비파괴적이라 작게 시작할 수 있고, 반대로 넓힌 것을 좁히면 노드 팩이 깨진다
+- **`ctx.models` 는 `ctx.assets` 와 같은 모양**이다 — core 의 Protocol + 밖의 구현 +
+  실패하는 Null 구현. 이미 있는 선례를 따르는 것이 새 패턴을 만드는 것보다 낫다
+- **`NullModelStore.plan` 은 터지지 않는다.** `load` 만 터진다 — 디바이스가
+  무엇인지 묻는 것은 저장소 없이도 물어볼 수 있어야 하는 질문이다
+- **`Device` 는 `torch.device` 가 아니라 값 타입**이고 `dtype` 은 `torch.dtype` 이
+  아니라 `types.json` 과 같은 어휘의 문자열이다. core 가 torch 를 모른다는 규칙
+- **영향 범위**: `packages/core/src/nodal/{models.py,events.py,executor.py,__init__.py}`
+- **되돌릴 수 있나**: 예 — 아직 부르는 노드가 없다
+
+#### 디바이스 경계는 grep 가드로 강제한다
+
+- **결정**: `torch.cuda` · `torch.mps` · `torch.backends.mps` 는
+  `nodal_nodes_diffusion/devices.py` 한 파일에만. CI 의 grep 스텝이 검사한다
+- **왜 ruff 가 아닌가**: `banned-api` 는 **import 문만** 보고
+  `torch.cuda.is_available()` 같은 속성 접근을 지나친다. 게다가 모든 banned-api
+  위반이 `TID251` 하나로 보고되므로, per-file-ignores 로 `torch` 는 풀고
+  `torch.cuda` 는 막는 것이 **불가능하다**. 시도해 보고 확인했다
+- **이유**: 백엔드 분기는 한 번 흩어지면 되돌릴 수 없고, 빠뜨린 자리는 그 하드웨어를
+  가진 사람만 발견한다. 저자가 맥에서 개발하고 GPU 가 별도 리눅스 장비인 이
+  프로젝트에서는 특히 그렇다
+- **영향 범위**: `pyproject.toml` per-file-ignores, `.github/workflows/ci.yml`
+- **되돌릴 수 있나**: 예
+
+#### 시드는 cpu 제너레이터에서 만든다
+
+- **결정**: `torch.Generator` 는 언제나 cpu 로 만들고 latent 를 `compute` 로 옮긴다.
+  `Seed` 위젯의 `control` (`fixed` · `increment` · `randomize`) 을 읽어 값을 굴리는
+  것은 **프론트**이고 서버는 넘어온 정수를 그대로 쓴다
+- **이유**: 제너레이터의 device 처리가 백엔드마다 달라서, 그대로 두면 "같은 시드 →
+  같은 결과" 가 백엔드를 건널 때 깨진다. 나중에 바꾸면 기존 그래프의 출력이 전부
+  달라지므로 처음부터 고정한다. 서버가 시드를 굴리면 캐시 키가 매번 달라지고
+  `.nodal.json` 이 재현 가능한 레시피라는 성질이 사라진다
+- **`Seed.CONTROLS` 는 에이전트 간 계약**이다 (`AGENTS.md` 규칙 7 의 아래 칸)
+- **영향 범위**: `packages/core/src/nodal/schema.py`, `docs/design.md` §9.4
+- **되돌릴 수 있나**: 지금은 예. 실제 이미지가 나오기 시작하면 아니오
+
+#### 테스트 픽스처는 diffusers 폴더 포맷
+
+- **결정**: CI 는 `hf-internal-testing/tiny-sd-pipe` (8.7 MB) ·
+  `tiny-sdxl-pipe` (11.2 MB) 로 `diffusers.pretrained` 경로를 검증한다.
+  `diffusers.single_file` 은 GPU 장비의 실제 체크포인트로 수동 확인
+- **이유**: tiny 픽스처가 전부 폴더 포맷이고 단일 파일 tiny 체크포인트를 찾지
+  못했다. 두 로더는 다른 경로다. `single_file` 의 아키텍처 추론이 실사용에서 가장
+  자주 깨지는 지점이라 **에러가 무엇을 추론하려 했는지 말하게** 만들었다
+  (`ModelLoadError` 의 `inferred` · `expected` · `evidence`) — 사용자 지시
+- **검증되지 않는 것**: 가중치가 랜덤이라 **출력의 의미는 검증하지 못한다.**
+  배선 · shape · dtype · 캐시 · 취소 · 프리뷰 경로가 대상이다
+- **LoRA 픽스처는 찾지 못했다.** `hf-internal-testing` 은 조직 목록 API 가 막혀
+  있어 정확한 이름으로만 조회된다. LoRA 로더 항목에 착수할 때 `diffusers` 테스트
+  스위트에서 **이름만** 확인한다 — 픽스처 이름 확인은 소스 복사가 아니므로
+  절대 규칙 1 과 무관하다
+- **영향 범위**: `docs/design.md` §9.6, `docs/roadmap.md`
+- **되돌릴 수 있나**: 예
+
 ### 2026-08-14 · Codex · M3 이미지 계약 보정
 
 - **결정**: `Image` 소켓 dtype 을 `float32` 하나로 좁혔다. `uint8` 은 Load/Save 노드

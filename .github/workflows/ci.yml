@@ -48,6 +48,54 @@ jobs:
       - name: OpenAPI drift 검사
         run: uv run python tools/export_openapi.py --check
 
+  # diffusion 은 별도 잡이다. 위 잡은 torch 없이 수십 초에 끝나는데 여기에
+  # 191.8 MB 설치를 얹으면 lint · typecheck 피드백까지 같이 느려진다.
+  # 기본 `uv sync` 에 torch 가 없는 것도 같은 이유다 (root pyproject.toml).
+  diffusion:
+    name: diffusion (CPU 고정)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: uv 설치
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # **CPU 를 명시적으로 고정한다.** `--group diffusion` 은 루트
+      # pyproject.toml 의 `[tool.uv.sources]` 에 따라 PyTorch CPU 인덱스로
+      # 해석된다. `--extra cuda` 는 여기서 절대 쓰지 않는다 — 러너에 GPU 가
+      # 없을 뿐 아니라 CUDA 휠 묶음이 수 GB 다.
+      - run: uv sync --frozen --group diffusion
+
+      # 실수로 CUDA 가 해석되지 않았는지 결과물로 확인한다. 설정을 믿지 않고
+      # 실제로 설치된 것을 본다 — 설정은 나중에 누가 바꿀 수 있다.
+      - name: CPU 휠이 맞는지 확인
+        run: |
+          if uv pip list | grep -qiE '^(nvidia-|cuda-)'; then
+            echo "::error::CUDA 패키지가 설치됐다. CI 는 CPU 휠만 써야 한다."
+            uv pip list | grep -iE '^(nvidia-|cuda-)'
+            exit 1
+          fi
+          uv run python -c "import torch; print('torch', torch.__version__)"
+
+      - name: mypy (diffusion 노드 팩)
+        run: uv run mypy -p nodal_nodes_diffusion
+
+      # 디바이스 분기가 흩어지는 것을 막는다 (M4 계약, design.md §9.3).
+      # ruff 의 banned-api 로는 잡히지 않고 grep 으로는 문서의 산문까지 잡힌다 —
+      # 근거는 스크립트 자체의 docstring 에 있다.
+      - name: 디바이스 경계 (torch.cuda · torch.mps 는 devices.py 에만)
+        run: uv run python tools/check_device_boundary.py
+
+      - name: pytest (diffusion)
+        run: |
+          if [ -d packages/nodes-diffusion/tests ]; then
+            NODAL_DEVICE=cpu uv run pytest packages/nodes-diffusion/tests
+          else
+            echo "아직 테스트가 없다 (M4 계약 단계). 구현 커밋에서 채운다."
+          fi
+
   web:
     name: web (lint · typecheck · test · build)
     runs-on: ubuntu-latest

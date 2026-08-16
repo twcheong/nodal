@@ -63,6 +63,7 @@ __all__ = [
     "NodeSchema",
     "OutputSpec",
     "SchemaError",
+    "Seed",
     "Socket",
     "Str",
     "get_schema",
@@ -168,6 +169,49 @@ class Int(InputDescriptor):
             lazy=lazy,
             doc=doc,
             widget=_widget(min=min, max=max, step=step),
+        )
+
+
+@dataclass(frozen=True)
+class Seed(InputDescriptor):
+    """시드 입력. 소켓 타입은 `INT` 이고 위젯만 다르다 (M4 계약, design.md §9).
+
+    `Int` 로 충분해 보이지만 아니다. 시드에는 **실행이 끝난 뒤 값을 어떻게 할
+    것인가** 라는 상태가 붙는다 — 고정할지, 1 씩 올릴지, 매번 새로 뽑을지.
+    그것이 `control` 이고, 이 힌트를 읽어 실제로 값을 바꾸는 것은 **프론트**다.
+    백엔드는 넘어온 정수를 그대로 쓴다. 그래야 같은 그래프 문서가 언제나 같은
+    결과를 낸다 — 서버가 시드를 몰래 굴리면 캐시 키가 매번 달라지고 `.nodal.json`
+    이 재현 가능한 레시피라는 성질이 사라진다.
+
+    `control` 값은 `SEED_CONTROLS` 셋이 전부이고 이 이름들은 프론트 코드에
+    박히므로 **에이전트 사이의 계약**이다 (AGENTS.md 협업 규칙 7).
+
+    범위는 부호 없는 64비트다. numpy 의 `default_rng` 와 torch 의 `manual_seed`
+    가 둘 다 받는 범위이면서 JSON 정수로 표현된다.
+    """
+
+    #: `control` 이 가질 수 있는 값. 순서가 UI 의 순서다.
+    CONTROLS: ClassVar[tuple[str, ...]] = ("fixed", "increment", "randomize")
+
+    #: 부호 없는 64비트 상한. `2**64 - 1`.
+    MAX: ClassVar[int] = 0xFFFF_FFFF_FFFF_FFFF
+
+    def __init__(
+        self,
+        default: int | object = 0,
+        *,
+        control: str = "randomize",
+        doc: str = "",
+    ) -> None:
+        if control not in Seed.CONTROLS:
+            allowed = ", ".join(Seed.CONTROLS)
+            raise SchemaError(f"알 수 없는 시드 control: {control!r}. 허용: {allowed}")
+        super().__init__(
+            type=INT,
+            default=default,
+            lazy=False,
+            doc=doc,
+            widget=_widget(seed=True, control=control, min=0, max=Seed.MAX, step=1),
         )
 
 
