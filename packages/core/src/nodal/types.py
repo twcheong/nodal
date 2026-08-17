@@ -175,6 +175,9 @@ class TypeCatalog:
         numeric_promotions: 허용된 (출처, 대상) 원시 타입 승격 쌍.
         rules: 규칙 스위치 원본. 개별 규칙을 끄면 호환 판정이 즉시 좁아진다.
         conformance: 양쪽 구현이 같은 답을 내야 하는 케이스 목록.
+        widget_vocabulary: 닫힌 어휘를 가진 위젯 힌트 (`seed.control` 등).
+            타입 판정에는 쓰이지 않는다 — `Seed.CONTROLS` 가 여기서 값을 읽어
+            어휘를 **두 번 쓰지 않게** 하려고 실려 있다.
     """
 
     version: str
@@ -182,6 +185,26 @@ class TypeCatalog:
     numeric_promotions: frozenset[tuple[str, str]]
     rules: Mapping[str, TypingAny]
     conformance: tuple[Mapping[str, TypingAny], ...]
+    widget_vocabulary: Mapping[str, Mapping[str, TypingAny]] = field(default_factory=dict)
+
+    def widget_options(self, widget: str, key: str) -> tuple[str, ...]:
+        """닫힌 위젯 어휘를 꺼낸다. `widget_options("seed", "control")`.
+
+        Raises:
+            TypeSpecError: `types.json` 에 그 어휘가 없을 때. 조용히 빈 튜플을
+                돌려주면 검증이 통째로 꺼진 채 통과한다.
+        """
+        try:
+            values = self.widget_vocabulary[widget][key]
+        except KeyError:
+            raise TypeSpecError(
+                f"{TYPES_FILE} 의 widget_vocabulary 에 {widget}.{key} 가 없다"
+            ) from None
+        if not isinstance(values, list) or not values:
+            raise TypeSpecError(
+                f"widget_vocabulary.{widget}.{key} 는 비어 있지 않은 배열이어야 한다"
+            )
+        return tuple(str(v) for v in values)
 
     def resolve(self, name: str) -> Type:
         """카탈로그 이름을 타입으로 푼다.
@@ -238,6 +261,11 @@ class TypeCatalog:
             numeric_promotions=edges,
             rules=rules,
             conformance=tuple(data.get("conformance", ())),
+            widget_vocabulary={
+                name: spec
+                for name, spec in data.get("widget_vocabulary", {}).items()
+                if not name.startswith("$")  # $comment 는 문서이지 어휘가 아니다
+            },
         )
 
 

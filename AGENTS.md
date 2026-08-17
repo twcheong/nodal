@@ -71,7 +71,9 @@ ComfyUI(`Comfy-Org/ComfyUI`)는 **GPL-3.0**이다. **nodal은 Apache-2.0으로 �
    | **패키지 간** | `nodal.models` 의 `ModelStore` · `DevicePlan` · `ModelLoadError`, `nodal.assets` 의 `AssetStore` | `packages/core` ↔ 노드 팩 | Python import 시점에 터진다. **CI 가 잡는다** |
    | **에이전트 간** | `types.json`, 캐논 그래프 스키마, `schemas/openapi.json` → `generated.ts`, 위젯 힌트 어휘 (`Seed.CONTROLS` 등) | Claude Code ↔ Codex (백엔드 ↔ 프론트) | **조용히 어긋난다.** 양쪽이 각자 컴파일되므로 런타임에야 드러난다 |
 
-   **아래 칸이 더 위험하다.** 위 칸은 타입 체커가 즉시 잡지만, 아래 칸은 프론트가 `"randomize"` 를 기대하는데 백엔드가 `"random"` 을 보내도 두 저장소가 다 초록이다. 그래서 `types.json` · OpenAPI 는 drift 검사를, 위젯 힌트 어휘는 **상수를 한 곳에만 두는 것**을 규칙으로 삼는다 (`Seed.CONTROLS`).
+   **아래 칸이 더 위험하다.** 위 칸은 타입 체커가 즉시 잡지만, 아래 칸은 프론트가 `"randomize"` 를 기대하는데 백엔드가 `"random"` 을 보내도 두 저장소가 다 초록이다.
+
+   **닫힌 어휘는 `types.json` 의 `widget_vocabulary` 에 싣는다.** `widget` 은 OpenAPI 에서 자유 딕셔너리라 `generated.ts` 가 `Record<string, unknown>` 을 주고, 그러면 오타를 아무도 잡지 않는다. 어휘를 그 파일에 두면 백엔드는 **읽어 쓰고**(`Seed.CONTROLS`) 프론트는 **리터럴 유니온으로 다시 적어**(`widgets.ts`) tsc 가 오타를 거부하게 만든다. TS 가 다시 적어야 하는 것은 JSON 모듈의 배열이 `string[]` 로 넓혀지기 때문이고, 그 중복은 `widgets.test.ts` 와 `tools/check_types.py` 가 고정한다. 값이 열린 힌트(`min`·`max`·`options`)는 넣지 않는다 — 오타로 깨질 수 있는 것만 넣는다.
 
    위 칸(패키지 간)은 Protocol 이라 **메서드 추가가 비파괴적**이다. 작게 시작해서 필요할 때 넓히고, 넓힌 것을 좁히지 않는다.
 8. **생성물은 원본을 바꾼 커밋에서 함께 재생성한다.** `schemas/openapi.json` 을 바꾸면 같은 커밋에서 `pnpm --filter @nodal/web gen:api` 를 돌려 `apps/web/src/api/generated.ts` 를 재생성한다. 나누면 그 사이 커밋마다 CI 의 drift 검사가 실패한다.

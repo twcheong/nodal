@@ -17,6 +17,7 @@ from pathlib import Path
 
 from nodal.types import (
     TYPES_FILE,
+    TypeCatalog,
     TypeSpecError,
     check_conformance,
     load_catalog,
@@ -41,6 +42,10 @@ REQUIRED_RULES = (
 
 #: 카탈로그에 반드시 있어야 하는 내장 타입.
 REQUIRED_TYPES = ("INT", "FLOAT", "STRING", "BOOL", "Image", "Model", "VAE")
+
+#: 반드시 실려 있어야 하는 닫힌 위젯 어휘 (widget, key).
+#: 프론트가 이것으로 리터럴 타입을 만든다 — 사라지면 오타 방어가 조용히 없어진다.
+REQUIRED_WIDGET_VOCABULARY = (("seed", "control"),)
 
 #: 거부 케이스를 요구하지 않는 규칙.
 #: `any_bidirectional` 은 켜져 있는 한 반례가 존재할 수 없다 — Any 는 무엇과도
@@ -94,6 +99,41 @@ def check() -> list[str]:
             problems.append(f"규칙 {rule!r} 에 {only} 케이스만 있다 — 반대 케이스도 필요하다")
 
     problems.extend(f"적합성 불일치 {line}" for line in check_conformance(catalog))
+    problems.extend(_check_widget_vocabulary(catalog))
+    return problems
+
+
+def _check_widget_vocabulary(catalog: TypeCatalog) -> list[str]:
+    """닫힌 위젯 어휘가 실려 있고 실제로 쓰이는지 본다.
+
+    이 어휘가 `types.json` 에 있는 이유는 프론트가 여기서 리터럴 타입을 만들기
+    때문이다 (`apps/web/src/graph/widgets.ts`). Python 쪽은 `Seed.CONTROLS` 가
+    **읽어 쓰므로** 낡을 수 없고, 여기서 볼 것은 두 가지다 — 어휘가 존재하는가,
+    그리고 누군가 `Seed.CONTROLS` 를 다시 하드코딩하지 않았는가.
+
+    TS 리터럴과의 일치는 `apps/web/src/graph/widgets.test.ts` 가 검사한다.
+    한쪽만으로는 "규칙이 하나" 라고 말할 수 없다 — 적합성 케이스와 같은 구조다.
+    """
+    from nodal.schema import Seed
+
+    problems: list[str] = []
+    for widget, key in REQUIRED_WIDGET_VOCABULARY:
+        try:
+            catalog.widget_options(widget, key)
+        except TypeSpecError as exc:
+            problems.append(str(exc))
+
+    try:
+        declared = catalog.widget_options("seed", "control")
+    except TypeSpecError:
+        return problems  # 위에서 이미 보고했다
+
+    if tuple(Seed.CONTROLS) != declared:
+        problems.append(
+            f"Seed.CONTROLS {tuple(Seed.CONTROLS)} 가 "
+            f"widget_vocabulary.seed.control {declared} 와 다르다 — "
+            "schema.py 가 types.json 을 읽는 대신 목록을 하드코딩했나?"
+        )
     return problems
 
 

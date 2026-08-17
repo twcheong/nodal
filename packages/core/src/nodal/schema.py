@@ -49,7 +49,7 @@ from dataclasses import dataclass, field
 from typing import Any as TypingAny
 from typing import ClassVar, Self, TypeVar
 
-from .types import BOOL, FLOAT, INT, STRING, CatalogType, Type, as_type
+from .types import BOOL, FLOAT, INT, STRING, CatalogType, Type, as_type, load_catalog
 
 __all__ = [
     "Bool",
@@ -183,8 +183,10 @@ class Seed(InputDescriptor):
     결과를 낸다 — 서버가 시드를 몰래 굴리면 캐시 키가 매번 달라지고 `.nodal.json`
     이 재현 가능한 레시피라는 성질이 사라진다.
 
-    `control` 값은 `SEED_CONTROLS` 셋이 전부이고 이 이름들은 프론트 코드에
-    박히므로 **에이전트 사이의 계약**이다 (AGENTS.md 협업 규칙 7).
+    `control` 어휘는 **`types.json` 의 `widget_vocabulary.seed.control` 이
+    단일 소스**이고 아래 `CONTROLS` 는 그것을 읽는다. 여기에 목록을 다시 적지
+    않는다 — 프론트도 같은 파일에서 리터럴 타입을 만들기 때문에, 두 번 쓰면
+    양쪽이 각자 컴파일된 채로 어긋난다 (AGENTS.md 협업 규칙 7 의 아래 칸).
 
     범위 상한이 `2**53 - 1` 인 이유는 **JavaScript** 다. torch 의 `manual_seed`
     와 numpy 의 `default_rng` 는 부호 없는 64비트를 받지만, `2**64 - 1` 은
@@ -198,7 +200,8 @@ class Seed(InputDescriptor):
     """
 
     #: `control` 이 가질 수 있는 값. 순서가 UI 의 순서다.
-    CONTROLS: ClassVar[tuple[str, ...]] = ("fixed", "increment", "randomize")
+    #: **`types.json` 에서 읽는다** — 이 파일에 목록을 적지 않는다.
+    CONTROLS: ClassVar[tuple[str, ...]] = load_catalog().widget_options("seed", "control")
 
     #: 상한. `2**53 - 1` = JS `Number.MAX_SAFE_INTEGER`. 위 docstring 참조 —
     #: 이 값을 올리면 프론트에서 시드가 조용히 바뀐다.

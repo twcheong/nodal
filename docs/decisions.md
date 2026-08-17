@@ -42,6 +42,45 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-17 · Claude Code · 시드 어휘를 타입 검사 안으로 (사용자 지시)
+
+- **문제**: `widget` 이 OpenAPI 에서 자유 딕셔너리라 `generated.ts` 가
+  `Record<string, unknown>` 을 준다. 프론트가 `"randomise"` 라고 오타를 내도
+  tsc 가 통과시키고 백엔드는 자기 검증만 하므로 **양쪽 저장소가 다 초록인 채로
+  런타임에야 드러났다** (AGENTS.md 규칙 7 의 아래 칸)
+- **결정**: `types.json` 에 `widget_vocabulary` 절을 신설하고 어휘를 거기 하나에
+  둔다. 사용자가 제시한 두 후보 중 두 번째 — 기존 패턴과 일관되기 때문이다
+- **왜 OpenAPI 판별 유니온이 아닌가**: `widget` 은 **모든** 입력에 붙는 필드라,
+  판별 유니온으로 만들려면 시드뿐 아니라 숫자·문자열·콤보 위젯까지 전부 타입을
+  정해야 한다. M2 부터 있던 공유 표면을 시드 하나 때문에 재구성하는 셈이다.
+  `types.json` 쪽은 절 하나 + TS 파일 하나로 끝난다
+- **세 층으로 닫았다**:
+
+  | 어디 | 무엇을 | 무엇을 막나 |
+  |---|---|---|
+  | `Seed.CONTROLS` | `types.json` 을 **읽는다** | 백엔드가 낡을 수 없다 |
+  | `widgets.ts` 의 `SeedControl` | 리터럴 유니온 | **tsc 가 오타를 거부** |
+  | `widgets.test.ts` · `check_types.py` | 셋이 같은지 | 리터럴이 낡음 · 하드코딩 복귀 |
+
+- **TS 가 리터럴을 다시 적어야 하는 이유**: TypeScript 는 JSON 모듈의 배열을
+  `string[]` 으로 넓혀서 리터럴 유니온을 뽑을 수 없다. 중복은 피할 수 없고
+  테스트로 고정한다. `typesystem.ts` 가 `types.json` 을 읽는 것과 같은 구조다
+- **`parseSeedControl` 은 반대 방향도 막는다**: 서버가 우리가 모르는 값을 보내면
+  `null` 이다. 조용히 `"fixed"` 로 떨어뜨리지 않는다 — 시드는 재현성이 존재
+  이유라 조용한 대체가 특히 나쁘다
+- **세 가드가 실제로 발동하는지 확인했다**: (1) `SeedControl` 에 `"randomise"` 를
+  넣으니 `TS2820 Did you mean "randomize"?`, (2) `types.json` 을 고치니 vitest 가
+  실패, (3) `Seed.CONTROLS` 를 하드코딩하니 `check_types.py` 가 실패
+- **`widget_vocabulary` 에 무엇을 넣는가**: **닫힌 어휘만.** `min`·`max`·`step`·
+  `options` 처럼 값이 열린 힌트는 넣지 않는다 — 오타로 깨질 수 있는 것만이 대상이다
+- **`types_version` 은 올리지 않았다.** 추가적 변경이고 기존 절을 건드리지 않는다
+- **생성물 변화 없음**: `types.json` 은 OpenAPI 에 실리지 않으므로
+  `openapi.json` · `generated.ts` 가 그대로다. 재생성해서 확인했고 drift 검사 통과
+- **영향 범위**: `packages/core/src/nodal/{types.json,types.py,schema.py}`,
+  `tools/check_types.py`, `apps/web/src/graph/widgets.ts`(신규)·`widgets.test.ts`(신규),
+  `AGENTS.md` 규칙 7, `docs/design.md` §9.4
+- **되돌릴 수 있나**: 예
+
 ### 2026-08-17 · Claude Code · M4 얇은 수직 절단 — 스키마 노출 (사용자 확인 후 확정)
 
 프론트 담당이 시드 위젯을 만들려면 `/api/nodes` 에 그 스키마가 나와야 하는데,

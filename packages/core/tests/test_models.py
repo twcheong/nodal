@@ -235,5 +235,18 @@ def test_seed_rejects_unknown_control():
         Seed(0, control="random")
 
 
-def test_seed_controls_are_frozen_vocabulary():
+def test_seed_controls_come_from_types_json():
+    # 어휘를 두 곳에 적지 않는다. 프론트도 같은 파일에서 리터럴 타입을 만들므로
+    # (apps/web/src/graph/widgets.ts) 여기서 하드코딩하면 조용히 갈라진다.
+    from nodal.types import load_catalog
+
+    assert load_catalog().widget_options("seed", "control") == Seed.CONTROLS
     assert Seed.CONTROLS == ("fixed", "increment", "randomize")
+
+
+def test_unknown_widget_vocabulary_fails_loudly():
+    # 조용히 빈 튜플을 돌려주면 control 검증이 통째로 꺼진 채 통과한다.
+    from nodal.types import TypeSpecError, load_catalog
+
+    with pytest.raises(TypeSpecError, match="widget_vocabulary"):
+        load_catalog().widget_options("seed", "없는키")

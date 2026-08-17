@@ -803,7 +803,27 @@ class LoadCheckpoint:
 백엔드는 넘어온 정수를 그대로 쓴다. 서버가 몰래 굴리면 캐시 키가 매번 달라지고
 `.nodal.json` 이 재현 가능한 레시피라는 성질이 사라진다 (§1.2).
 
-`control` 값 셋은 프론트 코드에 박히므로 **에이전트 사이의 계약**이다.
+**`control` 어휘의 단일 소스는 `types.json` 의 `widget_vocabulary.seed.control`
+이다.** 세 곳이 그것 하나를 본다:
+
+| 어디 | 무엇을 | 무엇을 막나 |
+|---|---|---|
+| `nodal.Seed.CONTROLS` | 읽어 쓴다 | 백엔드가 낡을 수 없다 (파생) |
+| `apps/web/.../widgets.ts` 의 `SeedControl` | 리터럴 유니온으로 다시 적는다 | **tsc 가 `"randomise"` 를 거부한다** |
+| `widgets.test.ts` · `tools/check_types.py` | 셋이 같은지 검사 | 리터럴이 낡거나 누가 하드코딩하는 것 |
+
+TS 가 리터럴을 다시 적는 이유는 **TypeScript 가 JSON 모듈의 배열을 `string[]`
+으로 넓혀 리터럴 유니온을 뽑을 수 없기 때문**이다. 그 중복은 피할 수 없고,
+대신 테스트가 고정한다.
+
+왜 이렇게까지 하는가: `widget` 은 OpenAPI 에서 자유 딕셔너리라
+`generated.ts` 가 `Record<string, unknown>` 을 준다. 방어가 없으면 프론트의
+오타가 **양쪽 저장소를 다 초록으로 통과해 런타임에야 드러난다** — `AGENTS.md`
+규칙 7 이 말하는 아래 칸이다.
+
+서버가 우리가 모르는 `control` 을 보내는 반대 방향은 `parseSeedControl` 이
+경계에서 좁힌다. 모르는 값이면 `null` 이고 **조용히 `"fixed"` 로 떨어지지
+않는다** — 시드는 재현성이 존재 이유라 조용한 대체가 특히 나쁘다.
 
 ### 9.5 스텝 프리뷰 — 새 전송 형식을 만들지 않는다
 
