@@ -7,6 +7,7 @@ import type {
   CreateRunResponse,
   GraphFromPngResponse,
   Issue,
+  ModelsResponse,
   NodeSchema,
   NodesResponse,
   ValidateResponse,
@@ -50,6 +51,21 @@ const output = (name: string, type: string): NonNullable<NodeSchema["outputs"]>[
   type,
   doc: "",
 });
+
+const MOCK_MODELS: NonNullable<ModelsResponse["models"]> = [
+  {
+    name: "sdxl-demo.safetensors",
+    kind: "checkpoints",
+    size_bytes: 6_934_458_368,
+    modified_at: "2026-08-17T09:00:00Z",
+  },
+  {
+    name: "tiny-sd-pipe",
+    kind: "checkpoints",
+    size_bytes: 9_125_888,
+    modified_at: "2026-08-17T09:00:00Z",
+  },
+];
 
 export const MOCK_NODE_SCHEMAS: readonly NodeSchema[] = [
   {
@@ -185,6 +201,40 @@ export const MOCK_NODE_SCHEMAS: readonly NodeSchema[] = [
     outputs: [output("text", "STRING")],
   },
   {
+    id: "diffusion.LoadCheckpoint",
+    title: "Load Checkpoint",
+    category: "diffusion/loaders",
+    aliases: ["체크포인트", "모델"],
+    version: "1",
+    cacheable: true,
+    output_node: false,
+    doc: "Combo.from_provider 체크포인트 선택 UI를 백엔드 없이 확인합니다.",
+    inputs: [input("ckpt", "STRING", "", { provider: "checkpoints" })],
+    outputs: [output("model", "Model"), output("clip", "CLIP"), output("vae", "VAE")],
+  },
+  {
+    id: "diffusion.KSampler",
+    title: "KSampler",
+    category: "diffusion/sampling",
+    aliases: ["샘플러", "생성"],
+    version: "1",
+    cacheable: true,
+    output_node: false,
+    doc: "고빈도 스텝 프리뷰와 시드 전환을 백엔드 없이 확인합니다.",
+    inputs: [
+      input("seed", "INT", 0, {
+        seed: true,
+        control: "fixed",
+        min: 0,
+        max: Number.MAX_SAFE_INTEGER,
+        step: 1,
+      }),
+      input("steps", "INT", 20, { min: 1, max: 1000, step: 1 }),
+      input("sampler_name", "STRING", "euler", { options: ["euler", "ddim"] }),
+    ],
+    outputs: [output("latent", "Latent")],
+  },
+  {
     id: "image.MockPreview",
     title: "Mock Image",
     category: "image",
@@ -211,6 +261,11 @@ export class MockGraphApiClient implements GraphApiClient {
   async listNodes(): Promise<NodesResponse> {
     await Promise.resolve();
     return { nodes: [...MOCK_NODE_SCHEMAS], types_version: TYPES_VERSION };
+  }
+
+  async listModels(): Promise<ModelsResponse> {
+    await Promise.resolve();
+    return { models: [...MOCK_MODELS], kinds: ["checkpoints", "loras", "vae"] };
   }
 
   async validateGraph(graph: GraphDocument): Promise<ValidateResponse> {
@@ -263,6 +318,16 @@ export class MockGraphApiClient implements GraphApiClient {
     const failedNode = nodes.find(
       ([, node]) => node.type === "math.Divide" && literalNumber(node.inputs?.b) === 0,
     );
+    const sampler = nodes.findIndex(([, node]) => node.type === "diffusion.KSampler");
+    const samplerWillRun =
+      sampler >= 0 && !(useCache && this.#hasCompletedRun && sampler % 4 === 1);
+    const samplerSteps = samplerWillRun
+      ? (literalNumber(nodes[sampler]?.[1].inputs?.steps) ?? 20)
+      : 0;
+    const completionDelay = Math.max(
+      180 + nodes.length * 150,
+      samplerWillRun ? 180 + sampler * 150 + samplerSteps * 35 : 0,
+    );
     this.#emit({ t: "run.started", run_id: runId, node_count: nodes.length });
     nodes.forEach(([nodeId, node], index) => {
       const delay = 100 + index * 150;
@@ -272,6 +337,40 @@ export class MockGraphApiClient implements GraphApiClient {
           return;
         }
         this.#emit({ t: "node.started", run_id: runId, node_id: nodeId });
+        if (node.type === "diffusion.KSampler") {
+          const steps = literalNumber(node.inputs?.steps) ?? 20;
+          for (let step = 1; step <= steps; step += 1) {
+            globalThis.setTimeout(() => {
+              this.#emit({
+                t: "node.progress",
+                run_id: runId,
+                node_id: nodeId,
+                step,
+                total: steps,
+              });
+              this.#emit({
+                t: "node.preview",
+                run_id: runId,
+                node_id: nodeId,
+                preview: {
+                  kind: "inline",
+                  data_uri: mockStepPreview(step, steps),
+                  width: 640,
+                  height: 400,
+                },
+              });
+              if (step === steps) {
+                this.#emit({
+                  t: "node.done",
+                  run_id: runId,
+                  node_id: nodeId,
+                  outputs: mockOutputs(node.type, index),
+                });
+              }
+            }, step * 35);
+          }
+          return;
+        }
         this.#emit({
           t: "node.progress",
           run_id: runId,
@@ -326,24 +425,31 @@ export class MockGraphApiClient implements GraphApiClient {
         });
       }, delay);
     });
-    globalThis.setTimeout(
-      () => {
-        if (failedNode) {
-          this.#emit({
-            t: "run.failed",
-            run_id: runId,
-            elapsed_ms: nodes.length * 150,
-            code: "node_failed",
-            message: `${failedNode[0]} 노드 실행에 실패했습니다`,
-          });
-        } else {
-          this.#hasCompletedRun = true;
-          this.#emit({ t: "run.done", run_id: runId, elapsed_ms: nodes.length * 150 });
-        }
-      },
-      180 + nodes.length * 150,
-    );
+    globalThis.setTimeout(() => {
+      if (failedNode) {
+        this.#emit({
+          t: "run.failed",
+          run_id: runId,
+          elapsed_ms: completionDelay,
+          code: "node_failed",
+          message: `${failedNode[0]} 노드 실행에 실패했습니다`,
+        });
+      } else {
+        this.#hasCompletedRun = true;
+        this.#emit({ t: "run.done", run_id: runId, elapsed_ms: completionDelay });
+      }
+    }, completionDelay);
   }
+}
+
+function mockStepPreview(step: number, total: number): string {
+  const hue = Math.round(160 + (step / total) * 80);
+  return (
+    "data:image/svg+xml;charset=utf-8," +
+    encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400"><rect width="640" height="400" fill="hsl(${hue} 36% 12%)"/><circle cx="320" cy="190" r="${70 + step * 2}" fill="hsl(${hue} 72% 64%)" opacity=".76"/><text x="320" y="350" fill="#e8fff8" font-family="sans-serif" font-size="26" text-anchor="middle">latent step ${step} / ${total}</text></svg>`,
+    )
+  );
 }
 
 function mockOutputs(nodeType: string, index: number) {

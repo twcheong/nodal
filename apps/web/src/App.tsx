@@ -3,6 +3,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 
 import { createGraphApiClient } from "./api";
 import { AssetUrlContext } from "./api/context";
+import { createEventBuffer } from "./api/eventBuffer";
 import { GraphCanvas, type CanvasHandle } from "./components/GraphCanvas";
 import { Inspector } from "./components/Inspector";
 import { NodePalette } from "./components/NodePalette";
@@ -22,6 +23,8 @@ export function App(): React.JSX.Element {
   const fps = useEditorStore((state) => state.benchmarkFps);
   const setSchemas = useEditorStore((state) => state.setSchemas);
   const setCatalogError = useEditorStore((state) => state.setCatalogError);
+  const setModels = useEditorStore((state) => state.setModels);
+  const setModelCatalogError = useEditorStore((state) => state.setModelCatalogError);
   const loadGraph = useEditorStore((state) => state.loadGraph);
   const setIssues = useEditorStore((state) => state.setIssues);
   const beginRunSubmission = useEditorStore((state) => state.beginRunSubmission);
@@ -40,13 +43,23 @@ export function App(): React.JSX.Element {
       .catch((error: unknown) => {
         if (active) setCatalogError(readError(error));
       });
-    const unsubscribe = api.subscribe(handleEvent);
+    api
+      .listModels()
+      .then((response) => {
+        if (active) setModels(response.models ?? [], response.kinds ?? []);
+      })
+      .catch((error: unknown) => {
+        if (active) setModelCatalogError(readError(error));
+      });
+    const eventBuffer = createEventBuffer(handleEvent);
+    const unsubscribe = api.subscribe(eventBuffer.push);
     return () => {
       active = false;
       unsubscribe();
+      eventBuffer.dispose();
       api.dispose();
     };
-  }, [api, handleEvent, setCatalogError, setSchemas]);
+  }, [api, handleEvent, setCatalogError, setModelCatalogError, setModels, setSchemas]);
 
   useEffect(() => {
     const timer = globalThis.setTimeout(() => {

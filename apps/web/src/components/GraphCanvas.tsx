@@ -39,7 +39,6 @@ export const GraphCanvas = forwardRef<CanvasHandle, GraphCanvasProps>(function G
   const [dropMessage, setDropMessage] = useState<string | null>(null);
   const graph = useEditorStore((state) => state.graph);
   const schemas = useEditorStore((state) => state.schemas);
-  const runtime = useEditorStore((state) => state.runtime);
   const issues = useEditorStore((state) => state.issues);
   const connection = useEditorStore((state) => state.connection);
   const selectedNodeIds = useEditorStore((state) => state.selectedNodeIds);
@@ -58,16 +57,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, GraphCanvasProps>(function G
   const schemaMap = useMemo(() => new Map(schemas.map((schema) => [schema.id, schema])), [schemas]);
   const projection = useMemo(
     () =>
-      graphToFlow(
-        graph,
-        schemaMap,
-        runtime,
-        issues,
-        connection,
-        new Set(selectedNodeIds),
-        nodeMeasurements,
-      ),
-    [connection, graph, issues, nodeMeasurements, runtime, schemaMap, selectedNodeIds],
+      graphToFlow(graph, schemaMap, issues, connection, new Set(selectedNodeIds), nodeMeasurements),
+    [connection, graph, issues, nodeMeasurements, schemaMap, selectedNodeIds],
   );
 
   const sourceIntent = useCallback(

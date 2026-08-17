@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { createStarterGraph } from "../editor/graph";
+import { MOCK_NODE_SCHEMAS } from "../api/mock";
+import { readSeedControl, withSeedControl } from "../editor/seed";
+import type { GraphDocument } from "../graph/types";
 import { useEditorStore } from "./editorStore";
 
 describe("실행 이벤트 상태", () => {
   beforeEach(() => {
     useEditorStore.setState({
       graph: createStarterGraph(),
+      schemas: [...MOCK_NODE_SCHEMAS],
       runtime: {},
       activeRunId: null,
       runStatus: null,
@@ -122,5 +126,87 @@ describe("실행 이벤트 상태", () => {
     useEditorStore.getState().finishRunSubmission();
 
     expect(useEditorStore.getState().beginRunSubmission()).toBe(true);
+  });
+
+  it("성공한 노드의 시드만 run.done 뒤 다음 실행값으로 넘긴다", () => {
+    const sampler = "00000000-0000-4000-8000-000000000404";
+    const waiting = "00000000-0000-4000-8000-000000000405";
+    let graph: GraphDocument = {
+      nodal_version: "1" as const,
+      nodes: {
+        [sampler]: { type: "diffusion.KSampler", inputs: { seed: 41, steps: 20 } },
+        [waiting]: { type: "diffusion.KSampler", inputs: { seed: 90, steps: 20 } },
+      },
+      outputs: [sampler],
+    };
+    graph = withSeedControl(graph, sampler, "seed", "increment");
+    graph = withSeedControl(graph, waiting, "seed", "increment");
+    useEditorStore.setState({ graph });
+
+    useEditorStore.getState().startRun("seed-run");
+    useEditorStore.getState().handleEvent({
+      t: "run.started",
+      run_id: "seed-run",
+      node_count: 1,
+    });
+    useEditorStore.getState().handleEvent({
+      t: "node.done",
+      run_id: "seed-run",
+      node_id: sampler,
+      outputs: [],
+    });
+    useEditorStore.getState().handleEvent({ t: "run.done", run_id: "seed-run", elapsed_ms: 50 });
+
+    const state = useEditorStore.getState();
+    expect(state.runtime[sampler]?.submittedSeeds).toEqual({ seed: 41 });
+    expect(state.graph.nodes?.[sampler]?.inputs?.seed).toBe(42);
+    expect(state.graph.nodes?.[waiting]?.inputs?.seed).toBe(90);
+
+    useEditorStore.getState().handleEvent({ t: "run.done", run_id: "seed-run", elapsed_ms: 50 });
+    expect(useEditorStore.getState().graph.nodes?.[sampler]?.inputs?.seed).toBe(42);
+  });
+
+  it("실패한 실행은 시드를 바꾸지 않는다", () => {
+    const sampler = "00000000-0000-4000-8000-000000000406";
+    let graph: GraphDocument = {
+      nodal_version: "1" as const,
+      nodes: { [sampler]: { type: "diffusion.KSampler", inputs: { seed: 7 } } },
+      outputs: [sampler],
+    };
+    graph = withSeedControl(graph, sampler, "seed", "increment");
+    useEditorStore.setState({ graph });
+    useEditorStore.getState().startRun("failed-seed-run");
+    useEditorStore.getState().handleEvent({
+      t: "run.started",
+      run_id: "failed-seed-run",
+      node_count: 1,
+    });
+    useEditorStore.getState().handleEvent({
+      t: "run.failed",
+      run_id: "failed-seed-run",
+      elapsed_ms: 10,
+      code: "node_failed",
+      message: "실패",
+    });
+    expect(useEditorStore.getState().graph.nodes?.[sampler]?.inputs?.seed).toBe(7);
+  });
+
+  it("노드를 옮겨도 ui에 저장한 시드 모드를 보존한다", () => {
+    const sampler = "00000000-0000-4000-8000-000000000407";
+    const graph: GraphDocument = {
+      nodal_version: "1",
+      nodes: { [sampler]: { type: "diffusion.KSampler", inputs: { seed: 3 } } },
+      ui: { [sampler]: { pos: [0, 0] } },
+    };
+    useEditorStore.setState({ graph });
+    useEditorStore.getState().setSeedControl(sampler, "seed", "randomize");
+    useEditorStore
+      .getState()
+      .applyNodeChanges([
+        { id: sampler, type: "position", position: { x: 120, y: 80 }, dragging: false },
+      ]);
+    expect(readSeedControl(useEditorStore.getState().graph, sampler, "seed", "fixed")).toBe(
+      "randomize",
+    );
   });
 });

@@ -3,6 +3,7 @@ import type {
   CreateRunResponse,
   ErrorResponse,
   GraphFromPngResponse,
+  ModelsResponse,
   NodesResponse,
   ValidateResponse,
   WsEvent,
@@ -16,6 +17,7 @@ export interface GraphApiClient {
   readonly mode: "mock" | "live";
   assetUrl(asset: AssetRef): string;
   listNodes(): Promise<NodesResponse>;
+  listModels(): Promise<ModelsResponse>;
   validateGraph(graph: GraphDocument): Promise<ValidateResponse>;
   createRun(graph: GraphDocument, useCache: boolean): Promise<CreateRunResponse>;
   graphFromPng(file: File): Promise<GraphFromPngResponse>;
@@ -49,6 +51,10 @@ export class HttpGraphApiClient implements GraphApiClient {
 
   listNodes(): Promise<NodesResponse> {
     return this.#request<NodesResponse>(API_PATHS.nodes);
+  }
+
+  listModels(): Promise<ModelsResponse> {
+    return this.#request<ModelsResponse>(API_PATHS.models);
   }
 
   validateGraph(graph: GraphDocument): Promise<ValidateResponse> {

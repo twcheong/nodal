@@ -7,7 +7,11 @@ export type NodeStatus = "idle" | "queued" | "running" | "cached" | "succeeded" 
 
 export interface NodeRuntimeState {
   status: NodeStatus;
-  progress?: { step: number; total: number };
+  progress?: { step: number; total: number; etaMs: number | null };
+  startedAtMs?: number;
+  progressUpdatedAtMs?: number;
+  msPerStep?: number;
+  submittedSeeds?: Record<string, number>;
   preview?: Preview;
   outputs?: OutputRef[];
   error?: { message: string; socket: string | null; traceback: string[] };
@@ -28,7 +32,6 @@ export interface NodalNodeData extends Record<string, unknown> {
   nodeId: string;
   graphNode: GraphNode;
   schema: NodeSchema;
-  runtime: NodeRuntimeState;
   issues: Issue[];
   connectionSourceType: SocketTypeExpr | null;
 }

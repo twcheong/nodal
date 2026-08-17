@@ -1,11 +1,14 @@
 import type { Connection, Edge, NodeChange, Viewport, XYPosition } from "@xyflow/react";
 import { create } from "zustand";
 
-import type { Issue, NodeSchema, RunStatus, WsEvent } from "../api/types";
+import type { Issue, ModelEntry, NodeSchema, RunStatus, WsEvent } from "../api/types";
 import type { GraphDocument, GraphNode, JsonValue } from "../graph/types";
 import { isLink, makeLink } from "../graph/types";
 import { createGraphNode, createStarterGraph, normalizeGraph } from "../editor/graph";
+import { withNodeProgress } from "../editor/progress";
+import { advanceGraphSeeds, submittedSeedValues, withSeedControl } from "../editor/seed";
 import { describeSocketType, socketTypesCompatible } from "../editor/socketTypes";
+import type { SeedControl } from "../graph/widgets";
 import type {
   ConnectionIntent,
   NodeRuntimeState,
@@ -16,6 +19,8 @@ import type {
 interface EditorState {
   graph: GraphDocument;
   schemas: NodeSchema[];
+  models: ModelEntry[];
+  modelKinds: string[];
   runtime: Record<string, NodeRuntimeState>;
   issues: Issue[];
   selectedNodeIds: string[];
@@ -23,19 +28,25 @@ interface EditorState {
   connection: ConnectionIntent | null;
   search: SearchState;
   catalogState: "loading" | "ready" | "error";
+  modelCatalogState: "loading" | "ready" | "error";
   activeRunId: string | null;
   runStatus: RunStatus | null;
+  runNodeCount: number;
+  runStartedAtMs: number | null;
   runSubmissionPending: boolean;
   message: string | null;
   benchmarkFps: number | null;
   setSchemas: (schemas: NodeSchema[]) => void;
   setCatalogError: (message: string) => void;
+  setModels: (models: ModelEntry[], kinds: string[]) => void;
+  setModelCatalogError: (message: string) => void;
   addNode: (schema: NodeSchema, position: XYPosition) => string;
   toggleOutput: (nodeId: string) => void;
   applyNodeChanges: (changes: NodeChange<NodalFlowNode>[]) => void;
   deleteEdges: (edges: Edge[]) => void;
   connectNodes: (connection: Connection) => boolean;
   setLiteralInput: (nodeId: string, socket: string, value: JsonValue) => void;
+  setSeedControl: (nodeId: string, socket: string, control: SeedControl) => void;
   setViewport: (viewport: Viewport) => void;
   beginConnection: (intent: ConnectionIntent | null) => void;
   openSearch: (position: XYPosition) => void;
@@ -53,6 +64,8 @@ interface EditorState {
 export const useEditorStore = create<EditorState>((set, get) => ({
   graph: createStarterGraph(),
   schemas: [],
+  models: [],
+  modelKinds: [],
   runtime: {},
   issues: [],
   selectedNodeIds: [],
@@ -60,14 +73,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   connection: null,
   search: { open: false, flowPosition: { x: 120, y: 120 } },
   catalogState: "loading",
+  modelCatalogState: "loading",
   activeRunId: null,
   runStatus: null,
+  runNodeCount: 0,
+  runStartedAtMs: null,
   runSubmissionPending: false,
   message: null,
   benchmarkFps: null,
 
   setSchemas: (schemas) => set({ schemas, catalogState: "ready" }),
   setCatalogError: (message) => set({ catalogState: "error", message }),
+  setModels: (models, modelKinds) => set({ models, modelKinds, modelCatalogState: "ready" }),
+  setModelCatalogError: (message) =>
+    set({ modelCatalogState: "error", message: `모델 목록을 불러오지 못했습니다: ${message}` }),
 
   addNode: (schema, position) => {
     const nodeId = crypto.randomUUID();
@@ -164,6 +183,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setLiteralInput: (nodeId, socket, value) =>
     set((state) => ({ graph: withInput(state.graph, nodeId, socket, value) })),
+  setSeedControl: (nodeId, socket, control) =>
+    set((state) => ({ graph: withSeedControl(state.graph, nodeId, socket, control) })),
 
   setViewport: (viewport) =>
     set((state) => ({
@@ -183,6 +204,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       nodeMeasurements: {},
       activeRunId: null,
       runStatus: null,
+      runNodeCount: 0,
+      runStartedAtMs: null,
       runSubmissionPending: false,
       message: "캐논 그래프를 불러왔습니다",
     }),
@@ -202,9 +225,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return {
         activeRunId: runId,
         runStatus: "queued",
-        runtime: Object.fromEntries(
-          Object.keys(state.graph.nodes ?? {}).map((nodeId) => [nodeId, { status: "queued" }]),
-        ),
+        runNodeCount: 0,
+        runStartedAtMs: null,
+        runtime: initialRuntime(state.graph, state.schemas, "queued"),
         message: "실행을 큐에 등록했습니다",
       };
     }),
@@ -228,19 +251,30 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           return {
             activeRunId: event.run_id,
             runStatus: "running",
-            runtime: Object.fromEntries(
-              Object.keys(state.graph.nodes ?? {}).map((nodeId) => [nodeId, { status: "queued" }]),
+            runNodeCount: event.node_count,
+            runStartedAtMs: Date.now(),
+            runtime: initialRuntime(
+              state.graph,
+              state.schemas,
+              "queued",
+              state.activeRunId === event.run_id ? state.runtime : undefined,
             ),
           };
         case "node.started":
-          return { runtime: withRuntime(state.runtime, event.node_id, { status: "running" }) };
-        case "node.progress":
           return {
             runtime: withRuntime(state.runtime, event.node_id, {
               ...state.runtime[event.node_id],
               status: "running",
-              progress: { step: event.step, total: event.total },
+              startedAtMs: Date.now(),
             }),
+          };
+        case "node.progress":
+          return {
+            runtime: withRuntime(
+              state.runtime,
+              event.node_id,
+              withNodeProgress(state.runtime[event.node_id], event.step, event.total, Date.now()),
+            ),
           };
         case "node.preview":
           return {
@@ -251,7 +285,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             }),
           };
         case "node.cached":
-          return { runtime: withRuntime(state.runtime, event.node_id, { status: "cached" }) };
+          return {
+            runtime: withRuntime(state.runtime, event.node_id, {
+              ...state.runtime[event.node_id],
+              status: "cached",
+            }),
+          };
         case "node.done":
           return {
             runtime: withRuntime(state.runtime, event.node_id, {
@@ -264,6 +303,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           return {
             runStatus: "failed",
             runtime: withRuntime(state.runtime, event.node_id, {
+              ...state.runtime[event.node_id],
               status: "error",
               error: {
                 message: event.message,
@@ -272,14 +312,24 @@ export const useEditorStore = create<EditorState>((set, get) => ({
               },
             }),
           };
-        case "run.done":
+        case "run.done": {
+          // 전역 WS의 늦거나 중복된 종료 이벤트가 다음 시드를 두 번 굴리면 안 된다.
+          if (state.activeRunId !== event.run_id) return state;
+          if (state.runStatus === "failed") {
+            return { runStatus: "failed", message: "오류와 함께 실행이 종료됐습니다" };
+          }
+          if (state.runStatus !== "running") return state;
+          const completedNodeIds = new Set(
+            Object.entries(state.runtime)
+              .filter(([, runtime]) => ["succeeded", "cached"].includes(runtime.status))
+              .map(([nodeId]) => nodeId),
+          );
           return {
-            runStatus: state.runStatus === "failed" ? "failed" : "succeeded",
-            message:
-              state.runStatus === "failed"
-                ? "오류와 함께 실행이 종료됐습니다"
-                : `${event.elapsed_ms}ms에 실행을 마쳤습니다`,
+            graph: advanceGraphSeeds(state.graph, state.schemas, undefined, completedNodeIds),
+            runStatus: "succeeded",
+            message: `${event.elapsed_ms}ms에 실행을 마쳤습니다`,
           };
+        }
         case "run.failed":
           return {
             runStatus: "failed",
@@ -304,9 +354,12 @@ function withNodePosition(
   nodeId: string,
   position: XYPosition,
 ): GraphDocument {
+  const current = graph.ui?.[nodeId];
+  const nodeUi =
+    typeof current === "object" && current !== null && !Array.isArray(current) ? current : {};
   return {
     ...graph,
-    ui: { ...(graph.ui ?? {}), [nodeId]: { pos: [position.x, position.y] } },
+    ui: { ...(graph.ui ?? {}), [nodeId]: { ...nodeUi, pos: [position.x, position.y] } },
   };
 }
 
@@ -368,6 +421,24 @@ function withRuntime(
   next: NodeRuntimeState,
 ): Record<string, NodeRuntimeState> {
   return { ...runtime, [nodeId]: next };
+}
+
+function initialRuntime(
+  graph: GraphDocument,
+  schemas: readonly NodeSchema[],
+  status: NodeRuntimeState["status"],
+  previous?: Readonly<Record<string, NodeRuntimeState>>,
+): Record<string, NodeRuntimeState> {
+  const seeds = submittedSeedValues(graph, schemas);
+  return Object.fromEntries(
+    Object.keys(graph.nodes ?? {}).map((nodeId) => [
+      nodeId,
+      {
+        status,
+        submittedSeeds: previous?.[nodeId]?.submittedSeeds ?? seeds[nodeId],
+      },
+    ]),
+  );
 }
 
 export function schemaForNode(

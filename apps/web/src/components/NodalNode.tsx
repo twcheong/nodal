@@ -3,9 +3,12 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 
 import { isImageAsset, previewSize, previewSrc, type InputSocket } from "../api/types";
 import { AssetUrlContext } from "../api/context";
+import { formatDuration } from "../editor/progress";
+import { readSeedControl } from "../editor/seed";
 import { describeSocketType, socketTypesCompatible } from "../editor/socketTypes";
-import type { NodalFlowNode } from "../editor/types";
+import { IDLE_RUNTIME, type NodalFlowNode, type NodeRuntimeState } from "../editor/types";
 import { isLink, type JsonValue } from "../graph/types";
+import { isSeedWidget, SEED_CONTROLS, type SeedControl, type SeedWidget } from "../graph/widgets";
 import { useEditorStore } from "../state/editorStore";
 
 const STATUS_LABEL = {
@@ -17,7 +20,15 @@ const STATUS_LABEL = {
   error: "오류",
 } as const;
 
+const SEED_CONTROL_LABEL: Record<SeedControl, string> = {
+  fixed: "고정",
+  increment: "증가",
+  randomize: "랜덤",
+};
+
 export const NodalNode = memo(function NodalNode({ data, selected }: NodeProps<NodalFlowNode>) {
+  // 런타임은 캔버스 투영과 분리한다. 프리뷰가 몰려도 해당 노드만 다시 그린다.
+  const runtime = useEditorStore((state) => state.runtime[data.nodeId] ?? IDLE_RUNTIME);
   const setLiteralInput = useEditorStore((state) => state.setLiteralInput);
   const assetUrl = useContext(AssetUrlContext);
   const beginConnection = useEditorStore((state) => state.beginConnection);
@@ -26,30 +37,35 @@ export const NodalNode = memo(function NodalNode({ data, selected }: NodeProps<N
     [data.issues],
   );
   const imageOutputs = useMemo(
-    () => (data.runtime.outputs ?? []).filter((output) => isImageAsset(output.asset)),
-    [data.runtime.outputs],
+    () => (runtime.outputs ?? []).filter((output) => isImageAsset(output.asset)),
+    [runtime.outputs],
   );
 
   return (
-    <article
-      className={`nodal-node status-${data.runtime.status}${selected ? " is-selected" : ""}`}
-    >
+    <article className={`nodal-node status-${runtime.status}${selected ? " is-selected" : ""}`}>
       <header className="node-header">
         <span className="node-category">{data.schema.category}</span>
-        <span className="node-status" aria-label={`상태: ${STATUS_LABEL[data.runtime.status]}`}>
-          <i /> {STATUS_LABEL[data.runtime.status]}
+        <span className="node-status" aria-label={`상태: ${STATUS_LABEL[runtime.status]}`}>
+          <i /> {STATUS_LABEL[runtime.status]}
         </span>
         <strong>{data.graphNode.meta?.title || data.schema.title}</strong>
         <small>{data.schema.id}</small>
       </header>
 
-      {data.runtime.progress ? (
-        <div className="node-progress" aria-label="노드 진행률">
-          <span
+      {runtime.progress ? (
+        <div
+          className="node-progress"
+          aria-label={`노드 진행률 ${runtime.progress.step}/${runtime.progress.total}`}
+        >
+          <i
             style={{
-              width: `${(data.runtime.progress.step / data.runtime.progress.total) * 100}%`,
+              width: `${(runtime.progress.step / runtime.progress.total) * 100}%`,
             }}
           />
+          <small>
+            스텝 {runtime.progress.step} / {runtime.progress.total} · 약{" "}
+            {formatDuration(runtime.progress.etaMs)} 남음
+          </small>
         </div>
       ) : null}
 
@@ -77,8 +93,10 @@ export const NodalNode = memo(function NodalNode({ data, selected }: NodeProps<N
               </label>
               {!linked ? (
                 <SocketWidget
+                  nodeId={data.nodeId}
                   socket={socket}
                   value={data.graphNode.inputs?.[socket.name]}
+                  runtime={runtime}
                   onChange={(value) => setLiteralInput(data.nodeId, socket.name, value)}
                 />
               ) : (
@@ -107,15 +125,20 @@ export const NodalNode = memo(function NodalNode({ data, selected }: NodeProps<N
         ))}
       </div>
 
-      {data.runtime.preview ? (
+      {runtime.preview ? (
         <NodeImage
           src={
-            data.runtime.preview.kind === "asset"
-              ? assetUrl(data.runtime.preview.asset)
-              : previewSrc(data.runtime.preview)
+            runtime.preview.kind === "asset"
+              ? assetUrl(runtime.preview.asset)
+              : previewSrc(runtime.preview)
           }
-          size={previewSize(data.runtime.preview)}
+          size={previewSize(runtime.preview)}
           alt="노드 미리보기"
+          badge={
+            runtime.progress
+              ? `${runtime.progress.step} / ${runtime.progress.total} · ${formatDuration(runtime.progress.etaMs)}`
+              : undefined
+          }
         />
       ) : null}
 
@@ -138,7 +161,7 @@ export const NodalNode = memo(function NodalNode({ data, selected }: NodeProps<N
         </section>
       ) : null}
 
-      {data.runtime.status === "cached" ? (
+      {runtime.status === "cached" ? (
         <p className="cache-note">입력 시그니처가 같아 실행하지 않았습니다.</p>
       ) : null}
 
@@ -149,14 +172,14 @@ export const NodalNode = memo(function NodalNode({ data, selected }: NodeProps<N
         </p>
       ))}
 
-      {data.runtime.error ? (
+      {runtime.error ? (
         <div className="inline-error">
-          <strong>{data.runtime.error.socket ? `${data.runtime.error.socket}: ` : ""}</strong>
-          {data.runtime.error.message}
-          {data.runtime.error.traceback.length ? (
+          <strong>{runtime.error.socket ? `${runtime.error.socket}: ` : ""}</strong>
+          {runtime.error.message}
+          {runtime.error.traceback.length ? (
             <details>
               <summary>기술 세부정보</summary>
-              <pre>{data.runtime.error.traceback.join("\n")}</pre>
+              <pre>{runtime.error.traceback.join("\n")}</pre>
             </details>
           ) : null}
         </div>
@@ -169,10 +192,12 @@ function NodeImage({
   src,
   size,
   alt,
+  badge,
 }: {
   src: string;
   size: { width: number | null; height: number | null };
   alt: string;
+  badge?: string;
 }): React.JSX.Element {
   const hasSize = Boolean(size.width && size.height);
   return (
@@ -189,20 +214,40 @@ function NodeImage({
         loading="lazy"
         decoding="async"
       />
+      {badge ? <span className="preview-step-badge">{badge}</span> : null}
     </div>
   );
 }
 
 function SocketWidget({
+  nodeId,
   socket,
   value,
+  runtime,
   onChange,
 }: {
+  nodeId: string;
   socket: InputSocket;
   value: unknown;
+  runtime: NodeRuntimeState;
   onChange: (value: JsonValue) => void;
 }): React.JSX.Element | null {
   const stop = (event: React.SyntheticEvent) => event.stopPropagation();
+  if (socket.widget?.seed === true) {
+    if (!isSeedWidget(socket.widget)) {
+      return <span className="widget-contract-error">지원하지 않는 시드 계약</span>;
+    }
+    return (
+      <SeedInput
+        nodeId={nodeId}
+        socket={socket}
+        widget={socket.widget}
+        value={value}
+        runtime={runtime}
+        onChange={onChange}
+      />
+    );
+  }
   if (socket.type === "BOOL") {
     return (
       <input
@@ -229,6 +274,29 @@ function SocketWidget({
     );
   }
   if (socket.type === "STRING") {
+    const provider = stringHint(socket, "provider");
+    const options = stringListHint(socket, "options");
+    if (provider) {
+      return (
+        <ProviderCombo socket={socket} provider={provider} value={value} onChange={onChange} />
+      );
+    }
+    if (options.length) {
+      return (
+        <select
+          className="nodrag socket-select"
+          value={typeof value === "string" ? value : ""}
+          onPointerDown={stop}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          {options.map((option) => (
+            <option value={option} key={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      );
+    }
     return (
       <input
         className="nodrag socket-text"
@@ -242,7 +310,133 @@ function SocketWidget({
   return null;
 }
 
+function SeedInput({
+  nodeId,
+  socket,
+  widget,
+  value,
+  runtime,
+  onChange,
+}: {
+  nodeId: string;
+  socket: InputSocket;
+  widget: SeedWidget;
+  value: unknown;
+  runtime: NodeRuntimeState;
+  onChange: (value: JsonValue) => void;
+}): React.JSX.Element {
+  const graph = useEditorStore((state) => state.graph);
+  const setSeedControl = useEditorStore((state) => state.setSeedControl);
+  const control = readSeedControl(graph, nodeId, socket.name, widget.control);
+  const current =
+    typeof value === "number" ? value : typeof socket.default === "number" ? socket.default : 0;
+  const submitted = runtime.submittedSeeds?.[socket.name];
+  const busy = runtime.status === "queued" || runtime.status === "running";
+  const stop = (event: React.SyntheticEvent) => event.stopPropagation();
+  let transition = `실행 후 ${SEED_CONTROL_LABEL[control]}`;
+  if (busy && submitted !== undefined) transition = `이번 실행 ${submitted}`;
+  else if (["succeeded", "cached"].includes(runtime.status) && submitted !== undefined) {
+    transition =
+      control === "fixed"
+        ? `이번 ${submitted} · 다음에도 유지`
+        : `이번 ${submitted} → 다음 ${current}`;
+  }
+  return (
+    <div className="seed-widget nodrag" onPointerDown={stop}>
+      <div>
+        <input
+          className="socket-number"
+          aria-label={`${socket.name} 시드`}
+          type="number"
+          value={current}
+          min={widget.min}
+          max={widget.max}
+          step={widget.step}
+          disabled={busy}
+          onChange={(event) => onChange(Number(event.target.value))}
+        />
+        <select
+          className="socket-select seed-control"
+          aria-label={`${socket.name} 실행 후 동작`}
+          value={control}
+          disabled={busy}
+          onChange={(event) =>
+            setSeedControl(nodeId, socket.name, event.target.value as SeedControl)
+          }
+        >
+          {SEED_CONTROLS.map((option) => (
+            <option value={option} key={option}>
+              {SEED_CONTROL_LABEL[option]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <small>{transition}</small>
+    </div>
+  );
+}
+
+function ProviderCombo({
+  socket,
+  provider,
+  value,
+  onChange,
+}: {
+  socket: InputSocket;
+  provider: string;
+  value: unknown;
+  onChange: (value: JsonValue) => void;
+}): React.JSX.Element {
+  const models = useEditorStore((state) => state.models);
+  const state = useEditorStore((editor) => editor.modelCatalogState);
+  const options = useMemo(
+    () => models.filter((model) => model.kind === provider).map((model) => model.name),
+    [models, provider],
+  );
+  const stop = (event: React.SyntheticEvent) => event.stopPropagation();
+  if (state === "loading") return <span className="model-catalog-note">모델 확인 중…</span>;
+  if (state === "error") return <span className="widget-contract-error">모델 목록 오류</span>;
+  if (options.length === 0) {
+    return (
+      <span className="model-empty" role="status">
+        <select className="socket-select" disabled aria-label={`${socket.name} 모델 없음`}>
+          <option>모델 없음</option>
+        </select>
+        <small>{provider} 모델 폴더가 비어 있습니다. 모델 파일을 추가해주세요.</small>
+      </span>
+    );
+  }
+  return (
+    <select
+      className="nodrag socket-select model-select"
+      aria-label={`${socket.name} 모델 선택`}
+      value={typeof value === "string" ? value : ""}
+      onPointerDown={stop}
+      onChange={(event) => onChange(event.target.value)}
+    >
+      <option value="" disabled>
+        모델 선택…
+      </option>
+      {options.map((option) => (
+        <option value={option} key={option}>
+          {option}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function numberHint(socket: InputSocket, key: string): number | undefined {
   const value = socket.widget?.[key];
   return typeof value === "number" ? value : undefined;
+}
+
+function stringHint(socket: InputSocket, key: string): string | undefined {
+  const value = socket.widget?.[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function stringListHint(socket: InputSocket, key: string): string[] {
+  const value = socket.widget?.[key];
+  return Array.isArray(value) && value.every((item) => typeof item === "string") ? value : [];
 }

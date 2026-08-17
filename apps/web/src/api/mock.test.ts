@@ -31,3 +31,14 @@ describe("목 PNG 워크플로 복원", () => {
     ).rejects.toMatchObject({ status: 404 });
   });
 });
+
+describe("M4 목 카탈로그", () => {
+  it("provider 이름과 같은 kind의 체크포인트를 제공한다", async () => {
+    const client = new MockGraphApiClient();
+    const nodes = await client.listNodes();
+    const models = await client.listModels();
+    const checkpoint = nodes.nodes.find((node) => node.id === "diffusion.LoadCheckpoint");
+    expect(checkpoint?.inputs?.[0]?.widget?.provider).toBe("checkpoints");
+    expect(models.models?.filter((model) => model.kind === "checkpoints")).toHaveLength(2);
+  });
+});
