@@ -29,6 +29,7 @@ from dataclasses import dataclass
 from typing import Any, Literal, Protocol, runtime_checkable
 
 __all__ = [
+    "CPU",
     "DTYPES",
     "Device",
     "DeviceKind",

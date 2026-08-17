@@ -72,6 +72,7 @@ from .graph import (
     validate_graph,
 )
 from .models import (
+    CPU,
     DTYPES,
     Device,
     DeviceKind,
@@ -111,6 +112,7 @@ from .schema import (
     Seed,
     Socket,
     Str,
+    combo_options,
     get_schema,
     node,
     output_names_for,
@@ -217,6 +219,7 @@ __all__ = [  # noqa: RUF022
     "encode_preview",
     "register_preview_encoder",
     # --- 모델 · 디바이스 (M4 계약 — 인터페이스만, 구현은 nodes-diffusion)
+    "CPU",
     "DTYPES",
     "Device",
     "DeviceKind",
@@ -238,6 +241,7 @@ __all__ = [  # noqa: RUF022
     "Seed",
     "Socket",
     "Str",
+    "combo_options",
     "get_schema",
     "node",
     "output_names_for",

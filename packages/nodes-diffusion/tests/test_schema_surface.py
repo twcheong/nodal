@@ -40,8 +40,17 @@ def test_pack_registers_without_torch():
     # 이 팩은 스키마 노출을 위해 언제나 설치된다. torch 는 옵트인이므로
     # 등록 경로가 런타임을 요구하면 팔레트에서 노드가 통째로 사라진다.
     ids = {schema.id for schema in registry()}
-    assert ids == {"diffusion.EmptyLatent", "diffusion.KSampler"}
-    assert len(NODES) == 2
+    assert ids == {
+        "diffusion.CLIPTextEncode",
+        "diffusion.ControlNetApply",
+        "diffusion.ControlNetLoader",
+        "diffusion.EmptyLatent",
+        "diffusion.KSampler",
+        "diffusion.LoadCheckpoint",
+        "diffusion.LoraLoader",
+        "diffusion.VAEDecode",
+    }
+    assert len(NODES) == len(ids)
 
 
 # ---------------------------------------------------------------- 시드 위젯

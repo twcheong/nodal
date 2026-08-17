@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from nodal_nodes_diffusion import EmptyLatent, KSampler
+from nodal_nodes_diffusion import EmptyLatent
 from nodal_nodes_diffusion.latent import LATENT_CHANNELS, VAE_SCALE_FACTOR, latent_size
 
 # ------------------------------------------------------------------ 크기 계산
@@ -54,22 +54,19 @@ def test_empty_latent_shape():
     assert bool(latent.abs().sum() == 0)
 
 
-def test_ksampler_run_is_not_implemented_yet():
-    # 이 커밋은 스키마만 노출한다. 조용히 0 을 돌려주는 것보다 명시적으로
-    # 실패하는 편이 낫다 — 아니면 프론트가 "돌았는데 결과가 이상하다" 를 본다.
+def test_ksampler_rejects_zero_denoise():
+    # denoise=0 은 "아무것도 하지 않는다" 라 조용히 통과시키면 사용자가 왜
+    # 결과가 그대로인지 알 수 없다. 노드를 빼라고 말한다.
     pytest.importorskip("torch")
+    from nodal_nodes_diffusion.nodes import _denoise_start
 
-    with pytest.raises(NotImplementedError, match="ModelManager"):
-        KSampler().run(
-            model=object(),
-            positive=object(),
-            negative=object(),
-            latent=object(),
-            seed=0,
-            steps=20,
-            cfg=7.0,
-            sampler_name="euler",
-            scheduler="normal",
-            denoise=1.0,
-            ctx=None,  # type: ignore[arg-type]
-        )
+    with pytest.raises(ValueError, match="노드를 빼라"):
+        _denoise_start(20, 0.0)
+
+
+def test_denoise_maps_to_skipped_steps():
+    from nodal_nodes_diffusion.nodes import _denoise_start
+
+    assert _denoise_start(20, 1.0) == 0  # 처음부터
+    assert _denoise_start(20, 0.5) == 10  # 절반만 디노이즈
+    assert _denoise_start(20, 0.25) == 15

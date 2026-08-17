@@ -42,6 +42,94 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-17 · Claude Code · M4 백엔드 본 작업
+
+roadmap M4 의 7 항목을 구현했다. txt2img 전 경로가 tiny 체크포인트로 CPU 에서
+돈다 (SD1.5 · SDXL 둘 다).
+
+#### 샘플링은 diffusers 파이프라인에 위임한다
+
+- **결정**: 디노이징 루프를 직접 쓰지 않는다. 파이프라인이 `prompt_embeds` ·
+  `latents` · `generator` · `callback_on_step_end` · `output_type="latent"` 를
+  전부 받으므로 **소켓을 그 인자에 붙이는 것**이 전부다
+- **이유**: `design.md` §0 의 전략 그대로다. 직접 루프를 쓰면 SDXL 의
+  `added_cond_kwargs` 같은 아키텍처별 분기가 우리 코드에 들어온다
+- **SD 와 SDXL 을 클래스 이름으로 구분하지 않는다.** `encode_prompt` 의 반환
+  개수(2 vs 4)로 갈린다 — 새 아키텍처가 와도 그 규칙은 유지된다
+
+#### 참조 카운팅은 약한 참조다 (수동 API 없음)
+
+- **결정**: `retain`/`release` 를 두지 않고 **밖으로 나간 핸들을 `WeakSet` 으로
+  센다.** 실행 중에는 엔진의 결과 딕셔너리가 핸들을 붙들고, 실행이 끝나면
+  저절로 0 이 된다. 언로드는 참조 수 0 인 항목만 고른다
+- **이유**: 수동 API 는 노드가 부르지 않는다. 한 번만 빠뜨려도 모델이 영원히
+  남거나 쓰는 중에 사라진다. 파이썬이 이미 정확히 세고 있는 것을 다시 세지 않는다
+- **찾은 버그**: 방금 로드한 항목은 아직 핸들이 나가지 않아 "사용 안 함" 으로
+  보인다 → **로드하자마자 자기 자신을 내렸다.** `_evict_if_needed(protect=key)`
+  로 고쳤고 테스트가 고정한다
+- **`Checkpoint` 를 `eq=False` 로 둔 것도 이것 때문이다.** dataclass 가 `eq=True`
+  면 `__hash__` 를 지워 `WeakSet` 이 동작하지 않는다 — 참조 카운팅이 통째로 깨진다
+
+#### 오프로드는 `accelerate` 에 통째로 위임한다
+
+- **결정**: `enable_model_cpu_offload` 만 부른다. 레이어 단위 부분 오프로드를
+  직접 구현하지 않는다
+- **이유**: `roadmap.md` M4 의 명시적 결정("느려도 된다")이고, 그 구간이
+  `AGENTS.md` 절대 규칙 1 이 경고하는 자리다. **구현하지 않으므로 참조할
+  이유 자체가 없다** — ComfyUI `model_management.py` 를 열지 않았다
+- **오프로드는 cuda 에서만 켠다.** mps 는 통합 메모리, cpu 는 애초에 호스트라
+  같은 메모리 안에서 텐서를 옮기기만 하는 순손실이다 (능력 테이블)
+
+#### 스텝 프리뷰는 **진짜 VAE 로 디코드한다**
+
+- **결정**: 잠재 → RGB 를 계수 표가 아니라 **체크포인트의 VAE** 로 한다.
+  `PREVIEW_COUNT`(8) 번만, 배치 첫 장만, 256px 로 줄여서
+- **가능한 이유**: `LoadCheckpoint` 가 낸 세 핸들이 같은 파이프라인을 가리키므로
+  (`handles.py`) `KSampler` 가 `model.checkpoint.vae` 로 VAE 에 닿는다. 소켓을
+  더 만들거나 계수 표를 들고 올 필요가 없었다
+- **⚠️ 이것이 절대 규칙 1 을 피한 방법이다.** 선형 근사는 계수를 가져와야 하고,
+  숫자 몇 개라 복사라는 자각 없이 옮기게 된다. 진짜 디코더를 쓰면 그 유혹 자체가 없다
+- **`Latent` 소켓 썸네일은 별개다.** VAE 없이 그려야 해서 앞 세 채널을 정규화해
+  보여준다 — **구조는 보이지만 색은 최종 결과와 다르다**. 문서에 그렇게 적었다
+
+#### core 버그 둘을 고쳤다 (M4 가 드러냈다)
+
+- **`ctx.preview` 가 문서와 달랐다.** docstring 은 "인코더가 처리하지 못하면
+  이벤트를 보내지 않는다" 인데 코드는 언제나 던졌다 (`if encoded is None` 이
+  닿을 수 없는 가지였다). `required` 파라미터를 붙여 **`NodeResult(preview=)` 는
+  약속(엄격), `ctx.progress(preview=)` 는 최선 노력**으로 갈랐다. 스텝 프리뷰가
+  없다고 생성이 죽는 것은 앞뒤가 바뀐 것이다
+- **`Latent` 출력에 프리뷰 인코더가 없었다.** core 는 텐서 타입 출력에 프리뷰를
+  요구하는데(M3) `Latent` 는 VAE 없이 그릴 수 없다. core 규칙을 약화시키거나
+  `types.json` 을 바꾸는 대신 **팩이 자기 인코더를 등록**해서 풀었다
+- **`pillow` · `peft` 를 runtime extra 에 추가**했다 (썸네일 PNG · LoRA)
+
+#### 검증에서 잡은 것
+
+- **다른 시드가 같은 그림을 냈다.** `EmptyLatent` 가 0 을 주고 파이프라인이
+  그것을 그대로 출발점으로 쓰니 시드가 결과에 관여하지 않았다. `denoise=1.0`
+  이면 들어온 잠재의 **shape 만** 쓰고 내용을 시드 노이즈로 대체하도록 고쳤다.
+  테스트가 없었으면 GPU 에서 한참 뒤에 발견했을 종류다
+- **디바이스 경계 가드가 내 테스트를 잡았다.** `torch.cuda.is_available()` 을
+  테스트에서 부르고 있었다 — 경계를 **통해서**(`detect_kind`) 묻도록 고쳤다
+
+#### LoRA 픽스처는 테스트가 만든다
+
+- **결정**: `hf-internal-testing` 에서 tiny LoRA 를 찾지 못해(조직 목록 API 가
+  막혀 있고 이름 추측이 전부 빗나갔다) **테스트가 `peft` 로 직접 만든다**
+- **이것이 오히려 낫다**: 네트워크에 의존하지 않고, upstream 이 픽스처를 바꿔도
+  흔들리지 않는다
+
+#### 영향 범위 · 되돌리기
+
+- `packages/nodes-diffusion/**` (신규 `manager.py` · `scanner.py` · `handles.py`),
+  `packages/core/src/nodal/{events.py,schema.py,__init__.py,models.py}`,
+  `packages/server/src/nodal_server/{app.py,queue.py,wire.py}`,
+  `packages/nodes-core/.../cli.py`, `examples/txt2img.nodal.json`, `docs/dev.md`
+- **`openapi.json` 은 바뀌지 않았다** — `models` 는 `create_app` 인자이지 API 표면이
+  아니고, 위젯 `options` 는 자유 딕셔너리 안이다. 재생성해 확인했다
+- **되돌릴 수 있나**: 예. 노드 팩은 통째로 뗄 수 있고 core 변경 둘은 각각 독립적이다
+
 ### 2026-08-17 · Claude Code · 시드 어휘를 타입 검사 안으로 (사용자 지시)
 
 - **문제**: `widget` 이 OpenAPI 에서 자유 딕셔너리라 `generated.ts` 가

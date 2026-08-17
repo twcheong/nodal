@@ -1,0 +1,93 @@
+{
+  "nodal_version": "1",
+  "id": "018f2c00-0000-7000-8000-0000000a0003",
+  "nodes": {
+    "ckpt": {
+      "type": "diffusion.LoadCheckpoint",
+      "inputs": { "ckpt": "hf-internal-testing/tiny-sd-pipe" },
+      "meta": {
+        "title": "체크포인트",
+        "notes": "models/checkpoints 의 파일명으로 바꾼다. 지금 값은 CPU 에서 도는 tiny 픽스처라 그림이 노이즈다 — 실제 확인은 docs/dev.md 의 NVIDIA 절차대로 한다"
+      }
+    },
+
+    "positive": {
+      "type": "diffusion.CLIPTextEncode",
+      "inputs": {
+        "clip": { "$link": ["ckpt", "clip"] },
+        "text": "a photo of a cat sitting on a windowsill, morning light"
+      },
+      "meta": { "title": "긍정 프롬프트" }
+    },
+
+    "negative": {
+      "type": "diffusion.CLIPTextEncode",
+      "inputs": {
+        "clip": { "$link": ["ckpt", "clip"] },
+        "text": "blurry, low quality"
+      },
+      "meta": { "title": "부정 프롬프트" }
+    },
+
+    "canvas": {
+      "type": "diffusion.EmptyLatent",
+      "inputs": { "width": 512, "height": 512, "batch_size": 1 },
+      "meta": {
+        "title": "빈 잠재",
+        "notes": "크기는 픽셀 단위다. 8 의 배수여야 한다 — VAE 가 공간 해상도를 정확히 8 배로 줄인다"
+      }
+    },
+
+    "sample": {
+      "type": "diffusion.KSampler",
+      "inputs": {
+        "model": { "$link": ["ckpt", "model"] },
+        "positive": { "$link": ["positive", "conditioning"] },
+        "negative": { "$link": ["negative", "conditioning"] },
+        "latent": { "$link": ["canvas", "latent"] },
+        "seed": 42,
+        "steps": 20,
+        "cfg": 7.0,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 1.0
+      },
+      "meta": {
+        "title": "샘플러",
+        "notes": "seed 를 고정한 채 --twice 로 돌리면 두 실행이 같은 그림을 내야 한다. 이 노드만 캐시가 무효화되는 것도 함께 보인다"
+      }
+    },
+
+    "decode": {
+      "type": "diffusion.VAEDecode",
+      "inputs": {
+        "vae": { "$link": ["ckpt", "vae"] },
+        "latent": { "$link": ["sample", "latent"] }
+      },
+      "meta": { "title": "이미지로 디코드" }
+    },
+
+    "save": {
+      "type": "image.Save",
+      "inputs": {
+        "image": { "$link": ["decode", "image"] },
+        "embed_workflow": true
+      },
+      "meta": {
+        "title": "저장",
+        "notes": "PNG iTXt 에 이 그래프가 통째로 들어간다 — 나온 이미지를 캔버스에 끌어다 놓으면 워크플로가 복원된다"
+      }
+    }
+  },
+  "outputs": ["save"],
+  "ui": {
+    "ckpt": { "pos": [40, 200] },
+    "positive": { "pos": [340, 80] },
+    "negative": { "pos": [340, 260] },
+    "canvas": { "pos": [340, 440] },
+    "sample": { "pos": [700, 220] },
+    "decode": { "pos": [1000, 220] },
+    "save": { "pos": [1280, 220] },
+    "viewport": { "x": 0, "y": 0, "zoom": 0.85 }
+  }
+}

@@ -47,6 +47,83 @@ uv sync --extra cuda        # CUDA 휠 — NVIDIA 리눅스/윈도우 장비
 NODAL_DEVICE=cpu uv run pytest packages/nodes-diffusion/tests
 ```
 
+### 모델 디렉토리
+
+```
+models/
+  checkpoints/   *.safetensors · *.ckpt · diffusers 폴더
+  loras/         *.safetensors
+  vae/
+  controlnet/
+```
+
+위치는 `nodal serve --models DIR` 또는 `NODAL_MODELS_DIR` 로 준다. 스캔은
+**요청마다 새로 돈다** — 파일을 넣고 브라우저를 새로고침하면 바로 팔레트의
+드롭다운에 나온다. 없으면 목록이 비고, 그것이 정상이다 (모델 없이도 서버는 뜬다).
+
+## NVIDIA 장비에서 실제 SDXL 확인하기
+
+CI 는 tiny 체크포인트로 **배선**만 검증한다. 가중치가 랜덤이라 나오는 그림은
+노이즈이고, **출력이 그럴듯한지는 기계가 판단할 수 없다.** 그 확인은 실제 GPU
+장비에서 사람이 한다. 아래가 그 절차다.
+
+### 1. CUDA 로 설치
+
+```bash
+uv sync --extra cuda
+```
+
+CPU 그룹과 **동시에 켤 수 없다.** 이미 `--group diffusion` 으로 받아 뒀다면 위
+명령이 알아서 바꿔 끼운다. 인덱스는 cu130 이다 (루트 `pyproject.toml`) — 드라이버가
+더 낮으면 그 URL 을 바꾸고 `uv lock` 을 다시 돌린다.
+
+맥에서 이 명령을 돌리면 **에러로 거부된다.** CUDA 휠에 macOS 빌드가 없기
+때문이고, 조용히 CPU 로 떨어지는 것보다 낫다.
+
+### 2. 설치가 CUDA 인지 확인
+
+```bash
+uv run python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
+```
+
+`2.x.x+cu130 True` 가 나와야 한다. `+cpu` 가 보이면 그룹이 잘못 켜진 것이다.
+
+### 3. 체크포인트를 놓고 서버를 띄운다
+
+```bash
+uv run nodal serve --models ~/models --assets ~/nodal-assets --host 0.0.0.0
+```
+
+시작 로그에 `모델 루트: ... (checkpoints N개, ...)` 가 찍힌다. 0개면 경로나
+디렉토리 이름이 틀린 것이다. `--host 0.0.0.0` 은 맥에서 브라우저로 붙기 위한 것이다.
+
+### 4. 무엇을 눈으로 볼 것인가
+
+CI 가 잡지 못하는 것만 본다:
+
+| 확인 | 왜 CI 가 못 하나 |
+|---|---|
+| **그림이 프롬프트와 맞는가** | tiny 가중치는 랜덤이라 의미가 없다 |
+| **스텝 프리뷰가 점점 또렷해지는가** | 프리뷰 **경로**는 CI 가 보지만 내용은 못 본다 |
+| **같은 시드가 GPU 에서도 같은 그림인가** | CI 는 CPU 뿐이다. 시드를 cpu 제너레이터로 고정한 이유가 이것이라 (§9.4) **여기서만 검증된다** |
+| **VRAM 이 실제로 줄어드는가** | `nvidia-smi` 로 본다. `accelerate` 오프로드는 GPU 에서만 동작한다 |
+| **큰 해상도에서 OOM 없이 도는가** | 1024×1024 SDXL 은 CI 러너에서 불가능하다 |
+
+시드 재현성은 이렇게 본다 — 같은 그래프를 두 번 돌려 두 이미지가 같은지:
+
+```bash
+uv run nodal run examples/txt2img.nodal.json --twice --assets ~/nodal-assets
+```
+
+### 5. 느리면
+
+1차 구현은 **`accelerate` 에 통째로 위임**한다. 레이어 단위 부분 오프로드를
+직접 만들지 않는 것이 명시적 결정이고 (`roadmap.md` M4), 그 구간이 `AGENTS.md`
+절대 규칙 1 이 경고하는 자리다. 느린 것은 지금은 정상이다.
+
+VRAM 이 충분하면 오프로드가 아예 안 켜지므로 그때는 빠르다. 오프로드가 켜졌는지는
+서버 로그의 `디바이스 계획: compute=cuda:0 dtype=bfloat16 offload=cpu` 줄로 본다.
+
 ## 일상 명령
 
 ```bash

@@ -28,27 +28,84 @@ uv sync --extra cuda        # CUDA (NVIDIA 장비)
 
 from __future__ import annotations
 
-from nodal import NodeRegistry
+from nodal import NodeRegistry, register_preview_encoder
 
-from .devices import DEVICE_ENV_VAR, DevicePolicy, detect_kind
-from .latent import LATENT_CHANNELS, VAE_SCALE_FACTOR, LatentTensor, latent_size
-from .nodes import NODES, SAMPLERS, SCHEDULERS, EmptyLatent, KSampler
+from .devices import BACKENDS, DEVICE_ENV_VAR, Backend, DevicePolicy, detect_kind, resolve_plan
+from .handles import (
+    Checkpoint,
+    ClipHandle,
+    ConditioningHandle,
+    ControlNetHandle,
+    ModelHandle,
+    VaeHandle,
+)
+from .latent import (
+    LATENT_CHANNELS,
+    VAE_SCALE_FACTOR,
+    LatentTensor,
+    encode_latent_preview,
+    latent_preview,
+    latent_size,
+)
+from .manager import ModelManager
+from .nodes import (
+    NODES,
+    SAMPLERS,
+    SCHEDULERS,
+    CLIPTextEncode,
+    ControlNetApply,
+    ControlNetLoader,
+    EmptyLatent,
+    KSampler,
+    LoadCheckpoint,
+    LoraLoader,
+    VAEDecode,
+)
+from .scanner import MODELS_ENV_VAR, models_root, register_providers, scan, set_models_root
 
 __all__ = [
+    "BACKENDS",
     "DEVICE_ENV_VAR",
     "LATENT_CHANNELS",
+    "MODELS_ENV_VAR",
     "NODES",
     "SAMPLERS",
     "SCHEDULERS",
     "VAE_SCALE_FACTOR",
+    "Backend",
+    "CLIPTextEncode",
+    "Checkpoint",
+    "ClipHandle",
+    "ConditioningHandle",
+    "ControlNetApply",
+    "ControlNetHandle",
+    "ControlNetLoader",
     "DevicePolicy",
     "EmptyLatent",
     "KSampler",
     "LatentTensor",
+    "LoadCheckpoint",
+    "LoraLoader",
+    "ModelHandle",
+    "ModelManager",
+    "VAEDecode",
+    "VaeHandle",
     "detect_kind",
+    "encode_latent_preview",
+    "latent_preview",
     "latent_size",
+    "models_root",
+    "register_providers",
     "registry",
+    "resolve_plan",
+    "scan",
+    "set_models_root",
 ]
+
+# import 하는 것만으로 Combo 공급자와 프리뷰 인코더가 등록된다 —
+# `nodal_nodes_image` 와 같은 패턴이다 (design.md §4.6).
+register_providers()
+register_preview_encoder(encode_latent_preview)
 
 
 def registry(into: NodeRegistry | None = None) -> NodeRegistry:

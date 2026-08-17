@@ -208,6 +208,28 @@ def _build_asset_store(root: Path | None) -> Any:
     return FileAssetStore(root)
 
 
+def _build_model_store(root: Path | None) -> Any:
+    """diffusion 모델 저장소를 만든다. 팩이 없으면 `None`.
+
+    `nodal_nodes_diffusion` 을 **늦게** import 한다 — 팩은 언제나 설치되지만
+    `ModelManager` 는 torch 를 요구하고, torch 는 옵트인이다
+    (`uv sync --group diffusion`). torch 없이 이미지 그래프만 돌리는 사람에게
+    diffusion 런타임을 강제하지 않는다.
+
+    저장소가 `None` 이면 `execute` 가 `NullModelStore` 를 쓰고, diffusion 노드의
+    `load` 가 "무엇을 설치하면 되는지" 를 말하며 실패한다.
+    """
+    try:
+        from nodal_nodes_diffusion.manager import ModelManager
+        from nodal_nodes_diffusion.scanner import models_root, set_models_root
+    except ImportError:
+        return None
+
+    if root is not None:
+        set_models_root(root)
+    return ModelManager(models_root=models_root())
+
+
 def _apply_overrides(graph: Graph, overrides: Sequence[str]) -> Graph:
     """`--set node.socket=값` 을 그래프에 적용한 새 그래프를 만든다.
 
@@ -282,6 +304,7 @@ async def _run(args: argparse.Namespace) -> int:
 
     result: RunResult | None = None
     assets = _build_asset_store(getattr(args, "assets", None))
+    models = _build_model_store(getattr(args, "models", None))
     for attempt, current in enumerate(runs):
         if attempt:
             changed = f" ({', '.join(args.set)} 적용)" if args.set else ""
@@ -295,6 +318,7 @@ async def _run(args: argparse.Namespace) -> int:
             events=events,
             cancel_token=token,
             assets=assets,
+            models=models,
         )
 
     assert result is not None
@@ -333,7 +357,8 @@ def _serve(args: argparse.Namespace) -> int:
         ) from exc
 
     registry = _build_registry(args.pack, optional_packs=DEFAULT_OPTIONAL_PACKS)
-    app = create_app(registry, assets_root=args.assets)
+    models = _build_model_store(args.models)
+    app = create_app(registry, assets_root=args.assets, models=models)
 
     # flush=True — uvicorn 은 stderr 로 로그를 내보내고, 파이프로 받으면 stdout 은
     # 블록 버퍼링된다. 그대로 두면 이 두 줄이 uvicorn 출력보다 **뒤에** 찍혀서
@@ -345,6 +370,7 @@ def _serve(args: argparse.Namespace) -> int:
         print("에셋 저장소: 메모리 (재시작하면 사라진다 — 남기려면 --assets DIR)", flush=True)
     else:
         print(f"에셋 저장소: {args.assets}", flush=True)
+    _print_models_line(models)
     uvicorn.run(app, host=args.host, port=args.port, log_level=args.log_level)
     return 0
 
@@ -416,6 +442,15 @@ def _parser() -> argparse.ArgumentParser:
         metavar="DIR",
         help="에셋 저장 디렉토리. Save 노드가 여기에 content-addressed 로 쓴다",
     )
+    run.add_argument(
+        "--models",
+        type=Path,
+        metavar="DIR",
+        help=(
+            "모델 루트 (checkpoints/ · loras/ · vae/ · controlnet/). "
+            "주지 않으면 NODAL_MODELS_DIR 환경변수를 본다"
+        ),
+    )
     run.add_argument("--no-cache", action="store_true", help="캐시를 끈다")
     run.add_argument("--cache-size", type=int, default=128, help="LRU 캐시 크기")
     run.add_argument("-v", "--verbose", action="store_true", help="진행률과 출력값까지")
@@ -445,6 +480,15 @@ def _parser() -> argparse.ArgumentParser:
         type=Path,
         metavar="DIR",
         help="에셋 저장 디렉토리. 주지 않으면 메모리에만 두고 재시작 시 사라진다",
+    )
+    serve.add_argument(
+        "--models",
+        type=Path,
+        metavar="DIR",
+        help=(
+            "모델 루트 (checkpoints/ · loras/ · vae/ · controlnet/). "
+            "주지 않으면 NODAL_MODELS_DIR 환경변수를 본다"
+        ),
     )
     serve.set_defaults(handler=_serve)
 
@@ -487,3 +531,21 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+def _print_models_line(models: Any) -> None:
+    """모델 저장소 상태를 한 줄로. 조용히 없는 것보다 시작할 때 말해 준다."""
+    if models is None:
+        print(
+            "모델 저장소: 없음 (diffusion 런타임 미설치 — uv sync --group diffusion)",
+            flush=True,
+        )
+        return
+    from nodal_nodes_diffusion.scanner import PROVIDERS, models_root, scan
+
+    root = models_root()
+    if root is None:
+        print("모델 루트: 없음 (--models DIR 또는 NODAL_MODELS_DIR)", flush=True)
+        return
+    counts = ", ".join(f"{name} {len(scan(name))}개" for name in PROVIDERS)
+    print(f"모델 루트: {root} ({counts})", flush=True)

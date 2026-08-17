@@ -26,6 +26,7 @@ from fastapi.websockets import WebSocketDisconnect
 from nodal import (
     Cache,
     GraphValidationError,
+    ModelStore,
     NodeRegistry,
     load_catalog,
     parse_graph,
@@ -107,6 +108,7 @@ def create_app(
     cache: Cache | None = None,
     history_limit: int = 100,
     assets_root: FsPath | str | None = None,
+    models: ModelStore | None = None,
 ) -> FastAPI:
     """앱을 만든다. 테스트가 자기 인스턴스를 갖도록 팩토리로 둔다.
 
@@ -116,6 +118,9 @@ def create_app(
             않은 노드 타입"으로 실패한다.
         cache: 실행 사이에 공유할 캐시. 없으면 LRU 를 새로 만든다.
         history_limit: 히스토리 보관 상한.
+        models: 모델 저장소 (M4). 서버는 diffusion 노드 팩을 import 하지 않으므로
+            (의존성은 server → core 한 방향) 호출자가 만들어 넘긴다. 없으면
+            diffusion 노드의 `load` 가 "저장소가 없다" 로 명시적으로 실패한다.
     """
     node_registry = registry if registry is not None else NodeRegistry()
     hub = EventHub()
@@ -129,6 +134,7 @@ def create_app(
         hub,
         cache=cache,
         assets=assets,
+        models=models,
         history_limit=history_limit,
     )
 

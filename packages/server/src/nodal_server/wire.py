@@ -11,6 +11,7 @@ pydantic 미러는 필드가 같고, 그것을 `test_openapi_export.py` 가 쌍�
 from __future__ import annotations
 
 import dataclasses
+import logging
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -20,6 +21,7 @@ from nodal import Event, GraphIssue, NodeSchema
 # 동결했으므로 여기서는 서브모듈에서 직접 가져온다 — core 를 건드리지 않는다.
 from nodal.assets import AssetRef
 from nodal.events import OutputRef
+from nodal.schema import SchemaError, combo_options
 from nodal.types import to_type_expr
 
 from .schemas import (
@@ -31,6 +33,8 @@ from .schemas import (
     OutputRefModel,
     OutputSocketModel,
 )
+
+_log = logging.getLogger("nodal.server.wire")
 
 __all__ = [
     "error_body",
@@ -144,7 +148,7 @@ def node_schema_model(schema: NodeSchema) -> NodeSchemaModel:
                 default=_json_value(spec.default) if _is_json_safe(spec.default) else None,
                 lazy=spec.lazy,
                 doc=spec.doc,
-                widget={k: _json_value(v) for k, v in spec.widget.items() if _is_json_safe(v)},
+                widget=_widget_model(spec.widget),
             )
             for spec in schema.inputs.values()
         ],
@@ -153,6 +157,30 @@ def node_schema_model(schema: NodeSchema) -> NodeSchemaModel:
             for spec in schema.outputs.values()
         ],
     )
+
+
+def _widget_model(widget: Mapping[str, Any]) -> dict[str, Any]:
+    """위젯 힌트를 전송용으로 바꾼다. **공급자 기반 Combo 는 옵션을 채워 보낸다.**
+
+    `Combo.from_provider("checkpoints")` 는 힌트에 공급자 **이름**만 남긴다.
+    그대로 실어 보내면 프론트가 "checkpoints" 라는 문자열만 받고 목록은 알 수
+    없다 — `/api/nodes` 가 "팔레트의 유일한 소스" 이려면 값까지 실려야 한다.
+
+    스캔은 요청마다 새로 돈다. 사용자가 모델 파일을 넣고 새로고침하면 바로
+    보이는 것이 그 덕이다 (`nodal_nodes_diffusion.scanner`).
+
+    공급자가 등록되지 않았으면 `options` 없이 내보낸다. 여기서 터지면 노드
+    하나 때문에 팔레트 전체가 500 이 된다 — 팩 하나가 빠진 것이 팔레트를
+    통째로 못 쓰게 만들 이유는 없다.
+    """
+    model = {k: _json_value(v) for k, v in widget.items() if _is_json_safe(v)}
+    provider = widget.get("provider")
+    if isinstance(provider, str):
+        try:
+            model["options"] = list(combo_options(provider))
+        except SchemaError:
+            _log.warning("등록되지 않은 Combo 공급자: %r", provider)
+    return model
 
 
 def _is_json_safe(value: Any) -> bool:

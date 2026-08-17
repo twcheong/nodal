@@ -33,10 +33,15 @@ runtime = [
     "diffusers>=0.35",
     "transformers>=4.46",
     "safetensors>=0.4",
+    # LoRA 어댑터. diffusers 의 load_lora_weights 가 이것을 요구한다.
+    "peft>=0.14",
     # 상한 <2.5 는 nodes-image 와 같은 이유(mypy 스텁 파싱)이고 같은 값이어야
     # 한다 — 워크스페이스는 락파일 하나를 공유하므로 두 하한/상한이 갈라지면
     # 해석이 실패한다.
     "numpy>=2.1,<2.5",
+    # 잠재 썸네일 PNG 인코딩 (latent.py). nodes-image 를 부르지 않는 이유는
+    # 노드 팩끼리 서로를 몰라야 하기 때문이다 (AGENTS.md 아키텍처 절).
+    "pillow>=11.0",
 ]
 
 # **torch 와 accelerate 가 여기 없는 것은 실수가 아니다.**

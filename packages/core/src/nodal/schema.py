@@ -66,6 +66,7 @@ __all__ = [
     "Seed",
     "Socket",
     "Str",
+    "combo_options",
     "get_schema",
     "node",
     "output_names_for",
@@ -627,6 +628,24 @@ def get_schema(node_class: type) -> NodeSchema:
     if not isinstance(schema, NodeSchema):
         raise SchemaError(f"`@node` 가 붙지 않은 클래스다: {node_class.__name__}")
     return schema
+
+
+def combo_options(provider: str) -> Sequence[str]:
+    """등록된 공급자에게 현재 옵션을 묻는다.
+
+    `/api/nodes` 를 만드는 서버가 쓴다. 노드 스키마의 `widget.provider` 는 이름
+    뿐이라, 그것만 실어 보내면 프론트가 목록을 알 수 없다 — 팔레트가 "유일한
+    소스" 이려면 값까지 실려야 한다.
+
+    Raises:
+        SchemaError: 등록되지 않은 공급자일 때. 조용히 빈 목록을 주면 오타 난
+            이름과 "아직 모델이 없다" 를 구분할 수 없다.
+    """
+    try:
+        return tuple(_COMBO_PROVIDERS[provider]())
+    except KeyError:
+        known = ", ".join(sorted(_COMBO_PROVIDERS)) or "(등록된 공급자 없음)"
+        raise SchemaError(f"등록되지 않은 Combo 공급자: {provider!r}. 등록된 것: {known}") from None
 
 
 def register_combo_provider(name: str, provider: ComboProvider) -> None:

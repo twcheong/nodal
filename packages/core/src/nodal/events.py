@@ -382,20 +382,33 @@ class NodeContext:
             )
         )
         if preview is not None:
-            self.preview(preview)
+            # 스텝 프리뷰는 최선 노력이다 — 인코더가 없으면 진행률만 나간다.
+            self.preview(preview, required=False)
 
-    def preview(self, value: Any, *, persistent: bool = False) -> None:
+    def preview(self, value: Any, *, persistent: bool = False, required: bool = True) -> None:
         """프리뷰를 보낸다 (M3).
 
         `value` 는 런타임 값(ndarray 등)이거나 이미 만들어진 `Preview` 다.
-        등록된 인코더가 처리하지 못하면 **이벤트를 보내지 않는다** — 빈 프리뷰를
-        보내는 것보다 낫다 (`preview.py`).
 
         `ctx.progress(preview=...)` 와 `NodeResult(preview=...)` 가 전부 이 한
         지점으로 모인다. 프리뷰가 여러 군데서 다르게 만들어지면 프론트가 여러
         모양을 다뤄야 한다.
+
+        **`required` 가 둘을 가른다** (M4 에서 명시했다):
+
+        - `NodeResult(preview=...)` 는 **약속**이다. 노드가 "이 프리뷰를 보내라"
+          고 했는데 인코더가 없으면 그것은 노드 팩 초기화 누락이므로 실패한다
+        - `ctx.progress(preview=...)` 는 **최선 노력**이다. 스텝 프리뷰가 없다고
+          생성이 죽는 것은 앞뒤가 바뀐 것이다. 인코더가 없으면 진행률만 나간다
+
+        M3 에서 이 문서는 "처리하지 못하면 이벤트를 보내지 않는다" 라고 적혀
+        있었지만 코드는 언제나 던졌다 — 아래 `if encoded is None` 가 닿을 수
+        없는 가지였다. M4 의 스텝 프리뷰가 그 불일치를 드러냈고, 문서 쪽이
+        옳았으므로 코드를 맞췄다.
         """
-        encoded = encode_preview(value, assets=self._assets, persistent=persistent)
+        encoded = encode_preview(
+            value, assets=self._assets, persistent=persistent, required=required
+        )
         if encoded is None:
             return
         self._events.emit(

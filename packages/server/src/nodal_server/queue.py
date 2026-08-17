@@ -36,10 +36,12 @@ from nodal import (
     Graph,
     GraphValidationError,
     LRUCache,
+    ModelStore,
     NodeExecutionError,
     NodeRegistry,
     NullAssetStore,
     NullCache,
+    NullModelStore,
     QueueStatus,
     RunCancelled,
     RunResult,
@@ -109,6 +111,7 @@ class RunQueue:
         *,
         cache: Cache | None = None,
         assets: AssetStore | None = None,
+        models: ModelStore | None = None,
         history_limit: int = DEFAULT_HISTORY_LIMIT,
     ) -> None:
         self._registry = registry
@@ -117,6 +120,8 @@ class RunQueue:
         #: — 같은 그래프를 다시 큐에 넣으면 전부 node.cached 로 나가야 한다.
         self._cache: Cache = cache if cache is not None else LRUCache(512)
         self._assets: AssetStore = assets if assets is not None else NullAssetStore()
+        #: M4. 모델 저장소가 없으면 diffusion 노드의 load 가 명시적으로 실패한다.
+        self._models: ModelStore = models if models is not None else NullModelStore()
         self._history_limit = history_limit
 
         self._records: dict[str, RunRecord] = {}
@@ -266,6 +271,7 @@ class RunQueue:
                 cancel_token=record.cancel_token,
                 run_id=record.run_id,
                 assets=self._assets,
+                models=self._models,
             )
             record.status = RunStatus.SUCCEEDED
 

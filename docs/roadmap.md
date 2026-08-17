@@ -107,17 +107,24 @@
 - [x] **스키마 노출**: `EmptyLatent` · `KSampler` 등록 + `Conditioning` 타입 추가.
       `/api/nodes` 에 시드 위젯이 나온다 — 프론트는 여기서 시작할 수 있다.
       실행은 아직 `NotImplementedError` (스키마가 목적인 얇은 수직 절단)
-- [ ] `ModelManager` + `diffusers` 통합 (`design.md` §9.6)
-- [ ] 모델 스캐너 (체크포인트/LoRA/VAE 디렉토리 발견)
-- [ ] 노드: LoadCheckpoint / CLIPTextEncode / VAEDecode (+ 위 둘의 실행 본문)
-- [ ] 스텝별 latent 프리뷰 스트리밍 — 전송 형식은 확정됐다 (`design.md` §9.5).
-      남은 것은 잠재→RGB 근사 선택뿐이고 그것은 품질 문제다
-- [ ] LoRA 로더
-- [ ] ControlNet
+- [x] `ModelManager` + `diffusers` 통합 (`design.md` §9.6) — 참조 카운팅(약한 참조) ·
+      LRU 언로드 · `accelerate` 오프로드 위임
+- [x] 백엔드 능력 테이블 (dtype · 오프로드 · 메모리 질의) — `devices.py`
+- [x] 모델 스캐너 (체크포인트/LoRA/VAE/ControlNet) → `register_combo_provider`.
+      스캔 결과가 `/api/nodes` 위젯 옵션까지 간다
+- [x] 노드: LoadCheckpoint / CLIPTextEncode / EmptyLatent / KSampler / VAEDecode
+- [x] 스텝별 latent 프리뷰 스트리밍 — VAE 로 실제 디코드한다. 계수 표를 쓰지
+      않으므로 절대 규칙 1 과 무관하다 (`design.md` §9.5)
+- [x] LoRA 로더 — 픽스처는 테스트가 `peft` 로 만든다 (tiny LoRA 가 HF 에 없다)
+- [x] ControlNet — Loader + Apply
 - [ ] 시드 컨트롤 위젯 (고정/증가/랜덤) — 백엔드 힌트는 계약에 있고, 값을 굴리는
       쪽은 프론트다 (`design.md` §9.4)
 
 **완료 기준**: txt2img 워크플로가 SDXL에서 돌고 스텝 프리뷰가 보인다.
+— **절반 확인됨.** tiny SDXL 픽스처로 전 경로가 CPU 에서 돌고 프리뷰가 나가는
+것은 CI 가 증명한다. **실제 SDXL 가중치로 그럴듯한 그림이 나오는지는 기계가
+판단할 수 없으므로** NVIDIA 장비에서 사람이 확인한다 (`docs/dev.md` 의
+"NVIDIA 장비에서 실제 SDXL 확인하기").
 
 **CI 검증**: `hf-internal-testing/tiny-sd-pipe` (8.7 MB) · `tiny-sdxl-pipe`
 (11.2 MB) 로 CPU 에서 돈다. 출력의 **의미**는 검증하지 못한다 (가중치가
