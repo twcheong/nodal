@@ -6,8 +6,29 @@ license = "Apache-2.0"
 # 휠의 `.dist-info/licenses/` 에 실제 파일을 넣는다 — 근거는 packages/core/pyproject.toml.
 license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.11"
+# **의존성이 `nodal-core` 하나뿐인 것은 실수가 아니다.**
+#
+# 이 팩은 **노드 스키마를 노출하기 위해 언제나 설치된다** (루트 dependencies).
+# 그래야 `uv sync` 만 한 사람의 `/api/nodes` 에도 시드 위젯이 나오고, 프론트
+# 담당이 torch 없이 작업을 시작할 수 있다.
+#
+# 스키마 노출에 필요한 것은 `nodal` 의 타입뿐이다 — diffusers 도 torch 도 필요
+# 없다. 그래서 무거운 것은 전부 `runtime` extra 로 내렸고, 모듈 최상단에서는
+# 절대 import 하지 않는다. `run` 본문에서 늦게 import 한다.
+#
+# 결과: `uv sync` = 스키마는 보이고 실행하면 명확히 실패 /
+#       `uv sync --group diffusion` = 실제로 돈다.
 dependencies = [
     "nodal-core",
+]
+
+[project.optional-dependencies]
+# 실제로 실행할 때 필요한 것들. 루트의 `diffusion` 그룹과 `cuda` 엑스트라가
+# `nodal-nodes-diffusion[runtime]` 로 이것을 켠다.
+#
+# torch 와 accelerate 는 **여기에도 없다** — 둘은 어느 인덱스에서 받을지가
+# 설치하는 사람의 하드웨어에 달려서 루트가 정한다. 이유는 아래 주석.
+runtime = [
     # diffusers 에 모델 계층을 위임한다. 직접 구현하지 않는다 (design.md §9).
     "diffusers>=0.35",
     "transformers>=4.46",

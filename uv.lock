@@ -981,8 +981,12 @@ name = "nodal-nodes-diffusion"
 version = "0.0.0"
 source = { editable = "packages/nodes-diffusion" }
 dependencies = [
-    { name = "diffusers" },
     { name = "nodal-core" },
+]
+
+[package.optional-dependencies]
+runtime = [
+    { name = "diffusers" },
     { name = "numpy" },
     { name = "safetensors" },
     { name = "transformers" },
@@ -990,12 +994,13 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "diffusers", specifier = ">=0.35" },
+    { name = "diffusers", marker = "extra == 'runtime'", specifier = ">=0.35" },
     { name = "nodal-core", editable = "packages/core" },
-    { name = "numpy", specifier = ">=2.1,<2.5" },
-    { name = "safetensors", specifier = ">=0.4" },
-    { name = "transformers", specifier = ">=4.46" },
+    { name = "numpy", marker = "extra == 'runtime'", specifier = ">=2.1,<2.5" },
+    { name = "safetensors", marker = "extra == 'runtime'", specifier = ">=0.4" },
+    { name = "transformers", marker = "extra == 'runtime'", specifier = ">=4.46" },
 ]
+provides-extras = ["runtime"]
 
 [[package]]
 name = "nodal-nodes-image"
@@ -1040,6 +1045,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "nodal-core" },
     { name = "nodal-nodes-core" },
+    { name = "nodal-nodes-diffusion" },
     { name = "nodal-nodes-image" },
     { name = "nodal-server" },
 ]
@@ -1047,7 +1053,7 @@ dependencies = [
 [package.optional-dependencies]
 cuda = [
     { name = "accelerate" },
-    { name = "nodal-nodes-diffusion" },
+    { name = "nodal-nodes-diffusion", extra = ["runtime"], marker = "extra == 'extra-15-nodal-workspace-cuda'" },
     { name = "torch", version = "2.13.0+cu130", source = { registry = "https://download.pytorch.org/whl/cu130" } },
 ]
 
@@ -1063,7 +1069,7 @@ dev = [
 ]
 diffusion = [
     { name = "accelerate" },
-    { name = "nodal-nodes-diffusion" },
+    { name = "nodal-nodes-diffusion", extra = ["runtime"], marker = "extra == 'group-15-nodal-workspace-diffusion'" },
     { name = "torch", version = "2.13.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.15' and sys_platform == 'darwin' and extra == 'group-15-nodal-workspace-diffusion') or (python_full_version >= '3.15' and extra == 'extra-15-nodal-workspace-cuda' and extra == 'group-15-nodal-workspace-diffusion') or (sys_platform != 'darwin' and extra == 'extra-15-nodal-workspace-cuda' and extra == 'group-15-nodal-workspace-diffusion')" },
     { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.15' and extra == 'group-15-nodal-workspace-diffusion') or (python_full_version < '3.15' and extra == 'extra-15-nodal-workspace-cuda' and extra == 'group-15-nodal-workspace-diffusion') or (sys_platform != 'darwin' and extra == 'group-15-nodal-workspace-diffusion')" },
 ]
@@ -1073,7 +1079,8 @@ requires-dist = [
     { name = "accelerate", marker = "extra == 'cuda'", specifier = ">=1.0" },
     { name = "nodal-core", editable = "packages/core" },
     { name = "nodal-nodes-core", editable = "packages/nodes-core" },
-    { name = "nodal-nodes-diffusion", marker = "extra == 'cuda'", editable = "packages/nodes-diffusion" },
+    { name = "nodal-nodes-diffusion", editable = "packages/nodes-diffusion" },
+    { name = "nodal-nodes-diffusion", extras = ["runtime"], marker = "extra == 'cuda'", editable = "packages/nodes-diffusion" },
     { name = "nodal-nodes-image", editable = "packages/nodes-image" },
     { name = "nodal-server", editable = "packages/server" },
     { name = "torch", marker = "extra == 'cuda'", specifier = ">=2.6", index = "https://download.pytorch.org/whl/cu130", conflict = { package = "nodal-workspace", extra = "cuda" } },
@@ -1092,7 +1099,7 @@ dev = [
 ]
 diffusion = [
     { name = "accelerate", specifier = ">=1.0" },
-    { name = "nodal-nodes-diffusion", editable = "packages/nodes-diffusion" },
+    { name = "nodal-nodes-diffusion", extras = ["runtime"], editable = "packages/nodes-diffusion" },
     { name = "torch", specifier = ">=2.6", index = "https://download.pytorch.org/whl/cpu", conflict = { package = "nodal-workspace", group = "diffusion" } },
 ]
 

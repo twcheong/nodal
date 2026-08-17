@@ -42,6 +42,83 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-17 · Claude Code · M4 얇은 수직 절단 — 스키마 노출 (사용자 확인 후 확정)
+
+프론트 담당이 시드 위젯을 만들려면 `/api/nodes` 에 그 스키마가 나와야 하는데,
+`Seed` 를 쓰는 노드가 없어 아무것도 나오지 않았다. 최소한만 만들어 흘려보냈다.
+
+#### 옵트인인 것은 **런타임**이지 팩이 아니다
+
+- **결정**: `nodal-nodes-diffusion` 을 루트 `dependencies` 로 옮겨 **언제나 설치**
+  한다. 대신 팩의 무거운 의존성(diffusers · transformers · safetensors · numpy)을
+  `[runtime]` extra 로 내려 torch · accelerate 와 같은 옵트인 프로파일에 넣었다
+- **이유**: 어제 결정("torch 191.8 MB 를 기본에서 뺀다")의 **근거는 무게**였는데,
+  팩 자체를 뺀 것은 그 근거를 넘어선 부작용이었다. 스키마 노출에는 torch 도
+  diffusers 도 필요 없다 — `nodal` 의 타입뿐이다. 팩을 빼 두면 프론트 담당이
+  JSON 스키마를 보려고 191.8 MB 를 받아야 한다
+- **결과**: 기본 `uv sync` 증가량은 `nodal-nodes-diffusion` 하나(의존성 `nodal-core`
+  뿐). 실측으로 diffusers 계열을 기본에 넣었을 때는 +31 MB 였다
+- **강제 규칙**: 이 팩의 **모듈 최상단에서 torch·diffusers 를 import 하지 않는다.**
+  하면 기본 환경에서 import 가 깨져 팔레트에서 노드가 통째로 사라진다.
+  `run` 안에서 늦게 import 하고, 없으면 `uv sync --group diffusion` 을 하라고
+  말하는 에러를 낸다. 테스트가 이 성질을 직접 검사한다
+  (`test_pack_registers_without_torch`)
+- **영향 범위**: `pyproject.toml`, `packages/nodes-diffusion/pyproject.toml`,
+  `packages/nodes-core/src/nodal_nodes_core/cli.py`(`DEFAULT_OPTIONAL_PACKS`), `uv.lock`
+- **되돌릴 수 있나**: 예
+
+#### `Conditioning` 을 `types.json` 에 추가 (인터페이스 변경 — 사용자 확인함)
+
+- **결정**: `catalog.opaque` 에 `Conditioning` 추가. `types.py` 에 `CatalogType` 도
+- **이유**: `KSampler` 의 `positive` · `negative` 에 줄 타입이 카탈로그에 없었다.
+  `CLIP` 으로 대신하면 **인코더와 그 출력이 같은 타입**이 되어 KSampler 의
+  `positive` 에 텍스트 인코더가 그대로 꽂힌다. conformance 케이스로 고정했다
+- **왜 지금인가**: 나중에 좁히는 것은 파괴적 변경이다. `Any` 로 두고 미루면
+  그 자리에서 타입 검사가 꺼진 채로 프론트가 먼저 만들어진다
+- **추가적이라 안전하다**: 기존 conformance 케이스를 건드리지 않았고 TS 로더가
+  같은 파일을 읽으므로 프론트에 자동 반영된다
+- **영향 범위**: `packages/core/src/nodal/{types.json,types.py,__init__.py}`
+- **되돌릴 수 있나**: 아니오(사실상) — 프론트가 이 타입으로 소켓을 그리기 시작하면
+
+#### `Seed.MAX` 를 `2**53-1` 로 내렸다 (어제 커밋의 결함 수정)
+
+- **결정**: 어제 `2**64-1` 로 둔 것을 `2**53-1`(JS `Number.MAX_SAFE_INTEGER`)로
+- **이유**: `JSON.parse("18446744073709551615")` 는 `18446744073709552000` 을
+  돌려준다. 프론트가 이 값을 위젯 상한으로 쓰는 순간 시드가 조용히 다른 수가
+  된다. **재현성이 존재 이유인 위젯에서 그것은 치명적이다.** `/api/nodes` 응답을
+  실제로 찍어 보고 발견했다 — 어제는 Python 쪽만 보느라 놓쳤다
+- **왜 지금 고치는가**: 프론트가 이 값에 기대기 전이다. 하루 늦었으면 파괴적 변경
+- **torch·numpy 는 64비트를 받지만** 9천조 가지면 충분하고, 정확한 왕복이 더 중요하다
+- **영향 범위**: `packages/core/src/nodal/schema.py`, `packages/core/tests/test_models.py`
+- **되돌릴 수 있나**: 예 (아직 아무도 안 쓴다)
+
+#### 스텝 프리뷰는 새 전송 형식을 만들지 않는다
+
+- **결정**: 잠재 → RGB `ndarray` 변환을 **`nodes-diffusion` 안에서** 하고, 그
+  다음은 M3 이 등록한 `nodal_nodes_image` 의 프리뷰 인코더를 그대로 탄다.
+  `node.preview` 페이로드는 `kind: "inline" | "asset"` 유니온 그대로 — **프론트가
+  스텝 프리뷰를 위해 새로 다룰 형식이 없다**
+- **이유**: 변환 결과가 §4.4 이미지 계약(`(B,H,W,C)` float32 0..1)을 만족하므로
+  기존 인코더가 그대로 받는다. 노드 팩이 인코더를 등록하는 구조(§4.6)가 이
+  확장을 위해 있었다. `nodes-image`(다른 에이전트 소유)를 건드리지 않아도 된다
+- **미룬 것**: 매 스텝 VAE 디코드 vs 선형 근사는 **품질 선택이고 전송 형식과
+  무관**하다. 어느 쪽이든 파이프라인과 프론트 코드는 그대로다
+- **⚠️ 기록해 두는 위험**: 선형 근사의 **계수 행렬을 ComfyUI 에서 가져오지 말 것.**
+  아이디어는 자유롭게 쓰되 값은 직접 구한다. 절대 규칙 1 이 가장 쉽게 깨지는
+  자리다 — 숫자 몇 개라 복사라는 자각 없이 옮기게 된다
+- **영향 범위**: `docs/design.md` §9.5 (기존 §9.5~§9.6 은 §9.6~§9.7 로 밀림)
+- **되돌릴 수 있나**: 예
+
+#### `KSampler.run` 은 `NotImplementedError` 다
+
+- **결정**: 스키마는 완성, 샘플링 루프는 다음 커밋. `EmptyLatent` 는 실제로 돈다
+- **이유**: 사용자가 "run 본문은 최소한이어도 된다" 고 했다. 조용히 0 을 돌려주는
+  것보다 명시적으로 실패하는 편이 낫다 — 아니면 프론트가 "돌았는데 결과가
+  이상하다" 를 본다
+- **`LATENT_CHANNELS = 4` 도 임시다.** 올바른 값은 체크포인트가 정한다 (SD3 ·
+  FLUX 는 16). 값이 바뀌어도 **소켓 타입은 그대로**라 프론트가 다시 그릴 일은 없다
+- **되돌릴 수 있나**: 예
+
 ### 2026-08-16 · Claude Code · M4 diffusion 계약 (사용자 확인 후 확정)
 
 #### numpy 상한 — 걱정은 발생하지 않았다
@@ -147,7 +224,7 @@ CPU 빌드와 CUDA 빌드는 **같은 패키지 이름·같은 버전**으로 �
   있어 정확한 이름으로만 조회된다. LoRA 로더 항목에 착수할 때 `diffusers` 테스트
   스위트에서 **이름만** 확인한다 — 픽스처 이름 확인은 소스 복사가 아니므로
   절대 규칙 1 과 무관하다
-- **영향 범위**: `docs/design.md` §9.6, `docs/roadmap.md`
+- **영향 범위**: `docs/design.md` §9.7, `docs/roadmap.md`
 - **되돌릴 수 있나**: 예
 
 ### 2026-08-14 · Codex · M3 이미지 계약 보정

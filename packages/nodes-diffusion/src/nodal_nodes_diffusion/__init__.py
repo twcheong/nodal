@@ -28,6 +28,41 @@ uv sync --extra cuda        # CUDA (NVIDIA 장비)
 
 from __future__ import annotations
 
-from .devices import DEVICE_ENV_VAR, DevicePolicy, detect_kind
+from nodal import NodeRegistry
 
-__all__ = ["DEVICE_ENV_VAR", "DevicePolicy", "detect_kind"]
+from .devices import DEVICE_ENV_VAR, DevicePolicy, detect_kind
+from .latent import LATENT_CHANNELS, VAE_SCALE_FACTOR, LatentTensor, latent_size
+from .nodes import NODES, SAMPLERS, SCHEDULERS, EmptyLatent, KSampler
+
+__all__ = [
+    "DEVICE_ENV_VAR",
+    "LATENT_CHANNELS",
+    "NODES",
+    "SAMPLERS",
+    "SCHEDULERS",
+    "VAE_SCALE_FACTOR",
+    "DevicePolicy",
+    "EmptyLatent",
+    "KSampler",
+    "LatentTensor",
+    "detect_kind",
+    "latent_size",
+    "registry",
+]
+
+
+def registry(into: NodeRegistry | None = None) -> NodeRegistry:
+    """이 팩의 노드를 담은 레지스트리를 돌려준다.
+
+    `nodal_nodes_image.registry` 와 같은 모양이다 — CLI 가 이 이름을 찾는다.
+
+    **torch 없이도 동작한다.** 스키마는 `nodal` 의 타입만으로 만들어지므로
+    등록에 런타임이 필요 없다. 실행할 때만 `run` 이 torch 를 요구한다.
+
+    Args:
+        into: 채울 레지스트리. 없으면 새로 만든다. 여러 팩을 합칠 때 넘긴다.
+    """
+    target = into if into is not None else NodeRegistry()
+    for node_class in NODES:
+        target.register(node_class)
+    return target

@@ -186,15 +186,23 @@ class Seed(InputDescriptor):
     `control` 값은 `SEED_CONTROLS` 셋이 전부이고 이 이름들은 프론트 코드에
     박히므로 **에이전트 사이의 계약**이다 (AGENTS.md 협업 규칙 7).
 
-    범위는 부호 없는 64비트다. numpy 의 `default_rng` 와 torch 의 `manual_seed`
-    가 둘 다 받는 범위이면서 JSON 정수로 표현된다.
+    범위 상한이 `2**53 - 1` 인 이유는 **JavaScript** 다. torch 의 `manual_seed`
+    와 numpy 의 `default_rng` 는 부호 없는 64비트를 받지만, `2**64 - 1` 은
+    JSON 을 왕복하면서 값이 바뀐다:
+
+        JSON.parse("18446744073709551615") === 18446744073709552000
+
+    프론트가 이 값을 위젯 상한으로 쓰는 순간 시드가 조용히 다른 수가 된다.
+    재현성이 존재 이유인 위젯에서 그것은 치명적이다. `2**53 - 1`
+    (`Number.MAX_SAFE_INTEGER`) 은 왕복해도 정확하고, 그래도 9천조 가지다.
     """
 
     #: `control` 이 가질 수 있는 값. 순서가 UI 의 순서다.
     CONTROLS: ClassVar[tuple[str, ...]] = ("fixed", "increment", "randomize")
 
-    #: 부호 없는 64비트 상한. `2**64 - 1`.
-    MAX: ClassVar[int] = 0xFFFF_FFFF_FFFF_FFFF
+    #: 상한. `2**53 - 1` = JS `Number.MAX_SAFE_INTEGER`. 위 docstring 참조 —
+    #: 이 값을 올리면 프론트에서 시드가 조용히 바뀐다.
+    MAX: ClassVar[int] = 2**53 - 1
 
     def __init__(
         self,

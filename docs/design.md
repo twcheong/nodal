@@ -805,7 +805,52 @@ class LoadCheckpoint:
 
 `control` 값 셋은 프론트 코드에 박히므로 **에이전트 사이의 계약**이다.
 
-### 9.5 `ModelManager` 책임
+### 9.5 스텝 프리뷰 — 새 전송 형식을 만들지 않는다
+
+**`node.preview` 의 페이로드 형태는 M3 에서 바뀌지 않는다.** 프론트가 스텝
+프리뷰를 위해 새로 다뤄야 할 전송 형식은 **없다** — `kind: "inline" | "asset"`
+유니온 그대로다 (§6). 프론트가 이번에 만들 것은 시드 위젯뿐이다.
+
+그렇게 되는 이유는 변환이 어디서 일어나는지에 있다:
+
+```
+KSampler 의 스텝 콜백
+  → 잠재 (B, C, H, W) torch.Tensor          [nodes-diffusion]
+  → RGB (B, H, W, C) float32 0..1 ndarray   [nodes-diffusion]  ← 여기서 변환
+  → PNG data URI                            [nodes-image 의 인코더]  ← M3 그대로
+  → node.preview {kind: "inline"}           [core]
+```
+
+**잠재 → RGB 변환은 `nodes-diffusion` 안에서** 한다. 그 결과는 §4.4 의 이미지
+계약(`(B, H, W, C)` float32 0..1)을 그대로 만족하는 ndarray 이므로, M3 에서
+`nodal_nodes_image` 가 등록한 `register_preview_encoder` 인코더가 **아무 변경
+없이** 받아 PNG 로 만든다. 노드 팩이 인코더를 등록하는 구조가 이 확장을 위해
+있었다 (§4.6).
+
+세 가지가 이 배치에서 따라 나온다:
+
+- **core 는 여전히 잠재가 무엇인지 모른다.** 인코더에 넘어가는 시점에는 이미
+  평범한 ndarray 다
+- **`nodes-image` 를 고치지 않는다.** 다른 에이전트 소유 영역을 건드리지 않고
+  기능이 늘어난다
+- **프리뷰가 없어도 실행은 된다.** 인코더가 없으면 `encode_preview` 가 `None` 을
+  돌려주고 이벤트를 보내지 않는다 (§4.6) — `nodes-image` 없이 diffusion 만 설치한
+  경우다
+
+`ctx.progress(step, total, preview=...)` 하나로 진행률과 프리뷰가 같이 나간다.
+프리뷰 경로가 여러 개가 되지 않게 M3 이 이미 한 지점으로 모아 뒀다.
+
+> **어떤 근사로 RGB 를 만들 것인가는 아직 정하지 않았다.** 매 스텝 VAE 디코드는
+> 정확하지만 비싸고, 잠재→RGB 선형 근사는 싸지만 색이 거칠다. 이것은 **품질
+> 선택이고 전송 형식과 무관하다** — 어느 쪽을 골라도 위 파이프라인과 프론트
+> 코드는 그대로다. M4 구현에서 정한다.
+>
+> ⚠️ 선형 근사를 쓸 때 **계수 행렬을 ComfyUI 에서 가져오지 말 것.** "잠재를
+> 선형 사상으로 미리보기한다" 는 아이디어는 자유롭게 쓰되 계수는 직접 구하거나
+> 허용적 라이선스 출처를 쓴다. `AGENTS.md` 절대 규칙 1 이 가장 쉽게 깨지는
+> 자리다 — 값 몇 개라 복사라는 자각 없이 옮기게 된다.
+
+### 9.6 `ModelManager` 책임
 
 - 참조 카운팅 — 여러 노드가 같은 체크포인트를 공유하면 한 번만 로드
 - `accelerate`의 `cpu_offload` / `sequential_offload`로 VRAM 압박 처리 (1차)
@@ -820,7 +865,7 @@ Protocol 은 메서드 추가가 비파괴적이므로 작게 시작해서 필�
 
 > 오프로딩 오버헤드가 참을 수 없어지면 레이어 단위 부분 오프로드를 직접 구현한다. **단 ComfyUI 코드 복사 금지 — `../AGENTS.md` 참조.**
 
-### 9.6 테스트는 tiny 체크포인트로 돈다
+### 9.7 테스트는 tiny 체크포인트로 돈다
 
 `hf-internal-testing/tiny-sd-pipe` (8.7 MB) · `tiny-sdxl-pipe` (11.2 MB) 는 채널
 수만 32/64 로 줄인 **진짜 `UNet2DConditionModel` + `AutoencoderKL`** 이다. 목이

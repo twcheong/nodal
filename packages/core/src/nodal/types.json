@@ -64,6 +64,7 @@
     "opaque": {
       "Model": { "title": "확산 모델 핸들", "capabilities": [] },
       "CLIP": { "title": "텍스트 인코더 핸들", "capabilities": [] },
+      "Conditioning": { "title": "인코딩된 조건 핸들", "capabilities": [] },
       "VAE": { "title": "VAE 핸들", "capabilities": [] },
       "Scheduler": { "title": "샘플링 스케줄러 핸들", "capabilities": [] }
     }
@@ -216,6 +217,19 @@
       "compatible": false,
       "rule": "opaque_capability_subset",
       "why": "능력이 부분집합이어도 핸들 이름이 다르면 호환되지 않는다"
+    },
+    {
+      "from": "Conditioning",
+      "to": "Conditioning",
+      "compatible": true,
+      "rule": "exact_match"
+    },
+    {
+      "from": "CLIP",
+      "to": "Conditioning",
+      "compatible": false,
+      "rule": "opaque_capability_subset",
+      "why": "CLIP 은 인코더이고 Conditioning 은 그 출력이다. 둘을 섞으면 KSampler 의 positive 에 텍스트 인코더가 꽂힌다"
     },
     {
       "from": { "opaque": "Model", "capabilities": [] },

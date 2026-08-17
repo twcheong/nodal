@@ -216,7 +216,16 @@ def test_seed_is_an_int_socket_with_control_hint():
     assert seed.widget["seed"] is True
     assert seed.widget["control"] == "randomize"
     assert seed.widget["min"] == 0
-    assert seed.widget["max"] == 2**64 - 1
+    assert seed.widget["max"] == 2**53 - 1
+
+
+def test_seed_max_survives_a_json_round_trip():
+    # 프론트가 이 값을 위젯 상한으로 쓴다. 2**64-1 은 JSON.parse 에서 값이
+    # 바뀌어 시드가 조용히 달라진다 — 재현성이 존재 이유인 위젯에서 치명적이다.
+    import json
+
+    assert json.loads(json.dumps(Seed.MAX)) == Seed.MAX
+    assert Seed.MAX == 9007199254740991  # JS Number.MAX_SAFE_INTEGER
 
 
 def test_seed_rejects_unknown_control():

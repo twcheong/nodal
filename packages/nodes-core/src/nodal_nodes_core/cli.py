@@ -141,7 +141,11 @@ def _load_graph(path: Path) -> Graph:
 #: 모든 명령에 똑같이 적용하는 것이 요점이다. `nodes` 에는 보이는데 `run` 에서는
 #: "등록되지 않은 노드 타입" 이 나거나, CLI 로는 되는데 브라우저 팔레트에는 없는
 #: 상태가 가장 나쁘다 (docs/decisions.md 2026-08-16).
-DEFAULT_OPTIONAL_PACKS: tuple[str, ...] = ("nodal_nodes_image",)
+#:
+#: `nodal_nodes_diffusion` 은 torch 없이도 import 된다 — 스키마만 노출하고
+#: 실행할 때만 런타임을 요구한다. 그래서 여기 있어도 기본 설치가 무거워지지
+#: 않는다 (루트 pyproject.toml 의 diffusion 그룹 주석).
+DEFAULT_OPTIONAL_PACKS: tuple[str, ...] = ("nodal_nodes_image", "nodal_nodes_diffusion")
 
 
 def _load_pack(registry: NodeRegistry, name: str) -> None:

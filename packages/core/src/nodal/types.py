@@ -33,6 +33,7 @@ __all__ = [
     "Any",
     "AnyType",
     "CatalogType",
+    "Conditioning",
     "Image",
     "Latent",
     "ListType",
@@ -548,6 +549,15 @@ class Model(CatalogType, catalog="Model"):
 
 class CLIP(CatalogType, catalog="CLIP"):
     """텍스트 인코더 핸들."""
+
+
+class Conditioning(CatalogType, catalog="Conditioning"):
+    """인코딩된 조건 핸들 — `CLIPTextEncode` 의 출력, `KSampler` 의 입력.
+
+    `CLIP` 과 **다른 타입**인 것이 요점이다. `CLIP` 은 인코더이고 이것은 그
+    출력이다. 하나로 합치면 KSampler 의 `positive` 에 텍스트 인코더가 그대로
+    꽂힌다 (`types.json` 의 conformance 케이스가 이것을 고정한다).
+    """
 
 
 class VAE(CatalogType, catalog="VAE"):

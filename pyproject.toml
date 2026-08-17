@@ -9,15 +9,21 @@ requires-python = ">=3.11"
 dependencies = [
     "nodal-core",
     "nodal-nodes-core",
+    # 스키마 노출용으로 **언제나** 설치된다. 의존성이 nodal-core 하나뿐이라
+    # 사실상 공짜다 — 무거운 것은 아래 diffusion 그룹에 있다.
+    "nodal-nodes-diffusion",
     "nodal-nodes-image",
     "nodal-server",
 ]
 
-# diffusion 노드 팩은 **옵트인**이다. 기본 `uv sync` 에 넣지 않는 이유는 torch
-# 휠이 리눅스에서 191.8 MB 이고, lint · typecheck · 프론트만 만지는 사람과 기존
-# CI 잡이 그 값을 치를 이유가 없기 때문이다. 설치법은 아래 [tool.uv.sources] 주석.
+# 옵트인인 것은 **런타임**이지 팩이 아니다. torch 휠이 리눅스에서 191.8 MB 이고,
+# lint · typecheck · 프론트만 만지는 사람과 기존 CI 잡이 그 값을 치를 이유가 없다.
+#
+# 팩 자체는 위 dependencies 에 있어 언제나 설치된다 — 노드 스키마가 `/api/nodes`
+# 에 나와야 프론트가 시드 위젯을 만들 수 있고, 스키마 노출에는 torch 도 diffusers
+# 도 필요 없다. 설치법은 아래 [tool.uv.sources] 주석.
 [project.optional-dependencies]
-cuda = ["nodal-nodes-diffusion", "torch>=2.6", "accelerate>=1.0"]
+cuda = ["nodal-nodes-diffusion[runtime]", "torch>=2.6", "accelerate>=1.0"]
 
 [tool.uv]
 package = false
@@ -73,7 +79,7 @@ dev = [
     "pyyaml>=6.0",
 ]
 # 기본 그룹이 **아니다** (`default-groups` 에 넣지 않았다). 켜야 들어온다.
-diffusion = ["nodal-nodes-diffusion", "torch>=2.6", "accelerate>=1.0"]
+diffusion = ["nodal-nodes-diffusion[runtime]", "torch>=2.6", "accelerate>=1.0"]
 
 # ---------------------------------------------------------------- ruff
 
@@ -157,7 +163,15 @@ known-first-party = [
 [tool.pytest.ini_options]
 # packages/core/tests 는 M1 에서 다른 에이전트가 소유한다.
 # packages/server/tests 는 M2 API 계약 검사다.
-testpaths = ["packages/core/tests", "packages/server/tests", "packages/nodes-image/tests"]
+# nodes-diffusion 테스트도 여기 있다. 대부분 torch 없이 돌고 (스키마 표면),
+# 런타임이 필요한 것만 `pytest.importorskip("torch")` 로 건너뛴다. 그래야 기본
+# 환경에서도 "스키마는 torch 없이 나온다" 는 주장이 실제로 검증된다.
+testpaths = [
+    "packages/core/tests",
+    "packages/server/tests",
+    "packages/nodes-image/tests",
+    "packages/nodes-diffusion/tests",
+]
 addopts = "-q --strict-markers"
 asyncio_mode = "auto"
 

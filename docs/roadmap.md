@@ -104,10 +104,14 @@
 
 - [x] **계약**: `ModelStore` · `DevicePlan` · `ModelLoadError` · `Seed` (`design.md` §9)
 - [x] **빌드**: torch 인덱스 분기 (CPU 기본 / `--extra cuda` 옵트인)
-- [ ] `ModelManager` + `diffusers` 통합 (`design.md` §9.5)
+- [x] **스키마 노출**: `EmptyLatent` · `KSampler` 등록 + `Conditioning` 타입 추가.
+      `/api/nodes` 에 시드 위젯이 나온다 — 프론트는 여기서 시작할 수 있다.
+      실행은 아직 `NotImplementedError` (스키마가 목적인 얇은 수직 절단)
+- [ ] `ModelManager` + `diffusers` 통합 (`design.md` §9.6)
 - [ ] 모델 스캐너 (체크포인트/LoRA/VAE 디렉토리 발견)
-- [ ] 노드: LoadCheckpoint / CLIPTextEncode / EmptyLatent / KSampler / VAEDecode
-- [ ] 스텝별 latent 프리뷰 스트리밍
+- [ ] 노드: LoadCheckpoint / CLIPTextEncode / VAEDecode (+ 위 둘의 실행 본문)
+- [ ] 스텝별 latent 프리뷰 스트리밍 — 전송 형식은 확정됐다 (`design.md` §9.5).
+      남은 것은 잠재→RGB 근사 선택뿐이고 그것은 품질 문제다
 - [ ] LoRA 로더
 - [ ] ControlNet
 - [ ] 시드 컨트롤 위젯 (고정/증가/랜덤) — 백엔드 힌트는 계약에 있고, 값을 굴리는
@@ -117,7 +121,7 @@
 
 **CI 검증**: `hf-internal-testing/tiny-sd-pipe` (8.7 MB) · `tiny-sdxl-pipe`
 (11.2 MB) 로 CPU 에서 돈다. 출력의 **의미**는 검증하지 못한다 (가중치가
-랜덤) — 배선 · shape · 캐시 · 취소 · 프리뷰 경로가 대상이다 (`design.md` §9.6).
+랜덤) — 배선 · shape · 캐시 · 취소 · 프리뷰 경로가 대상이다 (`design.md` §9.7).
 
 > ⚠️ VRAM 관리에서 ComfyUI `model_management.py`를 참조하고 싶어지는 지점. **코드 복사 금지.** 1차는 `accelerate`에 위임한다.
 
