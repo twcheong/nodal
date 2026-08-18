@@ -25,7 +25,8 @@ body,
   overflow: hidden;
 }
 button,
-input {
+input,
+select {
   font: inherit;
 }
 button {
@@ -105,6 +106,35 @@ button {
   display: flex;
   align-items: center;
   gap: 7px;
+}
+.run-progress-summary {
+  width: 190px;
+  display: grid;
+  gap: 3px;
+  color: #d7e3eb;
+  font:
+    9px ui-monospace,
+    monospace;
+}
+.run-progress-summary > span,
+.run-progress-summary > small {
+  white-space: nowrap;
+}
+.run-progress-summary > small {
+  color: #87a0af;
+}
+.run-progress-summary > i {
+  display: block;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #26313b;
+}
+.run-progress-summary > i > b {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), var(--mint));
+  transition: width 0.12s linear;
 }
 .api-mode {
   font:
@@ -454,14 +484,29 @@ button {
   }
 }
 .node-progress {
-  height: 2px;
+  min-height: 18px;
+  position: relative;
   background: #1b242d;
+  overflow: hidden;
 }
-.node-progress span {
+.node-progress > i {
+  position: absolute;
+  inset: 0 auto 0 0;
   height: 100%;
   display: block;
-  background: var(--cyan);
-  transition: width 0.2s;
+  background: rgba(98, 200, 255, 0.14);
+  border-bottom: 2px solid var(--cyan);
+  transition: width 0.1s linear;
+}
+.node-progress > small {
+  position: relative;
+  display: block;
+  padding: 3px 9px;
+  color: #b9dff3;
+  font:
+    8px ui-monospace,
+    monospace;
+  text-align: right;
 }
 .node-sockets {
   padding: 6px 0;
@@ -528,7 +573,8 @@ button {
   width: 112px;
 }
 .socket-number,
-.socket-text {
+.socket-text,
+.socket-select {
   border: 1px solid #2d3944;
   background: #0c1116;
   color: #dce6ee;
@@ -540,8 +586,61 @@ button {
     monospace;
 }
 .socket-number:focus,
-.socket-text:focus {
+.socket-text:focus,
+.socket-select:focus {
   border-color: #4e897c;
+}
+.socket-select {
+  max-width: 126px;
+  min-width: 74px;
+}
+.seed-widget {
+  width: 126px;
+}
+.seed-widget > div {
+  display: flex;
+  gap: 4px;
+}
+.seed-widget .socket-number {
+  min-width: 0;
+  flex: 1;
+}
+.seed-widget .seed-control {
+  min-width: 49px;
+  width: 49px;
+  padding-inline: 3px;
+}
+.seed-widget > small,
+.model-empty > small {
+  display: block;
+  margin-top: 3px;
+  color: #8295a2;
+  font:
+    7px/1.35 ui-monospace,
+    monospace;
+}
+.model-select {
+  width: 126px;
+}
+.model-empty {
+  width: 126px;
+}
+.model-empty .socket-select {
+  width: 100%;
+}
+.model-empty > small {
+  color: var(--amber);
+}
+.model-catalog-note,
+.widget-contract-error {
+  max-width: 126px;
+  color: #91a2ae;
+  font:
+    8px/1.35 ui-monospace,
+    monospace;
+}
+.widget-contract-error {
+  color: var(--red);
 }
 .linked-value {
   color: var(--mint);
@@ -585,11 +684,26 @@ button {
 }
 .node-image-frame {
   width: 100%;
+  position: relative;
   overflow: hidden;
   background:
     linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.035) 50%, transparent 65%),
     #0a1015;
   border-top: 1px solid #26343e;
+}
+.preview-step-badge {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  padding: 3px 6px;
+  border: 1px solid rgba(141, 232, 204, 0.32);
+  border-radius: 3px;
+  background: rgba(5, 10, 13, 0.78);
+  color: #d9fff1;
+  font:
+    8px ui-monospace,
+    monospace;
+  backdrop-filter: blur(3px);
 }
 .node-preview {
   width: 100%;

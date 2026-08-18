@@ -69,5 +69,17 @@ export function parseSeedControl(value: unknown): SeedControl | null {
 
 /** 위젯 힌트 딕셔너리가 시드 위젯인지 판별한다. */
 export function isSeedWidget(widget: Record<string, unknown> | undefined): widget is SeedWidget {
-  return widget !== undefined && widget.seed === true && parseSeedControl(widget.control) !== null;
+  return (
+    widget !== undefined &&
+    widget.seed === true &&
+    parseSeedControl(widget.control) !== null &&
+    typeof widget.min === "number" &&
+    typeof widget.max === "number" &&
+    typeof widget.step === "number" &&
+    Number.isSafeInteger(widget.min) &&
+    Number.isSafeInteger(widget.max) &&
+    Number.isSafeInteger(widget.step) &&
+    widget.min <= widget.max &&
+    widget.step > 0
+  );
 }

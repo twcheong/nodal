@@ -52,6 +52,11 @@ describe("isSeedWidget", () => {
     expect(isSeedWidget({ seed: true, control: "randomise" })).toBe(false);
   });
 
+  it("범위 힌트가 빠진 불완전한 시드 계약을 거부한다", () => {
+    expect(isSeedWidget({ seed: true, control: "fixed" })).toBe(false);
+    expect(isSeedWidget({ seed: true, control: "fixed", min: 0, max: 10, step: 0 })).toBe(false);
+  });
+
   it("평범한 정수 위젯은 아니다", () => {
     expect(isSeedWidget({ min: 1, max: 1000, step: 1 })).toBe(false);
     expect(isSeedWidget(undefined)).toBe(false);

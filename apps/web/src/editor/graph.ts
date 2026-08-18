@@ -8,13 +8,7 @@ import {
   type GraphNode,
   type JsonValue,
 } from "../graph/types";
-import {
-  IDLE_RUNTIME,
-  type ConnectionIntent,
-  type NodeRuntimeState,
-  type NodalFlowEdge,
-  type NodalFlowNode,
-} from "./types";
+import type { ConnectionIntent, NodalFlowEdge, NodalFlowNode } from "./types";
 
 const DEFAULT_VIEWPORT: Viewport = { x: 0, y: 0, zoom: 1 };
 
@@ -87,7 +81,6 @@ export function normalizeGraph(document: GraphDocument): GraphDocument {
 export function graphToFlow(
   graph: GraphDocument,
   schemas: ReadonlyMap<string, NodeSchema>,
-  runtime: Readonly<Record<string, NodeRuntimeState>>,
   issues: readonly Issue[],
   connection: ConnectionIntent | null,
   selected: ReadonlySet<string>,
@@ -108,7 +101,6 @@ export function graphToFlow(
         nodeId,
         graphNode,
         schema: schemas.get(graphNode.type) ?? unknownSchema(graphNode.type),
-        runtime: runtime[nodeId] ?? IDLE_RUNTIME,
         issues: issueMap.get(nodeId) ?? [],
         connectionSourceType: connection?.type ?? null,
       },
@@ -127,7 +119,6 @@ export function graphToFlow(
         target,
         targetHandle,
         type: "default",
-        animated: runtime[target]?.status === "running",
       });
     });
   });
