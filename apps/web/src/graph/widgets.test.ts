@@ -11,7 +11,14 @@
 
 import { describe, expect, it } from "vitest";
 
-import { SEED_CONTROLS, SEED_CONTROLS_FROM_TYPES, isSeedWidget, parseSeedControl } from "./widgets";
+import {
+  SEED_CONTROLS,
+  SEED_CONTROLS_FROM_TYPES,
+  comboOptions,
+  comboProvider,
+  isSeedWidget,
+  parseSeedControl,
+} from "./widgets";
 
 describe("시드 control 어휘", () => {
   it("types.json 이 어휘를 싣고 있다", () => {
@@ -60,5 +67,42 @@ describe("isSeedWidget", () => {
   it("평범한 정수 위젯은 아니다", () => {
     expect(isSeedWidget({ min: 1, max: 1000, step: 1 })).toBe(false);
     expect(isSeedWidget(undefined)).toBe(false);
+  });
+});
+
+describe("comboOptions", () => {
+  it("서버가 실어 보낸 목록을 그대로 준다", () => {
+    // `Combo.from_provider("checkpoints")` 든 `Combo(options=[...])` 든 서버는
+    // 똑같이 `options` 에 채워 보낸다.
+    expect(comboOptions({ provider: "checkpoints", options: ["a.safetensors", "b"] })).toEqual([
+      "a.safetensors",
+      "b",
+    ]);
+    expect(comboOptions({ options: ["euler", "ddim"] })).toEqual(["euler", "ddim"]);
+  });
+
+  it("공급자만 있고 옵션이 없으면 빈 목록이다", () => {
+    // 모델 폴더가 비었거나 공급자가 등록되지 않은 경우. 화면에는 "모델 없음"
+    // 이 떠야 하고, 그것이 여기서 조용히 다른 값으로 바뀌면 안 된다.
+    expect(comboOptions({ provider: "loras" })).toEqual([]);
+  });
+
+  it("위젯이 없거나 모양이 다르면 빈 목록이다", () => {
+    // `widget` 은 OpenAPI 에서 자유 딕셔너리라 무엇이든 올 수 있다.
+    expect(comboOptions(undefined)).toEqual([]);
+    expect(comboOptions({ options: "checkpoints" })).toEqual([]);
+    expect(comboOptions({ options: [1, 2] })).toEqual([]);
+  });
+});
+
+describe("comboProvider", () => {
+  it("공급자 기반 콤보를 알아본다", () => {
+    expect(comboProvider({ provider: "checkpoints", options: [] })).toBe("checkpoints");
+  });
+
+  it("고정 옵션 콤보는 공급자가 없다", () => {
+    // 둘을 구분해야 "모델 폴더가 비었다" 를 엉뚱한 소켓에 말하지 않는다.
+    expect(comboProvider({ options: ["euler"] })).toBeNull();
+    expect(comboProvider(undefined)).toBeNull();
   });
 });

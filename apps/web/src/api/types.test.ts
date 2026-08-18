@@ -48,7 +48,6 @@ describe("생성된 산출물", () => {
       "GET /api/runs",
       "GET /api/runs/{run_id}",
       "DELETE /api/runs/{run_id}",
-      "GET /api/models",
       "POST /api/assets",
       "GET /api/assets/{asset_hash}",
       "GET /api/extensions",
@@ -56,6 +55,13 @@ describe("생성된 산출물", () => {
     ]) {
       expect(declared).toContain(operation);
     }
+  });
+
+  it("GET /api/models 는 계약에 없다", () => {
+    // design.md §6 에는 있었지만 뺐다. 모델 목록은 `/api/nodes` 의
+    // `widget.options` 로만 나간다 — 두 경로로 같은 목록을 보내다가 실제로
+    // 어긋났다 (`decisions.md` 2026-08-18).
+    expect(Object.keys(openapi.paths)).not.toContain("/api/models");
   });
 
   it("WS 이벤트 스키마가 주입되어 있다 — OpenAPI 는 WS 를 모른다", () => {

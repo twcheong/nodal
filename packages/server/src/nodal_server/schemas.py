@@ -40,8 +40,6 @@ __all__ = [
     "InlinePreviewModel",
     "InputSocketModel",
     "IssueModel",
-    "ModelEntry",
-    "ModelsResponse",
     "NodeSchemaModel",
     "NodesResponse",
     "OutputRefModel",
@@ -331,22 +329,6 @@ class RunListResponse(_Model):
 
 
 # ------------------------------------------------------------------ 모델 · 에셋 · 확장
-
-
-class ModelEntry(_Model):
-    """발견된 모델 파일 하나. M4 에서 채워진다."""
-
-    name: str
-    kind: str = Field(description="`checkpoints` · `loras` · `vae` 등 디렉토리 종류")
-    size_bytes: int
-    modified_at: datetime | None = None
-
-
-class ModelsResponse(_Model):
-    """`GET /api/models` — M4 까지는 비어 있다. 형태만 먼저 고정한다."""
-
-    models: list[ModelEntry] = Field(default_factory=list)
-    kinds: list[str] = Field(default_factory=list, description="스캔 대상 종류")
 
 
 class AssetInfo(_Model):

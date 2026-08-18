@@ -1,12 +1,15 @@
-"""LoRA 와 ControlNet.
+"""LoRA 와 ControlNet — 핸들과 노드 수준의 성질.
+
+결과 픽셀까지 보는 검증은 `test_output_differs.py` 에 있다. 여기는 그 아래
+층이다: 핸들이 무엇을 들고 나가는지, 공유 파이프라인이 어떤 상태로 남는지.
 
 ## LoRA 픽스처를 왜 만들어 쓰는가
 
 `hf-internal-testing` 에 tiny LoRA 가 있을 법한 이름을 여럿 찔러봤지만 없었고,
 그 조직은 목록 API 가 막혀 있어 이름을 알아낼 방법이 없다. 그래서 **테스트가
-직접 만든다** — `peft` 로 tiny UNet 에 어댑터를 넣고 diffusers 의 저장 형식으로
-쓴다. 이것이 오히려 낫다: 네트워크에 의존하지 않고, upstream 이 픽스처를 바꿔도
-흔들리지 않는다.
+직접 만든다** (`tiny_fixtures.write_tiny_lora`) — 네트워크에 의존하지 않고,
+upstream 이 픽스처를 바꿔도 흔들리지 않는다. 그 함수는 `lora_B` 까지 채우므로
+**효과가 실제로 있는** LoRA 다. 그것이 아래 forward 비교의 전제다.
 """
 
 from __future__ import annotations
@@ -17,10 +20,12 @@ pytest.importorskip("torch")
 pytest.importorskip("diffusers")
 pytest.importorskip("peft")
 
+from tiny_fixtures import unet_probe, write_tiny_lora
+
 from nodal import NodeRegistry
 from nodal_nodes_diffusion import registry, scanner
 from nodal_nodes_diffusion.devices import DevicePolicy
-from nodal_nodes_diffusion.handles import ConditioningHandle, ControlNetHandle
+from nodal_nodes_diffusion.handles import Adapter, ConditioningHandle, ControlNetHandle
 from nodal_nodes_diffusion.manager import ModelManager
 from nodal_nodes_diffusion.nodes import ControlNetApply, LoraLoader
 
@@ -29,34 +34,8 @@ TINY_SD = "hf-internal-testing/tiny-sd-pipe"
 
 @pytest.fixture
 def lora_dir(tmp_path, monkeypatch):
-    """tiny LoRA 를 만들어 `models/loras/` 배치에 놓는다."""
-    import torch
-    from diffusers import DiffusionPipeline, StableDiffusionPipeline
-    from diffusers.utils import convert_state_dict_to_diffusers
-    from peft import LoraConfig
-    from peft.utils import get_peft_model_state_dict
-
-    try:
-        pipe = DiffusionPipeline.from_pretrained(TINY_SD, torch_dtype=torch.float32)
-    except Exception as exc:
-        pytest.skip(f"{TINY_SD} 를 받을 수 없다: {exc}")
-
-    pipe.unet.add_adapter(
-        LoraConfig(
-            r=2,
-            lora_alpha=2,
-            init_lora_weights="gaussian",
-            target_modules=["to_q", "to_k", "to_v", "to_out.0"],
-        )
-    )
-    state = convert_state_dict_to_diffusers(get_peft_model_state_dict(pipe.unet))
-
-    loras = tmp_path / "loras"
-    loras.mkdir()
-    StableDiffusionPipeline.save_lora_weights(save_directory=str(loras), unet_lora_layers=state)
-    (loras / "tiny.safetensors").write_bytes(
-        (loras / "pytorch_lora_weights.safetensors").read_bytes()
-    )
+    """효과가 있는 tiny LoRA 를 `models/loras/` 배치에 놓는다."""
+    write_tiny_lora(tmp_path)
     monkeypatch.setattr(scanner, "_root", tmp_path)
     return tmp_path
 
@@ -92,9 +71,44 @@ def test_lora_loader_returns_new_handles(lora_dir):
 
     assert new_model is not model
     assert new_clip is not clip
-    assert new_model.lora_scale == 0.8
+    # 세기는 **핸들에** 실린다. 파이프라인에 얹는 것은 쓰는 순간이다.
+    assert new_model.adapters == (Adapter("tiny_safetensors", 0.8),)
+    assert new_clip.adapters == new_model.adapters
+    # 원본 핸들은 그대로다 — 같은 체크포인트에서 갈라진 비-LoRA 분기의 근거.
+    assert model.adapters == ()
     # 같은 체크포인트를 가리킨다 — 가중치를 두 벌 올리지 않는다.
     assert new_model.checkpoint is model.checkpoint
+
+
+def test_lora_does_not_activate_on_the_shared_pipeline(lora_dir):
+    """**얹는 것과 켜는 것을 분리했다** (M4 검증에서 나온 P1).
+
+    `LoraLoader` 가 `set_adapters` 까지 해 버리면 같은 `LoadCheckpoint` 에서
+    갈라진 비-LoRA 분기도 LoRA 로 샘플링한다. 노드가 끝난 뒤 파이프라인에는
+    가중치만 올라와 있고 활성 어댑터는 없어야 한다.
+    """
+    import torch
+
+    manager = ModelManager(policy=DevicePolicy("cpu"))
+    ctx = _Ctx(manager)
+    model = manager.load(TINY_SD)
+    pipe = model.checkpoint.pipe
+    before = unet_probe(pipe)
+
+    LoraLoader().run(
+        model=model,
+        clip=manager.clip(TINY_SD),
+        lora_name="tiny.safetensors",
+        strength=1.0,
+        ctx=ctx,
+    )
+
+    assert model.checkpoint.loaded == {"tiny_safetensors"}, "가중치는 올라와 있어야 한다"
+    # 켜짐 여부는 **forward 로** 묻는다. `get_active_adapters()` 는
+    # `disable_lora()` 뒤에도 이름을 계속 돌려주므로 판별에 쓸 수 없다.
+    assert torch.allclose(before, unet_probe(pipe), atol=1e-6), (
+        "LoraLoader 가 공유 파이프라인의 forward 를 바꿨다 — 비-LoRA 분기가 오염된다"
+    )
 
 
 def test_lora_changes_the_cache_id(lora_dir):

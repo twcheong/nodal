@@ -18,10 +18,30 @@ import 하면 `uv sync` 만 한 사람의 서버가 이 팩을 못 읽어 팔레
 SD1.5 와 SDXL 의 차이는 `encode_prompt` 의 반환 개수(2 vs 4)로 드러난다.
 파이프라인 클래스 이름으로 분기하지 않는다 — 새 아키텍처가 오면 이름이 늘지만
 반환 개수 규칙은 그대로다.
+
+## 로더 노드는 캐시하지 않는다 (`cacheable=False`)
+
+`LoadCheckpoint` · `LoraLoader` · `ControlNetLoader` 의 출력은 수 GB 짜리 모델
+핸들이다. M1 의 실행 캐시(`LRUCache`)는 값싼 결과를 담을 생각으로 만들었고
+핸들을 **강하게** 붙든다 — 그러면 `ModelManager` 의 약한 참조 계산이 영영 0 이
+되지 않아 `capacity` 가 무의미해지고, 실제 GPU 에서는 그것이 OOM 경로다.
+
+로더를 캐시에서 빼도 느려지지 않는다. 재실행은 `ModelManager` 의 딕셔너리
+조회 한 번이고, 실제 로딩 캐시는 거기 있다. 하위 노드(`KSampler` 등)의 캐시
+키는 그래프 구조에서 계산되므로 로더가 캐시되든 말든 그대로 맞는다.
+
+## 파이프라인 전역 상태는 **쓰는 순간에만** 얹는다
+
+LoRA 어댑터는 파이프라인 하나에 붙는 전역 상태다. `LoraLoader` 가 그것을 켜
+버리면 같은 `LoadCheckpoint` 에서 갈라진 **비-LoRA 분기까지** LoRA 가 적용된다.
+그래서 어댑터는 핸들이 들고 다니고(`handles.py`), 파이프라인을 실제로 부르는
+노드가 `_adapters_applied` 안에서 그 순간에만 활성화한다.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
 from nodal import (
@@ -42,14 +62,22 @@ from nodal import (
 )
 
 from .handles import (
+    Adapter,
     Checkpoint,
     ClipHandle,
     ConditioningHandle,
     ControlNetHandle,
     ModelHandle,
     VaeHandle,
+    with_adapter,
 )
-from .latent import LATENT_CHANNELS, LatentTensor, latent_preview, latent_size
+from .latent import (
+    LATENT_CHANNELS,
+    VAE_SCALE_FACTOR,
+    LatentTensor,
+    latent_preview,
+    latent_size,
+)
 
 __all__ = [
     "NODES",
@@ -115,7 +143,7 @@ def _store(ctx: NodeContext) -> Any:
     title="Load Checkpoint",
     category="diffusion/loaders",
     aliases=["체크포인트", "모델 불러오기", "ckpt"],
-    cacheable=True,
+    cacheable=False,
 )
 class LoadCheckpoint:
     """체크포인트에서 `Model` · `CLIP` · `VAE` 를 낸다.
@@ -126,6 +154,8 @@ class LoadCheckpoint:
     단일 파일(`.safetensors`)이면 아키텍처를 **추론**하고, `model_index.json` 이
     있는 폴더면 파일이 명시한 것을 읽는다. 추론이 깨지면 무엇을 추론하려 했는지
     말하는 에러가 난다 (`design.md` §9.2).
+
+    **`cacheable=False`** — 로딩 캐시는 `ModelManager` 에 있다 (모듈 최상단).
     """
 
     ckpt: Combo = Combo.from_provider("checkpoints", doc="models/checkpoints 에서 스캔한다.")
@@ -156,7 +186,7 @@ class LoadCheckpoint:
     title="Load LoRA",
     category="diffusion/loaders",
     aliases=["로라", "lora", "어댑터"],
-    cacheable=True,
+    cacheable=False,
 )
 class LoraLoader:
     """LoRA 어댑터를 모델과 텍스트 인코더에 얹는다.
@@ -165,8 +195,11 @@ class LoraLoader:
     쪽과 없는 쪽에 동시에 쓸 수 있어야 한다 — 그래프는 DAG 라 한 노드의 출력이
     여러 곳으로 간다.
 
-    가중치는 파이프라인 하나에 붙으므로 어댑터 이름으로 구분해 `set_adapters`
-    로 켜고 끈다. `diffusers` 의 어댑터 API 에 위임한다.
+    가중치는 파이프라인 하나에 붙으므로 어댑터 이름으로 구분한다. 이 노드가
+    하는 일은 **가중치를 올려 두는 것까지**이고, 그것을 켜는 것은 파이프라인을
+    실제로 부르는 노드다 (`_adapters_applied`). 여기서 `set_adapters` 를 부르면
+    같은 체크포인트의 다른 분기까지 LoRA 가 적용된다 — 실제로 그랬고, 그것이
+    이 노드의 약속("원본을 바꾸지 않는다")과 정면으로 어긋났다.
     """
 
     model: Model
@@ -192,21 +225,25 @@ class LoraLoader:
         target = str(path) if path is not None else lora_name
         adapter = _adapter_name(lora_name)
 
-        if adapter not in checkpoint.adapters:
-            try:
-                checkpoint.pipe.load_lora_weights(target, adapter_name=adapter)
-            except Exception as exc:
-                raise RuntimeError(
-                    f"LoRA 를 얹지 못했다: {lora_name!r} ({target}). "
-                    f"체크포인트 아키텍처는 {checkpoint.architecture} 다 — "
-                    f"LoRA 가 같은 계열용인지 확인하라. 원인: {exc}"
-                ) from exc
-            checkpoint.adapters = (*checkpoint.adapters, adapter)
+        with checkpoint.lock:
+            if adapter not in checkpoint.loaded:
+                try:
+                    checkpoint.pipe.load_lora_weights(target, adapter_name=adapter)
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"LoRA 를 얹지 못했다: {lora_name!r} ({target}). "
+                        f"체크포인트 아키텍처는 {checkpoint.architecture} 다 — "
+                        f"LoRA 가 같은 계열용인지 확인하라. 원인: {exc}"
+                    ) from exc
+                checkpoint.loaded.add(adapter)
+                # `load_lora_weights` 는 방금 얹은 어댑터를 켜 둔 채로 돌아온다.
+                # 그대로 두면 이 노드를 거치지 않은 분기도 LoRA 를 쓰게 된다.
+                _deactivate(checkpoint)
 
-        checkpoint.pipe.set_adapters(list(checkpoint.adapters), adapter_weights=[strength])
+        adapters = with_adapter(model.adapters, adapter, strength)
         return NodeResult(
-            ModelHandle(checkpoint, lora_scale=strength),
-            ClipHandle(checkpoint, clip_skip=clip.clip_skip),
+            ModelHandle(checkpoint, adapters=adapters),
+            ClipHandle(checkpoint, adapters=adapters, clip_skip=clip.clip_skip),
         )
 
 
@@ -215,10 +252,14 @@ class LoraLoader:
     title="Load ControlNet",
     category="diffusion/loaders",
     aliases=["컨트롤넷", "controlnet"],
-    cacheable=True,
+    cacheable=False,
 )
 class ControlNetLoader:
-    """ControlNet 하나를 로드한다. 적용은 `ControlNetApply` 가 한다."""
+    """ControlNet 하나를 로드한다. 적용은 `ControlNetApply` 가 한다.
+
+    **`cacheable=False`** — 체크포인트와 같은 이유다 (모듈 최상단). 로딩 캐시는
+    `ModelManager` 에 있고 상한도 거기서 함께 센다.
+    """
 
     control_net_name: Combo = Combo.from_provider(
         "controlnet", doc="models/controlnet 에서 스캔한다."
@@ -228,31 +269,20 @@ class ControlNetLoader:
 
     def run(self, control_net_name: str, ctx: NodeContext) -> NodeResult:
         _require_torch()
-        from diffusers import ControlNetModel
-
-        from .devices import to_torch_dtype
+        from .manager import ModelManager
         from .scanner import resolve
 
-        plan = _store(ctx).plan
+        store = _store(ctx)
+        if not isinstance(store, ModelManager):
+            raise RuntimeError(
+                "ControlNet 로딩에는 ModelManager 가 필요하다. "
+                "이 실행의 ctx.models 는 "
+                f"{type(store).__name__} 다 — 서버로 실행하거나 ModelManager 를 주입하라."
+            )
+
         path = resolve("controlnet", control_net_name)
         target = str(path) if path is not None else control_net_name
-        dtype = to_torch_dtype(plan.dtype)
-
-        try:
-            if target.endswith((".safetensors", ".ckpt")):
-                model = ControlNetModel.from_single_file(target, torch_dtype=dtype)
-            else:
-                # diffusers 는 from_pretrained 에 타입을 붙이지 않는다.
-                model = ControlNetModel.from_pretrained(  # type: ignore[no-untyped-call]
-                    target, torch_dtype=dtype
-                )
-        except Exception as exc:
-            raise RuntimeError(
-                f"ControlNet 을 로드하지 못했다: {control_net_name!r} ({target}). 원인: {exc}"
-            ) from exc
-
-        model.to(str(plan.compute))
-        return NodeResult(ControlNetHandle(model=model, ref=control_net_name, plan=plan))
+        return NodeResult(store.controlnet(control_net_name, target=target))
 
 
 @node(
@@ -339,13 +369,17 @@ class CLIPTextEncode:
     def run(self, clip: ClipHandle, text: str) -> NodeResult:
         _require_torch()
         checkpoint = clip.checkpoint
-        embeds, pooled = _encode(checkpoint, text)
+        # 텍스트 인코더에도 LoRA 가 붙으므로 인코딩도 어댑터 안에서 한다.
+        # 그래서 `source` 에 어댑터가 실린다 — 같은 문장이라도 어댑터가 다르면
+        # 다른 임베딩이고, 캐시가 그 둘을 구분해야 한다.
+        with _adapters_applied(checkpoint, clip.adapters):
+            embeds, pooled = _encode(checkpoint, text)
         return NodeResult(
             ConditioningHandle(
                 embeds=embeds,
                 pooled=pooled,
                 text=text,
-                source=f"{checkpoint.ref}:{checkpoint.architecture}",
+                source=f"{checkpoint.ref}:{checkpoint.architecture}:{_adapter_tag(clip.adapters)}",
             )
         )
 
@@ -439,12 +473,17 @@ class KSampler:
         torch = _require_torch()
 
         checkpoint = model.checkpoint
-        pipe = checkpoint.pipe
         plan = checkpoint.plan
 
         pos, control = _split_control(positive)
         neg, _ = _split_control(negative)
 
+        # ControlNet 이 붙었으면 **부를 파이프라인 자체가 달라진다.** 컴포넌트를
+        # 공유하는 파생 파이프라인이라 가중치가 두 벌 올라가지 않는다.
+        pipe = checkpoint.pipe if control is None else _control_pipe(checkpoint, control)
+
+        # 스케줄러는 실제로 부를 파이프라인에 얹는다. 원본에만 얹으면 파생
+        # 파이프라인이 만들어진 시점의 옛 스케줄러로 돈다.
         _apply_sampler(pipe, sampler_name, scheduler)
 
         # 시드는 언제나 cpu 에서 만든다 (design.md §9.4). 백엔드마다 제너레이터의
@@ -489,9 +528,11 @@ class KSampler:
         if start > 0:
             call_kwargs["timesteps"] = _tail_timesteps(pipe, steps, start)
         if control is not None:
-            call_kwargs.update(_control_kwargs(control))
+            call_kwargs.update(_control_kwargs(control, latents))
 
-        result = pipe(**call_kwargs)
+        # 어댑터는 이 호출 동안에만 켜져 있다 (`_adapters_applied`).
+        with _adapters_applied(checkpoint, model.adapters):
+            result = pipe(**call_kwargs)
         return NodeResult(result.images)
 
 
@@ -549,6 +590,80 @@ def _adapter_name(lora_name: str) -> str:
     return "".join(c if c.isalnum() else "_" for c in lora_name)
 
 
+def _adapter_tag(adapters: tuple[Adapter, ...]) -> str:
+    """어댑터 목록의 캐시용 표기. 없으면 빈 문자열이다."""
+    return "+".join(f"{a.name}@{a.scale}" for a in adapters)
+
+
+def _deactivate(checkpoint: Checkpoint) -> None:
+    """올라와 있는 어댑터를 전부 끈다. 락을 쥔 채로 부른다."""
+    disable = getattr(checkpoint.pipe, "disable_lora", None)
+    if disable is not None:
+        disable()
+
+
+@contextmanager
+def _adapters_applied(checkpoint: Checkpoint, adapters: tuple[Adapter, ...]) -> Iterator[None]:
+    """이 블록 동안만 어댑터를 켠다.
+
+    활성 어댑터는 파이프라인 **전역** 상태다. 그래서 "켜 두고 쓴다" 가 아니라
+    "쓸 때 켠다" 로 뒤집었다 — 그러지 않으면 같은 체크포인트에서 갈라진 다른
+    분기가 옆 분기의 LoRA 를 쓰게 된다.
+
+    나갈 때 반드시 끈다. 다음 사용자가 켜 줄 것이라는 가정에 기대면, 어댑터를
+    쓰지 않는 노드 하나만 그 규약을 잊어도 조용히 잘못된 그림이 나온다.
+    """
+    with checkpoint.lock:
+        if adapters:
+            checkpoint.pipe.set_adapters(
+                [a.name for a in adapters],
+                adapter_weights=[a.scale for a in adapters],
+            )
+            enable = getattr(checkpoint.pipe, "enable_lora", None)
+            if enable is not None:
+                enable()
+        try:
+            yield
+        finally:
+            if checkpoint.loaded:
+                _deactivate(checkpoint)
+
+
+def _control_pipe(checkpoint: Checkpoint, control: ControlNetHandle) -> Any:
+    """이 체크포인트 + 이 ControlNet 으로 부를 파이프라인.
+
+    `from_pipe` 는 **컴포넌트를 공유한다** — UNet · VAE · 텍스트 인코더가 같은
+    객체라 가중치가 다시 올라가지 않는다. 그래서 LoRA 활성화도 원본 파이프라인
+    기준으로 하면 파생 쪽에 그대로 반영된다.
+
+    `AutoPipelineForText2Image` 를 쓰는 이유는 SD 와 SDXL 의 ControlNet
+    파이프라인 클래스가 다르기 때문이다. 클래스 이름으로 분기하면 새 아키텍처
+    마다 여기를 고쳐야 하고, 그것은 이 모듈이 피하기로 한 방식이다 (모듈 최상단).
+
+    파생 파이프라인은 체크포인트에 캐시한다. 스텝마다가 아니라 실행마다 한
+    번이지만, 매번 만들면 스케줄러 설정이 새로 복사되어 `_apply_sampler` 가
+    무엇에 얹혔는지 추적하기 어려워진다.
+    """
+    from diffusers import AutoPipelineForText2Image
+
+    key = id(control.model)
+    with checkpoint.lock:
+        cached = checkpoint.control_pipes.get(key)
+        if cached is not None:
+            return cached
+        try:
+            pipe = AutoPipelineForText2Image.from_pipe(checkpoint.pipe, controlnet=control.model)
+        except Exception as exc:
+            raise RuntimeError(
+                f"ControlNet {control.ref!r} 을 이 체크포인트에 붙이지 못했다 "
+                f"({checkpoint.architecture}). ControlNet 이 같은 계열용인지 "
+                f"확인하라 — SD1.5 용을 SDXL 에 붙이면 여기서 걸린다. 원인: {exc}"
+            ) from exc
+        pipe.set_progress_bar_config(disable=True)
+        checkpoint.control_pipes[key] = pipe
+        return pipe
+
+
 def _encode(checkpoint: Checkpoint, text: str) -> tuple[Any, Any | None]:
     """프롬프트를 인코딩한다. SDXL 이면 pooled 도 돌려준다.
 
@@ -598,10 +713,42 @@ def _split_control(
     return conditioning, None
 
 
-def _control_kwargs(control: ControlNetHandle) -> dict[str, Any]:
-    """ControlNet 을 파이프라인 인자로 바꾼다."""
+def _control_kwargs(control: ControlNetHandle, latents: Any) -> dict[str, Any]:
+    """ControlNet 을 파이프라인 인자로 바꾼다.
+
+    힌트는 `ControlNetApply` 가 이미 `(B, C, H, W)` 로 만들어 뒀다. 여기서는
+    배치와 dtype 만 잠재에 맞춘다 — 조건 이미지 한 장으로 여러 장을 뽑는 것이
+    흔한 사용이라 배치가 어긋나기 쉽다.
+
+    **`height` · `width` 를 반드시 함께 넘긴다.** 안 넘기면 파이프라인이
+    `unet.config.sample_size` 에서 기본 크기를 만들어 힌트를 그 크기로 리사이즈
+    하는데, 우리는 잠재를 직접 넘기므로 그 기본값이 잠재와 맞을 이유가 없다.
+    어긋나면 ControlNet 잔차와 UNet 활성의 shape 이 달라 샘플링이 터진다.
+
+    크기는 **잠재에서 되계산한다.** 잠재가 이 실행의 유일한 진실이고,
+    ControlNet 의 조건 임베딩은 힌트를 `VAE_SCALE_FACTOR` 만큼 줄여 잠재 격자에
+    맞춘다 (SD1.5 · SDXL 모두 8). `pipe.vae_scale_factor` 를 쓰지 않는 이유는
+    그것이 **VAE** 의 성질이라 조건 임베딩의 축소 비율과 다를 수 있어서다 —
+    tiny 픽스처에서 실제로 갈라진다 (VAE 는 2, 조건 임베딩은 8).
+    """
+    hint = control.hint
+    if hint is None:  # pragma: no cover - `_split_control` 이 먼저 잡는다
+        raise ValueError(f"ControlNet {control.ref!r} 에 힌트 이미지가 없다")
+
+    hint = hint.to(device=latents.device, dtype=latents.dtype)
+    batch = latents.shape[0]
+    if hint.shape[0] == 1 and batch > 1:
+        hint = hint.expand(batch, *hint.shape[1:]).contiguous()
+    elif hint.shape[0] != batch:
+        raise ValueError(
+            f"ControlNet 힌트의 배치({hint.shape[0]})가 잠재의 배치({batch})와 다르다. "
+            "한 장이면 자동으로 늘리지만 그 외에는 맞춰서 넣어야 한다."
+        )
+
     return {
-        "image": control.hint,
+        "image": hint,
+        "height": int(latents.shape[2]) * VAE_SCALE_FACTOR,
+        "width": int(latents.shape[3]) * VAE_SCALE_FACTOR,
         "controlnet_conditioning_scale": control.strength,
         "control_guidance_start": control.window[0],
         "control_guidance_end": control.window[1],

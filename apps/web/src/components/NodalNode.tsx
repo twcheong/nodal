@@ -8,7 +8,14 @@ import { readSeedControl } from "../editor/seed";
 import { describeSocketType, socketTypesCompatible } from "../editor/socketTypes";
 import { IDLE_RUNTIME, type NodalFlowNode, type NodeRuntimeState } from "../editor/types";
 import { isLink, type JsonValue } from "../graph/types";
-import { isSeedWidget, SEED_CONTROLS, type SeedControl, type SeedWidget } from "../graph/widgets";
+import {
+  comboOptions,
+  comboProvider,
+  isSeedWidget,
+  SEED_CONTROLS,
+  type SeedControl,
+  type SeedWidget,
+} from "../graph/widgets";
 import { useEditorStore } from "../state/editorStore";
 
 const STATUS_LABEL = {
@@ -274,11 +281,17 @@ function SocketWidget({
     );
   }
   if (socket.type === "STRING") {
-    const provider = stringHint(socket, "provider");
-    const options = stringListHint(socket, "options");
+    const provider = comboProvider(socket.widget);
+    const options = comboOptions(socket.widget);
     if (provider) {
       return (
-        <ProviderCombo socket={socket} provider={provider} value={value} onChange={onChange} />
+        <ProviderCombo
+          socket={socket}
+          provider={provider}
+          options={options}
+          value={value}
+          onChange={onChange}
+        />
       );
     }
     if (options.length) {
@@ -376,26 +389,34 @@ function SeedInput({
   );
 }
 
+/**
+ * 공급자 기반 콤보 — 체크포인트 · LoRA · ControlNet 목록.
+ *
+ * 목록은 **`/api/nodes` 가 실어 보낸 `widget.options`** 다. 서버가 소켓마다
+ * 공급자를 스캔해 채워 준다 (`nodal_server.wire._widget_model`).
+ *
+ * 한동안 이 컴포넌트는 별도의 `/api/models` 응답을 스토어에 담아 읽었다.
+ * 그 엔드포인트는 **언제나 빈 목록**이었으므로 화면에는 늘 "모델 없음" 이
+ * 떴다 — 서버는 옵션을 이미 보내고 있었는데 프론트가 다른 곳을 보고 있었다.
+ * 목록이 두 경로로 오면 반드시 이렇게 어긋난다. 그래서 경로를 하나로 줄였고
+ * `/api/models` 는 스펙에서 뺐다 (`decisions.md` 2026-08-18).
+ */
 function ProviderCombo({
   socket,
   provider,
+  options,
   value,
   onChange,
 }: {
   socket: InputSocket;
   provider: string;
+  options: string[];
   value: unknown;
   onChange: (value: JsonValue) => void;
 }): React.JSX.Element {
-  const models = useEditorStore((state) => state.models);
-  const state = useEditorStore((editor) => editor.modelCatalogState);
-  const options = useMemo(
-    () => models.filter((model) => model.kind === provider).map((model) => model.name),
-    [models, provider],
-  );
+  const catalogState = useEditorStore((state) => state.catalogState);
   const stop = (event: React.SyntheticEvent) => event.stopPropagation();
-  if (state === "loading") return <span className="model-catalog-note">모델 확인 중…</span>;
-  if (state === "error") return <span className="widget-contract-error">모델 목록 오류</span>;
+  if (catalogState === "loading") return <span className="model-catalog-note">모델 확인 중…</span>;
   if (options.length === 0) {
     return (
       <span className="model-empty" role="status">
@@ -429,14 +450,4 @@ function ProviderCombo({
 function numberHint(socket: InputSocket, key: string): number | undefined {
   const value = socket.widget?.[key];
   return typeof value === "number" ? value : undefined;
-}
-
-function stringHint(socket: InputSocket, key: string): string | undefined {
-  const value = socket.widget?.[key];
-  return typeof value === "string" ? value : undefined;
-}
-
-function stringListHint(socket: InputSocket, key: string): string[] {
-  const value = socket.widget?.[key];
-  return Array.isArray(value) && value.every((item) => typeof item === "string") ? value : [];
 }

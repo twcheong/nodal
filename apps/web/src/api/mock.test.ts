@@ -33,12 +33,15 @@ describe("목 PNG 워크플로 복원", () => {
 });
 
 describe("M4 목 카탈로그", () => {
-  it("provider 이름과 같은 kind의 체크포인트를 제공한다", async () => {
+  it("공급자 콤보에 옵션을 함께 실어 보낸다", async () => {
+    // 모델 목록은 `/api/nodes` 의 `widget.options` 로만 온다. 목이 `provider`
+    // 만 주고 `options` 를 빼면 실서버와 다른 모양이 되어, 목에서 본 UI 가
+    // 실제와 다르다.
     const client = new MockGraphApiClient();
     const nodes = await client.listNodes();
-    const models = await client.listModels();
     const checkpoint = nodes.nodes.find((node) => node.id === "diffusion.LoadCheckpoint");
-    expect(checkpoint?.inputs?.[0]?.widget?.provider).toBe("checkpoints");
-    expect(models.models?.filter((model) => model.kind === "checkpoints")).toHaveLength(2);
+    const ckpt = checkpoint?.inputs?.[0];
+    expect(ckpt?.widget?.provider).toBe("checkpoints");
+    expect(ckpt?.widget?.options).toEqual(["sdxl-demo.safetensors", "tiny-sd-pipe"]);
   });
 });

@@ -1,7 +1,7 @@
 import type { Connection, Edge, NodeChange, Viewport, XYPosition } from "@xyflow/react";
 import { create } from "zustand";
 
-import type { Issue, ModelEntry, NodeSchema, RunStatus, WsEvent } from "../api/types";
+import type { Issue, NodeSchema, RunStatus, WsEvent } from "../api/types";
 import type { GraphDocument, GraphNode, JsonValue } from "../graph/types";
 import { isLink, makeLink } from "../graph/types";
 import { createGraphNode, createStarterGraph, normalizeGraph } from "../editor/graph";
@@ -19,8 +19,6 @@ import type {
 interface EditorState {
   graph: GraphDocument;
   schemas: NodeSchema[];
-  models: ModelEntry[];
-  modelKinds: string[];
   runtime: Record<string, NodeRuntimeState>;
   issues: Issue[];
   selectedNodeIds: string[];
@@ -28,7 +26,6 @@ interface EditorState {
   connection: ConnectionIntent | null;
   search: SearchState;
   catalogState: "loading" | "ready" | "error";
-  modelCatalogState: "loading" | "ready" | "error";
   activeRunId: string | null;
   runStatus: RunStatus | null;
   runNodeCount: number;
@@ -38,8 +35,6 @@ interface EditorState {
   benchmarkFps: number | null;
   setSchemas: (schemas: NodeSchema[]) => void;
   setCatalogError: (message: string) => void;
-  setModels: (models: ModelEntry[], kinds: string[]) => void;
-  setModelCatalogError: (message: string) => void;
   addNode: (schema: NodeSchema, position: XYPosition) => string;
   toggleOutput: (nodeId: string) => void;
   applyNodeChanges: (changes: NodeChange<NodalFlowNode>[]) => void;
@@ -64,8 +59,6 @@ interface EditorState {
 export const useEditorStore = create<EditorState>((set, get) => ({
   graph: createStarterGraph(),
   schemas: [],
-  models: [],
-  modelKinds: [],
   runtime: {},
   issues: [],
   selectedNodeIds: [],
@@ -73,7 +66,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   connection: null,
   search: { open: false, flowPosition: { x: 120, y: 120 } },
   catalogState: "loading",
-  modelCatalogState: "loading",
   activeRunId: null,
   runStatus: null,
   runNodeCount: 0,
@@ -84,9 +76,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setSchemas: (schemas) => set({ schemas, catalogState: "ready" }),
   setCatalogError: (message) => set({ catalogState: "error", message }),
-  setModels: (models, modelKinds) => set({ models, modelKinds, modelCatalogState: "ready" }),
-  setModelCatalogError: (message) =>
-    set({ modelCatalogState: "error", message: `모델 목록을 불러오지 못했습니다: ${message}` }),
 
   addNode: (schema, position) => {
     const nodeId = crypto.randomUUID();

@@ -191,30 +191,63 @@ async def test_different_seed_gives_a_different_image(tiny_sd):
 async def test_changing_seed_reruns_only_downstream(tiny_sd):
     """M1 완료 기준을 diffusion 그래프에서 다시 확인한다.
 
-    시드만 바꾸면 `ckpt` · `pos` · `neg` · `empty` 는 캐시고 `sample` · `decode`
-    만 다시 돈다. 이 성질이 깨지면 슬라이더 하나 움직일 때마다 체크포인트가
-    다시 로드된다.
+    시드만 바꾸면 `pos` · `neg` · `empty` 는 캐시고 `sample` · `decode` 만 다시
+    돈다. 이 성질이 깨지면 슬라이더 하나 움직일 때마다 프롬프트가 다시 인코딩된다.
+
+    `ckpt` 는 **일부러 캐시되지 않는다** (`nodes.py` 의 `cacheable=False`) —
+    실행 캐시가 모델 핸들을 강하게 붙들면 `ModelManager` 의 상한이 풀린다.
+    그래도 가중치를 다시 읽지는 않는다: 로딩 캐시는 매니저에 있고, 아래에서
+    같은 매니저를 재사용하는 두 실행이 그것을 보인다.
     """
     cache = LRUCache(64)
     models = ModelManager()
 
     await _run(_graph(TINY_SD, seed=1), cache=cache, models=models)
+    loaded_once = models.loaded()
 
     events = RecordingEventSink()
     second = await _run(_graph(TINY_SD, seed=2), cache=cache, events=events, models=models)
 
     cached = {e.node_id for e in events.events if isinstance(e, NodeCached)}
-    assert {"ckpt", "pos", "neg", "empty"} <= cached
-    assert set(second.executed) == {"sample", "decode"}
+    assert {"pos", "neg", "empty"} <= cached
+    assert set(second.executed) == {"ckpt", "sample", "decode"}
+    # 두 번째 실행이 매니저에 새 항목을 만들지 않았다 = 다시 로드하지 않았다.
+    assert models.loaded() == loaded_once
+
+
+async def test_execution_cache_does_not_pin_checkpoints(tiny_sd, tiny_sdxl):
+    """**상한이 실제로 동작한다** — 실행 캐시가 켜져 있어도 (M4 검증에서 나온 P1).
+
+    로더 노드가 `cacheable=True` 이던 동안에는 `LRUCache` 가 모델 핸들을 강하게
+    붙들어 `in_use` 가 영영 비지 않았고, 그래서 `capacity` 가 사실상 무한이었다.
+    CPU 에서는 느려질 뿐이지만 GPU 에서는 그것이 OOM 경로다.
+
+    상한 1 짜리 매니저로 서로 다른 체크포인트 두 개를 차례로 돌린다. 캐시가
+    붙들지 않으면 첫 번째가 내려가 하나만 남는다.
+    """
+    import gc
+
+    cache = LRUCache(64)
+    models = ModelManager(capacity=1)
+
+    await _run(_graph(TINY_SD), cache=cache, models=models)
+    await _run(_graph(TINY_SDXL), cache=cache, models=models)
+    gc.collect()
+
+    assert len(models.loaded()) == 1, (
+        f"상한 1 인데 {len(models.loaded())}개가 올라와 있다 — 실행 캐시가 핸들을 붙들고 있다"
+    )
+    assert models.in_use() == (), "실행이 끝났는데 아직 사용 중인 체크포인트가 있다"
 
 
 async def test_identical_graph_is_fully_cached(tiny_sd):
+    """로더를 뺀 전부가 캐시에서 나온다. 로더는 위 테스트가 설명하는 이유로 돈다."""
     cache = LRUCache(64)
     models = ModelManager()
     await _run(_graph(TINY_SD), cache=cache, models=models)
     second = await _run(_graph(TINY_SD), cache=cache, models=models)
-    assert second.executed == ()
-    assert len(second.cached) == 6
+    assert second.executed == ("ckpt",)
+    assert len(second.cached) == 5
 
 
 # ------------------------------------------------------------------ 프리뷰

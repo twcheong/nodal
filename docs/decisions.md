@@ -42,6 +42,104 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-18 · Claude Code · M4 검증 대응 — 공유 상태 · 캐시 · 모델 목록
+
+Codex 의 M4 백엔드 검증(P1 3건 · P2 1건)에 대한 수정. 네 건의 뿌리가 같아서
+한 항목으로 묶는다: **출력이 실제로 달라지는지 보는 테스트가 없었다.**
+
+#### 파이프라인 전역 상태는 핸들이 들고 다니고, 쓰는 순간에만 얹는다
+
+- **문제**: `LoraLoader` 가 공유 `checkpoint.pipe` 에 `load_lora_weights` +
+  `set_adapters` 를 걸고 `checkpoint.adapters` 를 직접 바꿨다. 세 핸들이 같은
+  `Checkpoint` 를 가리키므로 **같은 `LoadCheckpoint` 에서 갈라진 비-LoRA
+  분기까지 LoRA 로 샘플링**됐다. 분기가 독립이 아니면 데이터흐름 그래프가
+  아니다. 캐시 키는 이 변경을 모르므로 잘못된 캐시 히트도 따라온다
+- **결정**: 어댑터를 **적용된 것**(`_View.adapters`, 핸들)과 **올라와 있는
+  것**(`Checkpoint.loaded`, 파이프라인)으로 나눴다. `LoraLoader` 는 가중치를
+  올리기만 하고 끈 채로 돌아온다. 파이프라인을 실제로 부르는 노드
+  (`KSampler` · `CLIPTextEncode`)가 `_adapters_applied` 안에서 그 순간에만 켠다
+- **왜 파이프라인을 복제하지 않았나**: 복제는 수 GB 를 다시 올리는 것이다.
+  어댑터는 어차피 이름으로 켜고 끌 수 있으므로 복제할 이유가 없다
+- **`lora_scale` 이 이제 실제로 쓰인다.** 세기는 핸들의 어댑터 목록에 실려
+  `set_adapters(adapter_weights=...)` 로 간다 — 전에는 만들어만 두고 읽는 곳이
+  0 곳이었다
+- **함께 고친 것**: 핸들 dataclass 를 `eq=False` 로 바꿨다. `ModelManager` 가
+  `WeakSet` 으로 참조를 세는데 값 비교를 쓰면 **필드가 같은 두 핸들이 하나로
+  합쳐져**, 먼저 만든 쪽이 죽을 때 아직 쓰는 중인 체크포인트가 "사용 안 함"
+  으로 보인다. 참조 카운팅은 값이 아니라 객체를 센다
+
+#### ControlNet 은 파생 파이프라인으로 연결한다
+
+- **문제**: `ControlNetApply` 가 만든 핸들의 `model` 을 읽는 곳이 **0 곳**이었다.
+  `_control_kwargs` 가 인자를 만들긴 했지만 받는 쪽이 ControlNet 을 모르는
+  파이프라인이었다. 노드는 성공하고 그래프도 돌지만 결과는 ControlNet 이 없는
+  것과 완전히 같았다
+- **결정**: `AutoPipelineForText2Image.from_pipe(pipe, controlnet=...)` 로 파생
+  파이프라인을 만들어 그것을 부른다. 컴포넌트를 공유하므로 가중치가 다시 올라가지
+  않는다 (테스트가 확인한다). `Auto` 를 쓰는 이유는 SD 와 SDXL 의 ControlNet
+  파이프라인 클래스가 다르기 때문 — 클래스 이름으로 분기하지 않는다는 이 모듈의
+  규칙과 같다
+- **찾은 것**: `height`·`width` 를 함께 넘기지 않으면 파이프라인이
+  `unet.config.sample_size` 로 힌트를 리사이즈해 ControlNet 잔차와 UNet 활성의
+  shape 이 어긋난다. 크기는 **잠재에서** 되계산한다 — `pipe.vae_scale_factor` 가
+  아니라 `VAE_SCALE_FACTOR` 로. 앞의 것은 VAE 의 성질이고 조건 임베딩의 축소
+  비율과 다를 수 있다 (tiny 픽스처에서 실제로 2 vs 8 로 갈린다)
+
+#### 로더 노드는 캐시하지 않는다 (`cacheable=False`)
+
+- **문제**: 실행 캐시(`LRUCache`)가 모델 핸들을 **강하게** 붙들어
+  `ModelManager` 의 약한 참조 계산이 영영 0 이 되지 않았다. `capacity` 가
+  사실상 무한이고, 실제 GPU 에서는 그것이 OOM 경로다. M1 캐시는 값싼 결과를
+  전제로 설계됐는데 M4 가 수 GB 핸들을 담기 시작했다
+- **결정**: `LoadCheckpoint` · `LoraLoader` · `ControlNetLoader` 를
+  `cacheable=False` 로. 로딩 캐시는 `ModelManager` 에 있으므로 재실행은 딕셔너리
+  조회 한 번이고, 하위 노드의 캐시 키는 그래프 구조에서 나오므로 그대로 맞는다
+- **왜 캐시가 약참조를 잡게 하지 않았나**: 그러면 core 가 "이 값은 모델 핸들이다"
+  를 알아야 한다. core 는 도메인 중립 그래프 엔진이고 (AGENTS.md 아키텍처 절)
+  `Cache` 는 M1 계약이다. **무엇이 비싼지는 그 표현을 소유한 노드 팩이 안다** —
+  선언을 그쪽에 두는 것이 층이 맞다. 캐시 히트로 값이 죽어 있는 경우를 다뤄야
+  하는 복잡도도 사라진다
+- **부수 효과**: ControlNet 도 `ModelManager` 가 캐시한다. 안 그러면 로더를
+  캐시에서 빼는 순간 실행마다 디스크를 다시 읽는다. 체크포인트와 **같은 상한**
+  으로 함께 센다 — 따로 세면 각각은 상한 안이면서 합쳐서 VRAM 을 넘길 수 있다
+- **눈에 보이는 변화**: `ckpt` 노드가 매 실행 `executed` 에 들어간다.
+  `test_changing_seed_reruns_only_downstream` 이 그것과 "가중치는 다시 읽지
+  않는다" 를 함께 고정한다
+
+#### `GET /api/models` 를 스펙에서 뺐다
+
+- **문제**: 계약에 있으면서 **언제나 빈 목록**을 내보내는 엔드포인트였다.
+  프론트는 그것을 읽어 모델 카탈로그를 만들었고, 그래서 체크포인트 콤보에 늘
+  "모델 없음" 이 떴다 — 서버는 `/api/nodes` 의 `widget.options` 로 목록을 이미
+  보내고 있었는데 프론트가 다른 곳을 보고 있었다
+- **결정**: 엔드포인트와 `ModelsResponse` · `ModelEntry` 를 지우고, 프론트가
+  `widget.options` 를 읽게 했다. 목록의 경로는 하나다
+- **왜 구현하는 대신 뺐나**: ① 채우려면 서버가 노드 팩을 import 하거나
+  (의존성 화살표 위반) 공급자 프로토콜에 크기·수정시각을 넓혀야 하는데 아무도
+  그것을 필요로 하지 않는다 ② 소켓마다 공급자가 다르므로 `/api/nodes` 가
+  **소켓 단위로** 답하는 것이 더 정확하다 ③ 같은 사실이 두 경로로 흐르면
+  반드시 어긋난다 — 이번이 바로 그 사례다. 모델 관리 UI 처럼 실제 수요가
+  생기면 그 수요에 맞는 모양으로 다시 넣으면 된다
+- **계약 변경이다.** `schemas/openapi.json` 과 `apps/web/src/api/generated.ts`
+  를 같은 커밋에서 재생성했다 (협업 규칙 8)
+
+#### 출력을 검증하는 테스트 (이것이 뿌리다)
+
+- **결정**: `test_output_differs.py` 를 추가했다. 같은 시드에서 LoRA 있음/없음 ·
+  ControlNet 적용/미적용의 **픽셀**을 비교하고, 비-LoRA 분기가 옆 분기에
+  영향받지 않는지(실행 순서를 바꿔서도) 고정한다
+- **픽스처를 직접 만든다.** `hf-internal-testing` 의 tiny LoRA·ControlNet 은
+  `lora_B` 와 제로 컨볼루션이 **전부 0** 이라 적용해도 결과가 바뀌지 않는다
+  (확인함). 그것으로 검증하면 버그가 있어도 통과한다 — 두 쪽 다 아무 일이
+  없기 때문이다. 그래서 `tiny_fixtures.py` 가 0 인 자리를 채워 만든다
+- **영향 범위**: `packages/nodes-diffusion/**`,
+  `packages/server/src/nodal_server/{app.py,schemas.py}`,
+  `apps/web/src/{components/NodalNode.tsx,graph/widgets.ts,state/editorStore.ts,api/*}`,
+  `schemas/openapi.json`, `apps/web/src/api/generated.ts`, `docs/{design,roadmap}.md`
+- **되돌릴 수 있나**: 부분적으로. 어댑터 분리와 ControlNet 연결은 되돌리면
+  버그가 돌아온다. `cacheable` 과 `/api/models` 는 되돌릴 수 있지만 각각
+  OOM 경로와 빈 드롭다운이 함께 돌아온다
+
 ### 2026-08-17 · Codex · M4 시드 컨트롤의 저장과 전환 시점
 
 - **결정**: 소켓별 시드 모드는 캐논 그래프의 열린 `ui.<node_id>.seed_controls.<socket>`에

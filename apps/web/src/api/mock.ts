@@ -7,7 +7,6 @@ import type {
   CreateRunResponse,
   GraphFromPngResponse,
   Issue,
-  ModelsResponse,
   NodeSchema,
   NodesResponse,
   ValidateResponse,
@@ -51,21 +50,6 @@ const output = (name: string, type: string): NonNullable<NodeSchema["outputs"]>[
   type,
   doc: "",
 });
-
-const MOCK_MODELS: NonNullable<ModelsResponse["models"]> = [
-  {
-    name: "sdxl-demo.safetensors",
-    kind: "checkpoints",
-    size_bytes: 6_934_458_368,
-    modified_at: "2026-08-17T09:00:00Z",
-  },
-  {
-    name: "tiny-sd-pipe",
-    kind: "checkpoints",
-    size_bytes: 9_125_888,
-    modified_at: "2026-08-17T09:00:00Z",
-  },
-];
 
 export const MOCK_NODE_SCHEMAS: readonly NodeSchema[] = [
   {
@@ -209,7 +193,15 @@ export const MOCK_NODE_SCHEMAS: readonly NodeSchema[] = [
     cacheable: true,
     output_node: false,
     doc: "Combo.from_provider 체크포인트 선택 UI를 백엔드 없이 확인합니다.",
-    inputs: [input("ckpt", "STRING", "", { provider: "checkpoints" })],
+    // 실서버는 `provider` 와 함께 스캔 결과를 `options` 로 실어 보낸다
+    // (`nodal_server.wire._widget_model`). 목이 그것을 흉내내지 않으면 목에서만
+    // "모델 없음" 이 뜨고, 그러면 목으로 UI 를 볼 수 없다.
+    inputs: [
+      input("ckpt", "STRING", "", {
+        provider: "checkpoints",
+        options: ["sdxl-demo.safetensors", "tiny-sd-pipe"],
+      }),
+    ],
     outputs: [output("model", "Model"), output("clip", "CLIP"), output("vae", "VAE")],
   },
   {
@@ -261,11 +253,6 @@ export class MockGraphApiClient implements GraphApiClient {
   async listNodes(): Promise<NodesResponse> {
     await Promise.resolve();
     return { nodes: [...MOCK_NODE_SCHEMAS], types_version: TYPES_VERSION };
-  }
-
-  async listModels(): Promise<ModelsResponse> {
-    await Promise.resolve();
-    return { models: [...MOCK_MODELS], kinds: ["checkpoints", "loras", "vae"] };
   }
 
   async validateGraph(graph: GraphDocument): Promise<ValidateResponse> {

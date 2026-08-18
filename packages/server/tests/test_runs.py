@@ -291,13 +291,22 @@ def test_priority_runs_first(client: TestClient) -> None:
         wait_for(client, run_id, timeout=3.0)
 
 
-# ------------------------------------------------------- 모델 · 에셋 · 확장
+# -------------------------------------------------------------- 에셋 · 확장
 
 
-def test_models_and_extensions_are_empty_but_present(client: TestClient) -> None:
-    """M4·M6 까지는 비어 있다. '아직 없음'과 '엔드포인트 없음'은 다르다."""
-    assert client.get("/api/models").json() == {"models": [], "kinds": []}
+def test_extensions_is_empty_but_present(client: TestClient) -> None:
+    """M6 까지는 비어 있다. '아직 없음'과 '엔드포인트 없음'은 다르다."""
     assert client.get("/api/extensions").json() == {"loaded": [], "failed": []}
+
+
+def test_models_endpoint_is_gone(client: TestClient) -> None:
+    """모델 목록은 `/api/nodes` 의 `widget.options` 로만 나간다.
+
+    `/api/models` 는 계약에 있으면서 언제나 빈 목록을 내보냈고, 프론트가 그것을
+    읽는 바람에 체크포인트 콤보가 늘 "모델 없음" 이었다. 목록이 두 경로로
+    오는 것 자체가 원인이었으므로 하나를 없앴다 (`decisions.md` 2026-08-18).
+    """
+    assert client.get("/api/models").status_code == 404
 
 
 def test_asset_round_trip_is_content_addressed(client: TestClient) -> None:

@@ -154,22 +154,42 @@ def test_providers_are_registered_in_core():
         combo_options(name)  # 등록되지 않았으면 SchemaError
 
 
+#: 공급자를 쓰는 소켓 전부 — (노드 ID, 소켓 이름, 공급자, 놓을 파일).
+#:
+#: 하나만 검사하면 나머지 셋이 조용히 비어 있어도 통과한다. `/api/nodes` 가
+#: **모델 목록의 유일한 경로**이므로 (`/api/models` 는 뺐다 — `decisions.md`
+#: 2026-08-18) 여기가 비면 그 소켓의 콤보는 화면에서 "모델 없음" 이 된다.
+_PROVIDER_SOCKETS = [
+    ("diffusion.LoadCheckpoint", "ckpt", "checkpoints", "my-model.safetensors"),
+    ("diffusion.LoraLoader", "lora_name", "loras", "my-lora.safetensors"),
+    ("diffusion.ControlNetLoader", "control_net_name", "controlnet", "my-cnet.safetensors"),
+]
+
+
 def test_scanned_names_reach_the_node_schema(models_dir):
-    """스캔 결과가 `/api/nodes` 의 위젯 옵션까지 간다 — 이것이 전체 경로다."""
+    """스캔 결과가 **실제 서버의** `/api/nodes` 위젯 옵션까지 간다.
+
+    목이 아니라 `create_app` 이 만든 앱에 붙는다 — 스캐너 · `Combo` 공급자 ·
+    `wire._widget_model` · 라우트가 전부 실제로 이어져야 통과한다. 그 사슬 중
+    하나만 끊겨도 프론트의 모델 콤보가 빈다.
+    """
     pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
 
     from nodal_nodes_diffusion import registry
     from nodal_server.app import create_app
 
-    root = models_dir / "checkpoints"
-    root.mkdir()
-    (root / "my-model.safetensors").write_bytes(b"")
+    for _, _, provider, filename in _PROVIDER_SOCKETS:
+        subdir = models_dir / scanner.PROVIDERS[provider][0]
+        subdir.mkdir(parents=True, exist_ok=True)
+        (subdir / filename).write_bytes(b"")
 
     client = TestClient(create_app(registry()))
-    schema = next(
-        n for n in client.get("/api/nodes").json()["nodes"] if n["id"] == "diffusion.LoadCheckpoint"
-    )
-    ckpt = next(i for i in schema["inputs"] if i["name"] == "ckpt")
-    assert ckpt["widget"]["options"] == ["my-model.safetensors"]
-    assert ckpt["widget"]["provider"] == "checkpoints"
+    nodes = {n["id"]: n for n in client.get("/api/nodes").json()["nodes"]}
+
+    for node_id, socket_name, provider, filename in _PROVIDER_SOCKETS:
+        socket = next(i for i in nodes[node_id]["inputs"] if i["name"] == socket_name)
+        assert socket["widget"]["provider"] == provider
+        assert socket["widget"]["options"] == [filename], (
+            f"{node_id}.{socket_name} 의 옵션이 비었다 — 이 콤보는 화면에서 '모델 없음' 이다"
+        )

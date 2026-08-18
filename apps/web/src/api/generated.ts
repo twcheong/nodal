@@ -103,26 +103,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/models": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * 발견된 모델 목록
-         * @description M4 까지는 빈 목록이 나간다. 형태만 먼저 고정한다.
-         */
-        get: operations["list_models_api_models_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/nodes": {
         parameters: {
             query?: never;
@@ -554,36 +534,6 @@ export interface components {
         ListTypeExpr: {
             /** List */
             list: string | components["schemas"]["ListTypeExpr"] | components["schemas"]["UnionTypeExpr"] | components["schemas"]["OpaqueTypeExpr"] | components["schemas"]["TensorTypeExpr"];
-        };
-        /**
-         * ModelEntry
-         * @description 발견된 모델 파일 하나. M4 에서 채워진다.
-         */
-        ModelEntry: {
-            /**
-             * Kind
-             * @description `checkpoints` · `loras` · `vae` 등 디렉토리 종류
-             */
-            kind: string;
-            /** Modified At */
-            modified_at?: string | null;
-            /** Name */
-            name: string;
-            /** Size Bytes */
-            size_bytes: number;
-        };
-        /**
-         * ModelsResponse
-         * @description `GET /api/models` — M4 까지는 비어 있다. 형태만 먼저 고정한다.
-         */
-        ModelsResponse: {
-            /**
-             * Kinds
-             * @description 스캔 대상 종류
-             */
-            kinds?: string[];
-            /** Models */
-            models?: components["schemas"]["ModelEntry"][];
         };
         /**
          * Node
@@ -1285,26 +1235,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    list_models_api_models_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ModelsResponse"];
                 };
             };
         };

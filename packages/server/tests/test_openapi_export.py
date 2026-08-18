@@ -39,7 +39,6 @@ EXPECTED_OPERATIONS = {
     ("get", "/api/runs"),
     ("get", "/api/runs/{run_id}"),
     ("delete", "/api/runs/{run_id}"),
-    ("get", "/api/models"),
     ("post", "/api/assets"),
     ("get", "/api/assets/{asset_hash}"),
     ("get", "/api/extensions"),

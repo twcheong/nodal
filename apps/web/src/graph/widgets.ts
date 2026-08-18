@@ -67,6 +67,41 @@ export function parseSeedControl(value: unknown): SeedControl | null {
   return SEED_CONTROLS.includes(value as SeedControl) ? (value as SeedControl) : null;
 }
 
+/**
+ * 콤보 소켓이 제시할 옵션 목록.
+ *
+ * **`/api/nodes` 의 `widget.options` 가 유일한 출처다.** 서버는 고정 목록
+ * (`Combo(options=[...])`) 이든 공급자 스캔 결과(`Combo.from_provider`) 든
+ * 똑같이 `options` 에 채워 보낸다 (`nodal_server.wire._widget_model`).
+ *
+ * 한동안 공급자 콤보만 별도의 `/api/models` 응답을 읽었는데, 그 엔드포인트는
+ * 언제나 빈 목록이라 체크포인트 드롭다운이 늘 "모델 없음" 이었다. 목록이 두
+ * 경로로 오면 그중 하나는 반드시 낡는다 — 그래서 경로를 이 하나로 줄였다
+ * (`decisions.md` 2026-08-18).
+ *
+ * 빈 배열은 **"고를 것이 없다"** 는 뜻이고 그것도 유효한 답이다. 공급자
+ * 콤보라면 모델 폴더가 비었다는 말이므로 부르는 쪽이 그렇게 안내한다.
+ */
+export function comboOptions(widget: Record<string, unknown> | undefined): string[] {
+  if (!Array.isArray(widget?.options)) return [];
+  // `Array.isArray` 는 `any[]` 로만 좁힌다. `unknown[]` 로 다시 받아야 아래
+  // `every` 가 실제 검사가 된다 (tsc 가 그 술어로 `string[]` 까지 좁혀 준다).
+  const items: unknown[] = widget.options;
+  return items.every((item) => typeof item === "string") ? items : [];
+}
+
+/**
+ * 이 콤보의 옵션이 **서버가 디스크를 훑어 채운 것**인가.
+ *
+ * 참이면 목록이 비었을 때 "모델 폴더가 비어 있다" 고 말할 수 있다. 고정 옵션
+ * 콤보(샘플러 이름 등)가 비는 것은 서버 버그이지 사용자가 고칠 일이 아니므로
+ * 둘을 같은 말로 안내하면 안 된다.
+ */
+export function comboProvider(widget: Record<string, unknown> | undefined): string | null {
+  const value = widget?.provider;
+  return typeof value === "string" ? value : null;
+}
+
 /** 위젯 힌트 딕셔너리가 시드 위젯인지 판별한다. */
 export function isSeedWidget(widget: Record<string, unknown> | undefined): widget is SeedWidget {
   return (

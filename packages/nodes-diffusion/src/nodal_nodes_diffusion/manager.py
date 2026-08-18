@@ -18,6 +18,11 @@ VRAM 관리는 `AGENTS.md` 절대 규칙 1 이 가장 깨지기 쉬운 자리다
 핸들을 붙들고 있으므로 참조 수가 0 이 아니고, 실행이 끝나 결과가 버려지면
 자동으로 0 이 된다. 언로드는 참조 수가 0 인 항목만 고른다. 파이썬이 이미
 정확하게 세고 있는 것을 다시 세지 않는다.
+
+> ⚠️ 이 계산은 **실행 캐시가 핸들을 붙들지 않을 때만** 성립한다. 로더 노드가
+> `cacheable=True` 이면 `LRUCache` 가 핸들을 강하게 들고 있어 참조 수가 영영
+> 0 이 되지 않고 `capacity` 가 사실상 무한이 된다. 그래서 로더 노드들은
+> `cacheable=False` 다 (`nodes.py`, `decisions.md` 2026-08-18).
 """
 
 from __future__ import annotations
@@ -26,7 +31,7 @@ import logging
 import threading
 import weakref
 from collections import OrderedDict
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TypeVar
@@ -34,20 +39,24 @@ from typing import Any, TypeVar
 from nodal.models import DevicePlan, ModelLoadError
 
 from .devices import DevicePolicy, empty_cache, free_memory, resolve_plan, to_torch_dtype
-from .handles import Checkpoint, ClipHandle, ModelHandle, VaeHandle
+from .handles import Checkpoint, ClipHandle, ControlNetHandle, ModelHandle, VaeHandle
 
 __all__ = ["DEFAULT_CAPACITY", "LOADERS", "ModelManager"]
 
 _log = logging.getLogger("nodal.diffusion.models")
 
 #: 체크포인트를 가리키는 뷰 핸들. `_track` 이 타입을 보존한다.
-_HandleT = TypeVar("_HandleT", ModelHandle, ClipHandle, VaeHandle)
+_HandleT = TypeVar("_HandleT", ModelHandle, ClipHandle, VaeHandle, ControlNetHandle)
 
-#: 동시에 올려 두는 체크포인트 수의 기본 상한. 넘으면 참조되지 않는 것부터 내린다.
+#: 동시에 올려 두는 모델 수의 기본 상한. 넘으면 참조되지 않는 것부터 내린다.
 DEFAULT_CAPACITY = 2
 
 #: 인식하는 로더 이름. `ModelLoadError.expected` 가 이것을 싣는다.
 LOADERS = ("diffusers.pretrained", "diffusers.single_file")
+
+#: ControlNet 은 파이프라인이 아니라 컴포넌트 하나라 로더가 따로다. 같은 캐시에
+#: 같은 상한으로 들어간다 — VRAM 을 차지하는 것은 마찬가지다.
+CONTROLNET_LOADER = "diffusers.controlnet"
 
 #: 단일 파일 체크포인트의 확장자.
 SINGLE_FILE_SUFFIXES = (".safetensors", ".ckpt")
@@ -55,16 +64,27 @@ SINGLE_FILE_SUFFIXES = (".safetensors", ".ckpt")
 
 @dataclass
 class _Entry:
-    """캐시 항목 하나."""
+    """캐시 항목 하나.
 
-    checkpoint: Checkpoint
+    `payload` 는 `Checkpoint`(파이프라인) 이거나 `ControlNetModel` 이다. 둘을
+    한 딕셔너리에 담는 이유는 상한과 축출 순서를 **함께** 세야 하기 때문이다 —
+    따로 세면 각각은 상한 안이지만 합쳐서 VRAM 을 넘길 수 있다.
+    """
+
+    payload: Any
     #: 밖으로 나간 핸들들. 약한 참조라 결과가 버려지면 저절로 빈다.
     handles: weakref.WeakSet[Any] = field(default_factory=weakref.WeakSet)
 
     @property
     def in_use(self) -> bool:
-        """아직 누군가 이 체크포인트의 핸들을 들고 있는가."""
+        """아직 누군가 이 항목의 핸들을 들고 있는가."""
         return len(self.handles) > 0
+
+    @property
+    def plan(self) -> DevicePlan | None:
+        """축출 후 캐시를 비울 디바이스. 계획을 모르는 항목이면 `None`."""
+        plan = getattr(self.payload, "plan", None)
+        return plan if isinstance(plan, DevicePlan) else None
 
 
 class ModelManager:
@@ -125,13 +145,34 @@ class ModelManager:
     def vae(self, ref: str, *, loader: str = "diffusers.pretrained") -> VaeHandle:
         return self._track(VaeHandle(self._checkpoint(ref, loader)))
 
+    # ----------------------------------------------------------- ControlNet
+
+    def controlnet(self, ref: str, *, target: str | None = None) -> ControlNetHandle:
+        """ControlNet 하나를 로드하고 핸들을 돌려준다.
+
+        체크포인트와 **같은 캐시·같은 상한**을 쓴다. 노드가 매번 로드하면
+        (`ControlNetLoader` 는 `cacheable=False` 다) 실행마다 디스크를 다시 읽는다.
+
+        Args:
+            ref: 사용자가 고른 이름. 캐시 키이자 에러 메시지에 실리는 것.
+            target: 실제로 열 경로. 없으면 `ref` 를 그대로 연다.
+        """
+        model = self._entry(
+            _key(ref, CONTROLNET_LOADER),
+            lambda: self._load_controlnet(ref, target if target is not None else ref),
+        )
+        return self._track(ControlNetHandle(model=model, ref=ref, plan=self.plan))
+
     # ------------------------------------------------------------------ 내부
 
     def _track(self, handle: _HandleT) -> _HandleT:
         """핸들을 항목의 약한 참조 집합에 등록한다 — 이것이 참조 카운팅이다."""
-        checkpoint = handle.checkpoint
+        if isinstance(handle, ControlNetHandle):
+            key = _key(handle.ref, CONTROLNET_LOADER)
+        else:
+            key = _key(handle.checkpoint.ref, handle.checkpoint.loader)
         with self._lock:
-            entry = self._entries.get(_key(checkpoint.ref, checkpoint.loader))
+            entry = self._entries.get(key)
             if entry is not None:
                 entry.handles.add(handle)
         return handle
@@ -144,29 +185,59 @@ class ModelManager:
                 reason="알 수 없는 로더",
                 expected=LOADERS,
             )
+        checkpoint = self._entry(_key(ref, loader), lambda: self._load_checkpoint(ref, loader))
+        assert isinstance(checkpoint, Checkpoint)
+        return checkpoint
 
-        key = _key(ref, loader)
+    def _entry(self, key: str, build: Callable[[], Any]) -> Any:
+        """캐시에서 꺼내거나 만들어 넣는다. 상한 검사까지 여기서 한다."""
         with self._lock:
             entry = self._entries.get(key)
             if entry is not None:
                 self._entries.move_to_end(key)  # LRU 갱신
-                return entry.checkpoint
+                return entry.payload
 
         # 로딩은 오래 걸린다. 락을 쥔 채로 하면 다른 노드가 전부 막힌다.
-        checkpoint = self._load_checkpoint(ref, loader)
+        payload = build()
 
         with self._lock:
             existing = self._entries.get(key)
             if existing is not None:
                 # 다른 스레드가 먼저 끝냈다. 방금 만든 것을 버린다 — 같은 것이
                 # 두 벌 올라가 있는 상태가 가장 나쁘다.
-                return existing.checkpoint
-            self._entries[key] = _Entry(checkpoint)
+                return existing.payload
+            self._entries[key] = _Entry(payload)
             self._entries.move_to_end(key)
             # 방금 넣은 것은 후보에서 뺀다 — 아직 핸들이 나가지 않아 "사용 안 함"
             # 으로 보이므로, 보호하지 않으면 로드하자마자 자기 자신을 내린다.
             self._evict_if_needed(protect=key)
-        return checkpoint
+        return payload
+
+    def _load_controlnet(self, ref: str, target: str) -> Any:
+        from diffusers import ControlNetModel
+
+        plan = self.plan
+        dtype = to_torch_dtype(plan.dtype)
+        try:
+            if target.endswith(SINGLE_FILE_SUFFIXES):
+                model = ControlNetModel.from_single_file(target, torch_dtype=dtype)
+            else:
+                # diffusers 는 from_pretrained 에 타입을 붙이지 않는다.
+                model = ControlNetModel.from_pretrained(  # type: ignore[no-untyped-call]
+                    target, torch_dtype=dtype
+                )
+        except Exception as exc:
+            raise ModelLoadError(
+                ref,
+                loader=CONTROLNET_LOADER,
+                reason=str(exc),
+                expected=(CONTROLNET_LOADER,),
+                evidence=(f"열려던 것: {target}",),
+            ) from exc
+
+        model.to(str(plan.compute))
+        _log.info("로드: %s (ControlNet) → %s", ref, plan.compute)
+        return model
 
     def _load_checkpoint(self, ref: str, loader: str) -> Checkpoint:
         plan = self.plan
@@ -232,7 +303,7 @@ class ModelManager:
             if victim is None:
                 # 전부 사용 중이다. 내리면 실행 중인 그래프가 깨지므로 넘긴다.
                 _log.debug(
-                    "체크포인트 %d개가 전부 사용 중이라 언로드하지 않는다 (상한 %d)",
+                    "모델 %d개가 전부 사용 중이라 언로드하지 않는다 (상한 %d)",
                     len(self._entries),
                     self._capacity,
                 )
@@ -241,20 +312,21 @@ class ModelManager:
 
     def _unload(self, key: str) -> None:
         entry = self._entries.pop(key)
-        plan = entry.checkpoint.plan
-        _log.info("언로드: %s", entry.checkpoint.ref)
+        plan = entry.plan
+        _log.info("언로드: %s", key)
         del entry
-        empty_cache(plan.compute)
+        if plan is not None:
+            empty_cache(plan.compute)
 
     # ------------------------------------------------------------- 진단용 표면
 
     def loaded(self) -> tuple[str, ...]:
-        """올라와 있는 체크포인트 키. LRU 순서(오래된 것부터)다."""
+        """올라와 있는 모델 키. LRU 순서(오래된 것부터)다."""
         with self._lock:
             return tuple(self._entries)
 
     def in_use(self) -> tuple[str, ...]:
-        """아직 핸들이 살아 있는 체크포인트 키."""
+        """아직 핸들이 살아 있는 모델 키."""
         with self._lock:
             return tuple(k for k, e in self._entries.items() if e.in_use)
 

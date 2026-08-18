@@ -53,8 +53,6 @@ export type CancelRunResponse = Schemas["CancelRunResponse"];
 
 // ---------------------------------------------------- 모델 · 에셋 · 확장
 
-export type ModelEntry = Schemas["ModelEntry"];
-export type ModelsResponse = Schemas["ModelsResponse"];
 export type AssetInfo = Schemas["AssetInfo"];
 export type ExtensionInfo = Schemas["ExtensionInfo"];
 export type ExtensionsResponse = Schemas["ExtensionsResponse"];
@@ -102,7 +100,6 @@ export const API_PATHS = {
   validate: "/api/graph/validate",
   runs: "/api/runs",
   run: (runId: string) => `/api/runs/${runId}`,
-  models: "/api/models",
   assets: "/api/assets",
   asset: (hash: string) => `/api/assets/${hash}`,
   extensions: "/api/extensions",

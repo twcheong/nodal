@@ -45,7 +45,6 @@ from .schemas import (
     ErrorResponse,
     ExtensionsResponse,
     GraphFromPngResponse,
-    ModelsResponse,
     NodeSchemaModel,
     NodesResponse,
     RunDetail,
@@ -287,19 +286,13 @@ def create_app(
             )
         return CancelRunResponse(run_id=record.run_id, status=record.status)
 
-    # ------------------------------------------------------ 모델 · 에셋 · 확장
-
-    @app.get(
-        "/api/models",
-        response_model=ModelsResponse,
-        summary="발견된 모델 목록",
-        description="M4 까지는 빈 목록이 나간다. 형태만 먼저 고정한다.",
-        tags=["models"],
-    )
-    async def list_models() -> ModelsResponse:
-        # 모델 스캐너는 M4 다 (roadmap M4). 형태만 고정하고 빈 목록을 낸다 —
-        # 프론트가 "아직 없음"과 "엔드포인트 없음"을 구분할 수 있어야 한다.
-        return ModelsResponse(models=[], kinds=[])
+    # ------------------------------------------------------------ 에셋 · 확장
+    #
+    # `GET /api/models` 는 여기 있었다. **뺐다** — 모델 목록은 `/api/nodes` 의
+    # `widget.options` 로 이미 나간다 (`wire._widget_model`). 두 경로로 같은
+    # 목록을 보내면 반드시 어긋나고, 실제로 어긋났다: 프론트는 빈 `/api/models`
+    # 를 읽고 있어서 체크포인트 콤보에 언제나 "모델 없음" 이 떴다
+    # (`decisions.md` 2026-08-18).
 
     @app.post(
         "/api/graph/from-png",

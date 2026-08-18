@@ -115,10 +115,16 @@
 - [x] 노드: LoadCheckpoint / CLIPTextEncode / EmptyLatent / KSampler / VAEDecode
 - [x] 스텝별 latent 프리뷰 스트리밍 — VAE 로 실제 디코드한다. 계수 표를 쓰지
       않으므로 절대 규칙 1 과 무관하다 (`design.md` §9.5)
-- [x] LoRA 로더 — 픽스처는 테스트가 `peft` 로 만든다 (tiny LoRA 가 HF 에 없다)
-- [x] ControlNet — Loader + Apply
-- [ ] 시드 컨트롤 위젯 (고정/증가/랜덤) — 백엔드 힌트는 계약에 있고, 값을 굴리는
-      쪽은 프론트다 (`design.md` §9.4)
+- [x] LoRA 로더 — 픽스처는 테스트가 `peft` 로 만든다 (tiny LoRA 가 HF 에 없다).
+      어댑터는 **핸들이 들고 다니고** 파이프라인에는 쓰는 순간에만 얹는다 —
+      그러지 않으면 같은 체크포인트에서 갈라진 비-LoRA 분기까지 오염된다
+- [x] ControlNet — Loader + Apply + **샘플링 연결** (`from_pipe` 파생 파이프라인)
+- [x] 시드 컨트롤 위젯 (고정/증가/랜덤) — 백엔드 힌트는 계약에 있고, 값을 굴리는
+      쪽은 프론트다 (`design.md` §9.4). 모드는 `ui.<node>.seed_controls` 에 남는다
+- [x] 모델 목록이 화면까지 간다 — `/api/nodes` 의 `widget.options` 한 경로로.
+      `GET /api/models` 는 **스펙에서 뺐다** (`decisions.md` 2026-08-18)
+- [x] 출력 차이 테스트 — LoRA · ControlNet 이 **픽셀을 실제로 바꾸는지**,
+      비-LoRA 분기가 오염되지 않는지 (`test_output_differs.py`)
 
 **완료 기준**: txt2img 워크플로가 SDXL에서 돌고 스텝 프리뷰가 보인다.
 — **절반 확인됨.** tiny SDXL 픽스처로 전 경로가 CPU 에서 돌고 프리뷰가 나가는
@@ -129,6 +135,14 @@
 **CI 검증**: `hf-internal-testing/tiny-sd-pipe` (8.7 MB) · `tiny-sdxl-pipe`
 (11.2 MB) 로 CPU 에서 돈다. 출력의 **의미**는 검증하지 못한다 (가중치가
 랜덤) — 배선 · shape · 캐시 · 취소 · 프리뷰 경로가 대상이다 (`design.md` §9.7).
+
+> **의미를 못 본다고 출력을 안 보는 것은 아니다.** M4 1차 구현은 "핸들이 생겼고
+> 호출이 성공했다" 까지만 검사했고, 그 결과 LoRA 오염과 ControlNet 미연결이
+> 전부 초록으로 통과했다. 지금은 **같은 시드에서 픽셀이 달라지는지 / 달라지지
+> 않는지**를 고정한다 — 가중치가 랜덤이어도 참이어야 하는 성질이다.
+> LoRA·ControlNet 픽스처는 테스트가 만든다: HF 의 tiny 픽스처는 LoRA 의
+> `lora_B` 와 ControlNet 의 제로 컨볼루션이 **전부 0** 이라 적용해도 결과가
+> 바뀌지 않고, 그러면 검증이 조용히 무의미해진다.
 
 > ⚠️ VRAM 관리에서 ComfyUI `model_management.py`를 참조하고 싶어지는 지점. **코드 복사 금지.** 1차는 `accelerate`에 위임한다.
 

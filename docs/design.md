@@ -513,10 +513,15 @@ ComfyUI가 여러 캐시 구현을 병렬 운영하며 도달한 결론을 압�
 | `GET  /api/runs/{id}` | 상태 · 결과 |
 | `DELETE /api/runs/{id}` | 취소 |
 | `GET  /api/runs` | 큐 · 히스토리 |
-| `GET  /api/models` | 발견된 모델 목록 (타입별) |
 | `POST /api/assets` | 입력 파일 업로드 |
 | `GET  /api/assets/{hash}` | content-addressed 조회 |
 | `GET  /api/extensions` | 로드된 확장 · 실패한 확장 |
+
+> **`GET /api/models` 는 뺐다 (M4).** 모델 목록은 `/api/nodes` 의 각 소켓
+> `widget.options` 로 나간다 — 서버가 `Combo.from_provider` 의 공급자를 요청마다
+> 스캔해 채운다. 목록을 엔드포인트로도 내보내면 같은 사실이 두 경로로 흐르고,
+> 실제로 어긋났다: 프론트가 언제나 비어 있던 `/api/models` 를 읽어 체크포인트
+> 콤보에 늘 "모델 없음" 이 떴다. 근거는 `decisions.md` 2026-08-18.
 
 ### WebSocket 이벤트 (`/ws`)
 

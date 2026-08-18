@@ -669,67 +669,6 @@
         "title": "ListTypeExpr",
         "type": "object"
       },
-      "ModelEntry": {
-        "additionalProperties": false,
-        "description": "발견된 모델 파일 하나. M4 에서 채워진다.",
-        "properties": {
-          "kind": {
-            "description": "`checkpoints` · `loras` · `vae` 등 디렉토리 종류",
-            "title": "Kind",
-            "type": "string"
-          },
-          "modified_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Modified At"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "size_bytes": {
-            "title": "Size Bytes",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "name",
-          "kind",
-          "size_bytes"
-        ],
-        "title": "ModelEntry",
-        "type": "object"
-      },
-      "ModelsResponse": {
-        "additionalProperties": false,
-        "description": "`GET /api/models` — M4 까지는 비어 있다. 형태만 먼저 고정한다.",
-        "properties": {
-          "kinds": {
-            "description": "스캔 대상 종류",
-            "items": {
-              "type": "string"
-            },
-            "title": "Kinds",
-            "type": "array"
-          },
-          "models": {
-            "items": {
-              "$ref": "#/components/schemas/ModelEntry"
-            },
-            "title": "Models",
-            "type": "array"
-          }
-        },
-        "title": "ModelsResponse",
-        "type": "object"
-      },
       "Node": {
         "additionalProperties": false,
         "description": "그래프의 노드 하나. ID는 그래프의 `nodes` 딕셔너리 키다.",
@@ -2137,28 +2076,6 @@
         "summary": "실행 없이 검증만",
         "tags": [
           "graph"
-        ]
-      }
-    },
-    "/api/models": {
-      "get": {
-        "description": "M4 까지는 빈 목록이 나간다. 형태만 먼저 고정한다.",
-        "operationId": "list_models_api_models_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ModelsResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "발견된 모델 목록",
-        "tags": [
-          "models"
         ]
       }
     },

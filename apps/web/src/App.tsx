@@ -23,8 +23,6 @@ export function App(): React.JSX.Element {
   const fps = useEditorStore((state) => state.benchmarkFps);
   const setSchemas = useEditorStore((state) => state.setSchemas);
   const setCatalogError = useEditorStore((state) => state.setCatalogError);
-  const setModels = useEditorStore((state) => state.setModels);
-  const setModelCatalogError = useEditorStore((state) => state.setModelCatalogError);
   const loadGraph = useEditorStore((state) => state.loadGraph);
   const setIssues = useEditorStore((state) => state.setIssues);
   const beginRunSubmission = useEditorStore((state) => state.beginRunSubmission);
@@ -43,14 +41,6 @@ export function App(): React.JSX.Element {
       .catch((error: unknown) => {
         if (active) setCatalogError(readError(error));
       });
-    api
-      .listModels()
-      .then((response) => {
-        if (active) setModels(response.models ?? [], response.kinds ?? []);
-      })
-      .catch((error: unknown) => {
-        if (active) setModelCatalogError(readError(error));
-      });
     const eventBuffer = createEventBuffer(handleEvent);
     const unsubscribe = api.subscribe(eventBuffer.push);
     return () => {
@@ -59,7 +49,7 @@ export function App(): React.JSX.Element {
       eventBuffer.dispose();
       api.dispose();
     };
-  }, [api, handleEvent, setCatalogError, setModelCatalogError, setModels, setSchemas]);
+  }, [api, handleEvent, setCatalogError, setSchemas]);
 
   useEffect(() => {
     const timer = globalThis.setTimeout(() => {
