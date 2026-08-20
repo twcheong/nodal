@@ -378,8 +378,10 @@ def _load_single_file(target: str, torch_dtype: Any) -> Any:
         load_single_file_checkpoint,
     )
 
-    checkpoint = load_single_file_checkpoint(target)
-    model_type = infer_diffusers_model_type(checkpoint)
+    # `single_file_utils` 는 diffusers 내부 모듈이라 `from_pretrained` 와 마찬가지로
+    # 타입이 붙어 있지 않다. strict 모드가 untyped call 로 막으므로 여기서만 푼다.
+    checkpoint = load_single_file_checkpoint(target)  # type: ignore[no-untyped-call]
+    model_type = infer_diffusers_model_type(checkpoint)  # type: ignore[no-untyped-call]
     class_name = _SINGLE_FILE_PIPELINE_CLASSES.get(model_type)
     if class_name is None:
         known = ", ".join(sorted(_SINGLE_FILE_PIPELINE_CLASSES))

@@ -828,7 +828,7 @@ def _initial_noise(pipe: Any, latents: Any, generator: Any) -> Any:
     가 `latents` 인자를 받았는지와 무관하게 항상 `* scheduler.init_noise_sigma`
     를 한 번 더 적용한다 (diffusers 의 `StableDiffusionPipeline`·
     `StableDiffusionXLPipeline` 공통 구현). 여기서도 곱하면 이중 스케일링이 되어
-    잠재가 `sigma²` 배로 터진다 — 실제로 Euler(σ≈14.6)에서 latent std 가 190 대로
+    잠재가 `sigma²` 배로 터진다 — 실제로 Euler(sigma≈14.6)에서 latent std 가 190 대로
     나가 디코드가 전부 노이즈였다. `denoise<1.0` 분기(`_add_noise`)는 이 함수를
     타지 않으므로 영향 없다.
 
