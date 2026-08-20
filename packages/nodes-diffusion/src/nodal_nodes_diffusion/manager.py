@@ -356,11 +356,46 @@ def _describe(plan: DevicePlan) -> str:
     return f"{where} offload={plan.offload}" if plan.offloading else f"{where} offload=없음"
 
 
+#: 단일 파일 추론 결과(`infer_diffusers_model_type`) → 실제로 인스턴스화할 파이프라인.
+#:
+#: `DiffusionPipeline.from_single_file` 는 존재하지 않는다 — `from_single_file` 은
+#: `FromSingleFileMixin` 을 통해 **구체 클래스에만** 붙는다 (`StableDiffusionPipeline`
+#: 등). diffusers 가 아키텍처마다 이걸 대신 골라주는 진입점을 두지 않으므로 여기서
+#: 직접 고른다. 1차 지원 범위(design.md §9.6: SD1.5·SDXL·SD3·FLUX)만 다룬다 —
+#: 그 밖의 타입은 `_load_single_file` 이 명시적으로 실패한다.
+_SINGLE_FILE_PIPELINE_CLASSES: dict[str, str] = {
+    "v1": "StableDiffusionPipeline",
+    "v2": "StableDiffusionPipeline",
+    "xl_base": "StableDiffusionXLPipeline",
+    "xl_refiner": "StableDiffusionXLImg2ImgPipeline",
+}
+
+
+def _load_single_file(target: str, torch_dtype: Any) -> Any:
+    import diffusers
+    from diffusers.loaders.single_file_utils import (
+        infer_diffusers_model_type,
+        load_single_file_checkpoint,
+    )
+
+    checkpoint = load_single_file_checkpoint(target)
+    model_type = infer_diffusers_model_type(checkpoint)
+    class_name = _SINGLE_FILE_PIPELINE_CLASSES.get(model_type)
+    if class_name is None:
+        known = ", ".join(sorted(_SINGLE_FILE_PIPELINE_CLASSES))
+        raise ValueError(
+            f"체크포인트에서 추론한 아키텍처 {model_type!r} 는 이 팩이 아직 지원하지 "
+            f"않는다 (지원: {known})"
+        )
+    pipeline_cls = getattr(diffusers, class_name)
+    return pipeline_cls.from_single_file(target, torch_dtype=torch_dtype)
+
+
 def _call_loader(loader: str, target: str, torch_dtype: Any) -> Any:
+    if loader == "diffusers.single_file":
+        return _load_single_file(target, torch_dtype)
     from diffusers import DiffusionPipeline
 
-    if loader == "diffusers.single_file":
-        return DiffusionPipeline.from_single_file(target, torch_dtype=torch_dtype)
     # diffusers 는 `from_pretrained` 에 타입을 붙이지 않는다. strict 모드가
     # untyped call 로 막으므로 여기서만 푼다 — 반환은 어차피 Any 다.
     return DiffusionPipeline.from_pretrained(  # type: ignore[no-untyped-call]

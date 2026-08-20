@@ -427,11 +427,17 @@ function ProviderCombo({
       </span>
     );
   }
+  // `value` 가 `options` 에 없으면(예: 다른 머신에서 저장된 그래프) 그대로
+  // `<select>` 에 넘기지 않는다. 네이티브 `<select>` 는 바인딩된 값이 그 어떤
+  // `<option>` 과도 안 맞으면 **목록의 첫 항목을 조용히 표시하면서 onChange 를
+  // 내지 않는다** — 실제로는 선택되지 않았는데 골라진 것처럼 보이는 것이다.
+  // 플레이스홀더로 떨어뜨려 "선택 안 됨" 임을 화면에서도 정확히 드러낸다.
+  const isKnownOption = typeof value === "string" && options.includes(value);
   return (
     <select
       className="nodrag socket-select model-select"
       aria-label={`${socket.name} 모델 선택`}
-      value={typeof value === "string" ? value : ""}
+      value={isKnownOption ? value : ""}
       onPointerDown={stop}
       onChange={(event) => onChange(event.target.value)}
     >

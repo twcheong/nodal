@@ -560,11 +560,16 @@ class VAEDecode:
         import numpy as np
 
         module = vae.vae
+        # `module.device` 는 accelerate cpu-offload 아래서 쉬는 자리(cpu)를
+        # 가리킨다 — forward 시점에 훅이 GPU 로 옮기므로 그걸로 입력을 배치하면
+        # 어긋난다. `plan.compute` 가 diffusers 파이프라인의 `_execution_device`
+        # 와 같은 역할이다 (`_encode` 가 이미 쓰는 패턴, §9.3).
+        device = torch.device(str(vae.plan.compute))
         scaling = float(getattr(module.config, "scaling_factor", 1.0))
         shift = float(getattr(module.config, "shift_factor", 0.0) or 0.0)
 
         with torch.no_grad():
-            scaled = latent.to(device=module.device, dtype=module.dtype) / scaling + shift
+            scaled = latent.to(device=device, dtype=module.dtype) / scaling + shift
             decoded = module.decode(scaled).sample
 
         # (B, C, H, W) -1..1 → (B, H, W, C) 0..1
@@ -817,8 +822,15 @@ def _initial_noise(pipe: Any, latents: Any, generator: Any) -> Any:
     구현했다가 "다른 시드가 같은 이미지를 낸다" 로 테스트가 잡았다.
 
     `denoise=1.0` 은 "처음부터 만든다" 는 뜻이므로 들어온 잠재의 **shape 만**
-    쓰고 내용은 노이즈로 대체한다. 스케줄러마다 출발 분산이 다르므로
-    `init_noise_sigma` 를 곱한다.
+    쓰고 내용은 노이즈로 대체한다.
+
+    **여기서 `init_noise_sigma` 를 곱하지 않는다.** `pipe.prepare_latents()`
+    가 `latents` 인자를 받았는지와 무관하게 항상 `* scheduler.init_noise_sigma`
+    를 한 번 더 적용한다 (diffusers 의 `StableDiffusionPipeline`·
+    `StableDiffusionXLPipeline` 공통 구현). 여기서도 곱하면 이중 스케일링이 되어
+    잠재가 `sigma²` 배로 터진다 — 실제로 Euler(σ≈14.6)에서 latent std 가 190 대로
+    나가 디코드가 전부 노이즈였다. `denoise<1.0` 분기(`_add_noise`)는 이 함수를
+    타지 않으므로 영향 없다.
 
     노이즈는 cpu 에서 뽑는다 (design.md §9.4) — 제너레이터의 device 처리가
     백엔드마다 달라서, 그러지 않으면 같은 시드가 cuda 와 cpu 에서 다른 그림을 낸다.
@@ -826,9 +838,7 @@ def _initial_noise(pipe: Any, latents: Any, generator: Any) -> Any:
     import torch
 
     noise = torch.randn(latents.shape, generator=generator, dtype=torch.float32)
-    noise = noise.to(device=latents.device, dtype=latents.dtype)
-    sigma = getattr(pipe.scheduler, "init_noise_sigma", 1.0)
-    return noise * sigma
+    return noise.to(device=latents.device, dtype=latents.dtype)
 
 
 def _add_noise(pipe: Any, latents: Any, generator: Any, steps: int, start: int) -> Any:
