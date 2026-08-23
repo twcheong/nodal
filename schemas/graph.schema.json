@@ -39,12 +39,25 @@
                 "$ref": "#/$defs/Link"
               },
               {
-                "description": "JSON 리터럴. `$link` 키를 가진 객체는 링크로 해석되므로 리터럴이 될 수 없다.",
+                "$ref": "#/$defs/Param"
+              },
+              {
+                "description": "JSON 리터럴. `$link` · `$param` 키를 가진 객체는 각각 링크와 파라미터 참조로 해석되므로 리터럴이 될 수 없다.",
                 "not": {
-                  "required": [
-                    "$link"
-                  ],
-                  "type": "object"
+                  "anyOf": [
+                    {
+                      "required": [
+                        "$link"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "required": [
+                        "$param"
+                      ],
+                      "type": "object"
+                    }
+                  ]
                 }
               }
             ]
@@ -99,6 +112,92 @@
       },
       "title": "NodeMeta",
       "type": "object"
+    },
+    "Param": {
+      "additionalProperties": false,
+      "description": "서브그래프 **정의 안에서** 그 정의의 파라미터를 가리키는 참조.\n\nJSON에서는 ``{\"$param\": \"<이름>\"}`` 로 표현된다.\n\n정의 밖에서는 의미가 없다. 최상위 그래프의 입력 슬롯에 나타나면 검증이\n거부한다 (`PARAM_OUTSIDE_DEFINITION`) — 조용히 리터럴 딕셔너리로 취급하면\n실행 시점에 정체불명의 값이 노드로 들어간다.",
+      "properties": {
+        "$param": {
+          "description": "이 정의의 `params` 에 선언된 파라미터 이름",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "title": "$Param",
+          "type": "string"
+        }
+      },
+      "required": [
+        "$param"
+      ],
+      "title": "Param",
+      "type": "object"
+    },
+    "ParamDef": {
+      "additionalProperties": false,
+      "description": "서브그래프 파라미터 하나의 선언 — 인스턴스가 채우는 구멍이다.\n\nMCP `run_template(id, params)` 이 받는 파라미터가 정확히 이 목록이다\n(docs/design.md §12.3).\n\n`default` 가 **없거나 `null`** 이면 필수 파라미터다. 둘을 구분하지 않는 이유는\n캐논 문서에 빈 값이 두 가지 생기면 안 되기 때문이고, 카탈로그 타입 중 `null`\n을 정상 값으로 갖는 것이 없어 잃는 것이 없기 때문이다.",
+      "properties": {
+        "default": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null,
+          "description": "기본값. 없거나 null 이면 필수 파라미터다"
+        },
+        "type": {
+          "$ref": "#/$defs/JsonValue",
+          "description": "`types.json` 의 타입 표현식. 문자열(`\"INT\"`)이거나 구조화 형태(`{\"list\": \"Image\"}`)다"
+        },
+        "widget": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "위젯 힌트 (min·max·options 등). 열린 딕셔너리이고 실행은 읽지 않는다",
+          "title": "Widget",
+          "type": "object"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "ParamDef",
+      "type": "object"
+    },
+    "SubgraphDef": {
+      "additionalProperties": false,
+      "description": "재사용 가능한 워크플로 조각. **MCP 툴의 단위**다 (design.md §12.2).\n\n정의는 캐논 문서 **안에** 산다. 외부 파일 참조가 아니다 — 문서 하나가 그대로\n재현 가능한 레시피여야 PNG `iTXt` 워크플로 복원(§6)이 성립하기 때문이다.\n\n경계는 두 방향으로 뚫린다:\n\n- **들어오는 값**은 `params` 로 선언하고 정의 안에서 `{\"$param\": ...}` 로 쓴다\n- **나가는 값**은 `outputs` 가 정의 안의 (노드, 소켓)에 이름을 붙인 것이다.\n  인스턴스를 소비하는 링크 `{\"$link\": [\"<인스턴스>\", \"<이름>\"]}` 가 이 이름을\n  가리키고, 평탄화가 그것을 안쪽 노드로 재배선한다 (§5.5)",
+      "properties": {
+        "nodes": {
+          "additionalProperties": false,
+          "description": "정의 안의 노드. 최상위 그래프와 **별개의 이름공간**이다",
+          "patternProperties": {
+            "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,63}$": {
+              "$ref": "#/$defs/Node"
+            }
+          },
+          "title": "Nodes",
+          "type": "object"
+        },
+        "outputs": {
+          "additionalProperties": false,
+          "description": "인스턴스가 내보내는 출력 소켓 이름 → 정의 안의 (노드, 소켓)",
+          "patternProperties": {
+            "^[A-Za-z_][A-Za-z0-9_]*$": {
+              "$ref": "#/$defs/Link"
+            }
+          },
+          "title": "Outputs",
+          "type": "object"
+        },
+        "params": {
+          "additionalProperties": false,
+          "description": "이 정의가 받는 파라미터. 인스턴스의 입력 소켓이 된다",
+          "patternProperties": {
+            "^[A-Za-z_][A-Za-z0-9_]*$": {
+              "$ref": "#/$defs/ParamDef"
+            }
+          },
+          "title": "Params",
+          "type": "object"
+        }
+      },
+      "title": "SubgraphDef",
+      "type": "object"
     }
   },
   "$id": "https://nodal.local/schemas/graph.schema.json",
@@ -106,6 +205,17 @@
   "additionalProperties": false,
   "description": "캐논 그래프 문서.\n\n`ui` 는 프론트엔드 전용이다. 백엔드는 이 필드를 읽지 않으며, 없어도 완전히\n동작한다. 이 격리가 스키마 레벨에서 명시되는 것이 설계의 핵심이다.",
   "properties": {
+    "definitions": {
+      "additionalProperties": false,
+      "description": "서브그래프 정의 (M5, §5.5). 노드 타입 `subgraph.<이름>` 이 참조한다. 문서 안에 사는 이유는 문서 하나가 자기완결적이어야 하기 때문이다",
+      "patternProperties": {
+        "^[A-Za-z_][A-Za-z0-9_]*$": {
+          "$ref": "#/$defs/SubgraphDef"
+        }
+      },
+      "title": "Definitions",
+      "type": "object"
+    },
     "id": {
       "format": "uuid",
       "title": "Id",

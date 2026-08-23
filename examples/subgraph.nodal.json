@@ -1,0 +1,95 @@
+{
+  "nodal_version": "1",
+  "id": "018f2c00-0000-7000-8000-0000000d0001",
+
+  "definitions": {
+    "thumbnail": {
+      "params": {
+        "source": {
+          "type": "Image"
+        },
+        "size": {
+          "type": "INT",
+          "default": 256,
+          "widget": { "min": 16, "max": 2048, "step": 8 }
+        }
+      },
+      "nodes": {
+        "fit": {
+          "type": "image.Resize",
+          "inputs": {
+            "image": { "$param": "source" },
+            "width": { "$param": "size" },
+            "height": { "$param": "size" },
+            "method": "lanczos"
+          },
+          "meta": {
+            "title": "정사각으로 맞추기",
+            "notes": "밖에서 오는 값은 링크가 아니라 $param 이다 — 정의는 자기 노드만 볼 수 있다"
+          }
+        }
+      },
+      "outputs": {
+        "image": { "$link": ["fit", "image"] }
+      }
+    }
+  },
+
+  "nodes": {
+    "source": {
+      "type": "image.Load",
+      "inputs": { "path": "examples/sample.png" },
+      "meta": { "title": "샘플 읽기" }
+    },
+
+    "small": {
+      "type": "subgraph.thumbnail",
+      "inputs": {
+        "source": { "$link": ["source", "image"] },
+        "size": 128
+      },
+      "meta": {
+        "title": "썸네일 128",
+        "notes": "인스턴스 둘이 같은 정의를 쓴다. 평탄화되면 각자 자기 사본을 갖고 ID 는 small:fit · large:fit 이 된다"
+      }
+    },
+
+    "large": {
+      "type": "subgraph.thumbnail",
+      "inputs": {
+        "source": { "$link": ["source", "image"] }
+      },
+      "meta": {
+        "title": "썸네일 (기본 256)",
+        "notes": "size 를 주지 않았다 — 정의가 선언한 기본값 256 이 쓰인다"
+      }
+    },
+
+    "save_small": {
+      "type": "image.Save",
+      "inputs": {
+        "image": { "$link": ["small", "image"] },
+        "embed_workflow": true
+      },
+      "meta": {
+        "title": "128 저장",
+        "notes": "인스턴스의 출력 소켓 이름은 정의의 outputs 가 선언한 것이다"
+      }
+    },
+
+    "save_large": {
+      "type": "image.Save",
+      "inputs": {
+        "image": { "$link": ["large", "image"] },
+        "embed_workflow": true
+      },
+      "meta": { "title": "256 저장" }
+    }
+  },
+
+  "outputs": ["save_small", "save_large"],
+
+  "ui": {
+    "$comment": "M5.0 계약 예제. 문서 검증(parse_graph + validate_graph)은 통과하고, 실행은 아직 되지 않는다 — 평탄화가 M5.3 이다"
+  }
+}

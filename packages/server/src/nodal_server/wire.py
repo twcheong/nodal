@@ -65,6 +65,7 @@ def issue_models(issues: Sequence[GraphIssue]) -> list[IssueModel]:
             message=issue.message,
             node_id=issue.node_id,
             socket=issue.socket,
+            definition=issue.definition,
             location=issue.location,
         )
         for issue in issues

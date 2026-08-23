@@ -62,13 +62,19 @@ from .executor import (
 from .graph import (
     GRAPH_VERSION,
     LINK_KEY,
+    PARAM_KEY,
+    SUBGRAPH_TYPE_PREFIX,
     Graph,
     InputValue,
     Link,
     Node,
     NodeMeta,
+    Param,
+    ParamDef,
+    SubgraphDef,
     check_graph,
     parse_graph,
+    subgraph_name,
     validate_graph,
 )
 from .models import (
@@ -174,6 +180,13 @@ __all__ = [  # noqa: RUF022
     "check_graph",
     "parse_graph",
     "validate_graph",
+    # --- 서브그래프 (M5.0 계약: 표현과 검증만. 평탄화는 M5.3)
+    "PARAM_KEY",
+    "SUBGRAPH_TYPE_PREFIX",
+    "Param",
+    "ParamDef",
+    "SubgraphDef",
+    "subgraph_name",
     # --- 타입 시스템 (구현됨, 규칙은 types.json)
     "BOOL",
     "CLIP",

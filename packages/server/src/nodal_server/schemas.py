@@ -71,13 +71,21 @@ class IssueModel(_Model):
     """`nodal.GraphIssue` 의 전송 형태. 필드 이름을 그대로 유지한다.
 
     `location` 은 `nodes.<id>.inputs.<socket>` 경로다. 프론트는 이것만으로
-    캔버스의 해당 소켓을 찾아 빨갛게 칠할 수 있다.
+    캔버스의 해당 소켓을 찾아 빨갛게 칠할 수 있다. 문제가 서브그래프 정의 안에
+    있으면 `definitions.<이름>.` 이 앞에 붙는다 (M5).
     """
 
     code: str = Field(description="안정적인 기계 판독용 코드 (`type_mismatch` 등)")
     message: str = Field(description="사람이 읽는 설명")
     node_id: str | None = Field(default=None, description="문제가 귀속되는 노드")
     socket: str | None = Field(default=None, description="문제가 귀속되는 소켓")
+    definition: str | None = Field(
+        default=None,
+        description=(
+            "문제가 서브그래프 정의 안에 있으면 그 정의 이름. `node_id` 만으로는 "
+            "위치가 모호하다 — 정의마다 별개의 이름공간이라 ID 가 겹칠 수 있다"
+        ),
+    )
     location: str = Field(description="캐논 문서 안의 경로. 그래프 전역이면 `graph`")
 
 

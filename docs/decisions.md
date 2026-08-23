@@ -42,6 +42,113 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-23 (3) · Claude Code · M5.0 서브그래프 계약 (D1·D2·D3, 사용자 확정)
+
+**계약 커밋이다. 구현이 아니다.** 평탄화(M5.3) · executor(M5.2) · 노드(M5.4) ·
+프론트(M5.5)는 건드리지 않았다. 바뀐 것은 `graph.py` 의 모델과 검증, 그리고
+문서다.
+
+#### D1 — 서브그래프는 캐논 문서 안에 산다
+
+- **결정**: `Graph.definitions: dict[str, SubgraphDef]`. 인스턴스는 노드 타입
+  `subgraph.<이름>` 으로 참조한다. **외부 파일 참조가 아니다**
+- **이유**: 문서가 자기완결적이지 않으면 PNG `iTXt` 워크플로 복원(§6)이 반쪽이
+  되고 "문서 하나가 곧 재현 가능한 레시피"(§1.2 ①)가 거짓이 된다. 템플릿
+  카탈로그의 `.nodal.json` 은 각자 자기 정의를 들고 다닌다 (§12.8)
+- **대가**: 같은 정의를 쓰는 문서 열 개가 그것을 열 번 담는다. 받아들인다 —
+  캐시 키가 입력 시그니처 기반이라 중복이 재계산으로 이어지지 않는다
+
+#### D2 — `$param` 은 `$link` 옆의 두 번째 예약 키
+
+- **결정**: `SubgraphDef` 는 `params`(이름 → 타입·기본값·위젯 힌트)와 `nodes` 를
+  갖고, 정의 안에서 파라미터는 `{"$param": "<이름>"}` 으로 가리킨다.
+  `_input_kind` 판별이 두 갈래에서 **세 갈래**(link / param / literal)로 넓어졌다
+- **`$param` 은 정의 안에서만 유효하다.** 최상위에 나타나면 거부한다
+  (`param_outside_definition`) — 채울 사람이 없는 구멍이고, 조용히 리터럴
+  딕셔너리로 새면 정체불명의 값이 노드까지 흘러간다
+
+##### D2 를 넘어선 추가 — `SubgraphDef.outputs` (**사용자 확인 필요**)
+
+- **무엇**: `outputs: dict[str, Link]` — 인스턴스가 내보내는 소켓 이름 → 정의
+  안의 `(노드, 소켓)`
+- **왜 넣었나**: D2 의 문구는 "params 와 nodes 를 갖는다" 였지만, **그 둘만으로는
+  경계 링크 재배선이 정의되지 않는다.** 밖에서 `{"$link": ["thumb", "image"]}`
+  라고 썼을 때 `image` 가 안쪽의 무엇인지 말해 주는 것이 문서 어디에도 없다.
+  §5.5 가 서술해야 할 평탄화 규칙(작업 지시 1번)이 이 필드 없이는 쓸 수 없었다
+- **검토한 대안**: ① 정의에 단일 종단 노드를 두고 그 출력 소켓을 그대로
+  노출 — 종단이 둘이면 이름이 충돌한다 ② 소켓 이름을 `<노드>:<소켓>` 로
+  수식 — 정의의 내부 구조가 밖으로 새고, 리팩터링하면 바깥 링크가 깨진다
+- **되돌릴 수 있나**: 예, 아직 아무도 쓰지 않는다. **다른 모양을 원하면
+  M5.3 착수 전에 말해 달라** — 평탄화가 이 필드를 읽기 시작하면 굳는다
+
+#### D3 — `IS_CHANGED` 는 리터럴/위젯 입력만 받는다
+
+- **결정**: `@staticmethod is_changed(...) -> str`. 반환은 문자열 토큰이고,
+  **링크로 들어오는 값은 주지 않는다.** 시그니처에 링크된 소켓 이름을 적으면
+  엔진이 거부한다 (조용히 `None` 을 넣지 않는다)
+- **이유는 순서다**: 훅은 캐시 조회 **전에** 평가돼야 하는데
+  (`executor.py` 의 `cache_key_for` 가 `cache.get` 보다 앞이다) 링크 값은 상류를
+  실행한 뒤에야 존재한다. 링크 값을 받겠다고 하면 "캐시를 쓸지 정하려고 상류를
+  전부 실행한다" 가 되어 캐시가 캐시가 아니게 된다
+- **왜 bool 이 아니라 토큰인가**: "바뀌었나" 는 무엇과 비교하는지를 노드가
+  기억해야 답할 수 있고, 그러면 노드가 상태를 갖는다. 토큰은 비교를 캐시 키에
+  맡긴다 — `cache_key(..., is_changed_token=...)` 는 M1 부터 이미 그 자리에 있었다
+- **하류 전파는 공짜다**: `cache_key_for` 가 상류의 **키**를 자기 입력으로 쓰므로
+  토큰이 바뀌면 하류 키가 연쇄적으로 바뀐다. 무효화를 전파하는 코드는 없다
+- **이번 커밋에 구현은 없다.** 노드 API 서술만 `design.md` §5.3 에 넣었다
+
+#### 함께 넓힌 것 — `GraphIssue.definition` (에러 어휘 변경)
+
+- **결정**: `GraphIssue` 에 `definition: str | None` 을 추가하고 `location` 이
+  `definitions.<이름>.nodes.<노드>.inputs.<소켓>` 을 낸다. 서버 `IssueModel` 과
+  `wire.py` 도 같이 넓혔다
+- **이유**: 정의마다 **별개의 이름공간**이라 `node_id` 만으로는 위치가 모호하다.
+  서로 다른 정의가 같은 노드 ID 를 쓸 수 있다. "어느 노드 어느 소켓" 을 지목하라는
+  규칙(AGENTS.md 코딩 컨벤션)이 정의 안에서도 참이려면 이 필드가 있어야 한다
+- **비파괴적이다**: 기본값이 있는 마지막 필드이고, 전송 형태에서도 선택 필드다.
+  `schemas/openapi.json` 과 `apps/web/src/api/generated.ts` 를 같은 커밋에서
+  재생성했다 (협업 규칙 8)
+
+#### 검증을 어느 층에 두었나
+
+문서 검증(`validate_graph`)은 **레지스트리를 몰라도 판정되는 것만** 본다 —
+`unknown_subgraph` · `unknown_param` · `param_outside_definition` ·
+`subgraph_external_link` · `unknown_output_socket` · `subgraph_cycle`.
+노드 팩이 하나도 설치되지 않은 서버에서도 문서의 자기모순은 답할 수 있어야 한다.
+
+**정의 간 순환만 예외적으로 여기 있다.** 일반 사이클은 실행 엔진의 역방향
+용해가 잡지만(§5.1), 정의 순환은 **실행에 도달하지 못한다** — 평탄화가 먼저
+무한히 펼쳐진다.
+
+#### `default` 없음 = `null` = 필수
+
+- **결정**: `ParamDef.default` 가 없는 것과 `null` 인 것을 구분하지 않는다.
+  둘 다 필수 파라미터다
+- **이유**: 구분하면 캐논 문서에 빈 값이 두 가지 생긴다 (`to_dict` 가
+  `exclude_defaults` 로 압축하므로 왕복하면 어차피 합쳐진다). 카탈로그 타입 중
+  `null` 을 정상 값으로 갖는 것이 없어 잃는 것도 없다
+
+#### 하지 않은 것과 그 자리에 남은 구멍
+
+- **`types.json` 은 건드리지 않았다.** 새 닫힌 어휘가 없다. `$param` 은
+  `graph.schema.json` 을 타고 프론트로 가고, 그것은 `$link` 가 이미 쓰는 경로다
+  (`apps/web/src/graph/types.ts` + `schema.test.ts` 계약 테스트)
+- **인스턴스가 필수 파라미터를 채웠는지는 아무도 검증하지 않는다.** 문서 검증은
+  타입을 모르고 `validate_for_execution` 은 `subgraph.*` 를 모른다.
+  `design.md` §11 열린 질문 10·11 로 남겼다
+- **`/api/graph/validate` 는 서브그래프 문서를 아직 통과시키지 못한다.**
+  그 엔드포인트는 `validate_for_execution`(executor.py)을 부르고, 거기서
+  `subgraph.thumbnail` 이 `unknown_node_type` 이 된다. executor.py 는 M5.2 이므로
+  이번 범위 밖이다 — 열린 질문 14
+
+- **영향 범위**: `packages/core/src/nodal/{graph.py,errors.py,__init__.py}`,
+  `packages/server/src/nodal_server/{schemas.py,wire.py}`,
+  `packages/core/tests/test_subgraph.py`(새 파일),
+  `schemas/{graph.schema.json,openapi.json}`, `apps/web/src/api/generated.ts`,
+  `examples/subgraph.nodal.json`(새 파일), `docs/{design,decisions}.md`
+- **되돌릴 수 있나**: 예. 아직 이 모델을 읽는 실행 코드가 없다. 평탄화가
+  붙는 순간부터는 아니다
+
 ### 2026-08-23 (2) · Claude Code (Cowork) · MCP 표면의 열린 질문 5~9 해소
 
 같은 날 아래 항목의 후속이다. **저장소를 직접 확인하고 쓴 첫 항목**이다 — 앞 항목은
