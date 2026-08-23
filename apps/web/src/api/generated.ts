@@ -372,6 +372,13 @@ export interface components {
          */
         Graph: {
             /**
+             * Definitions
+             * @description 서브그래프 정의 (M5, §5.5). 노드 타입 `subgraph.<이름>` 이 참조한다. 문서 안에 사는 이유는 문서 하나가 자기완결적이어야 하기 때문이다
+             */
+            definitions?: {
+                [key: string]: components["schemas"]["SubgraphDef"];
+            };
+            /**
              * Id
              * Format: uuid
              */
@@ -484,7 +491,8 @@ export interface components {
          * @description `nodal.GraphIssue` 의 전송 형태. 필드 이름을 그대로 유지한다.
          *
          *     `location` 은 `nodes.<id>.inputs.<socket>` 경로다. 프론트는 이것만으로
-         *     캔버스의 해당 소켓을 찾아 빨갛게 칠할 수 있다.
+         *     캔버스의 해당 소켓을 찾아 빨갛게 칠할 수 있다. 문제가 서브그래프 정의 안에
+         *     있으면 `definitions.<이름>.` 이 앞에 붙는다 (M5).
          */
         IssueModel: {
             /**
@@ -492,6 +500,11 @@ export interface components {
              * @description 안정적인 기계 판독용 코드 (`type_mismatch` 등)
              */
             code: string;
+            /**
+             * Definition
+             * @description 문제가 서브그래프 정의 안에 있으면 그 정의 이름. `node_id` 만으로는 위치가 모호하다 — 정의마다 별개의 이름공간이라 ID 가 겹칠 수 있다
+             */
+            definition?: string | null;
             /**
              * Location
              * @description 캐논 문서 안의 경로. 그래프 전역이면 `graph`
@@ -542,7 +555,7 @@ export interface components {
         Node: {
             /** Inputs */
             inputs?: {
-                [key: string]: components["schemas"]["Link"] | unknown;
+                [key: string]: components["schemas"]["Link"] | components["schemas"]["Param"] | unknown;
             };
             meta?: components["schemas"]["NodeMeta"];
             /**
@@ -657,6 +670,47 @@ export interface components {
             type: string | components["schemas"]["ListTypeExpr"] | components["schemas"]["UnionTypeExpr"] | components["schemas"]["OpaqueTypeExpr"] | components["schemas"]["TensorTypeExpr"];
         };
         /**
+         * Param
+         * @description 서브그래프 **정의 안에서** 그 정의의 파라미터를 가리키는 참조.
+         *
+         *     JSON에서는 ``{"$param": "<이름>"}`` 로 표현된다.
+         *
+         *     정의 밖에서는 의미가 없다. 최상위 그래프의 입력 슬롯에 나타나면 검증이
+         *     거부한다 (`PARAM_OUTSIDE_DEFINITION`) — 조용히 리터럴 딕셔너리로 취급하면
+         *     실행 시점에 정체불명의 값이 노드로 들어간다.
+         */
+        Param: {
+            /**
+             * $Param
+             * @description 이 정의의 `params` 에 선언된 파라미터 이름
+             */
+            $param: string;
+        };
+        /**
+         * ParamDef
+         * @description 서브그래프 파라미터 하나의 선언 — 인스턴스가 채우는 구멍이다.
+         *
+         *     MCP `run_template(id, params)` 이 받는 파라미터가 정확히 이 목록이다
+         *     (docs/design.md §12.3).
+         *
+         *     `default` 가 **없거나 `null`** 이면 필수 파라미터다. 둘을 구분하지 않는 이유는
+         *     캐논 문서에 빈 값이 두 가지 생기면 안 되기 때문이고, 카탈로그 타입 중 `null`
+         *     을 정상 값으로 갖는 것이 없어 잃는 것이 없기 때문이다.
+         */
+        ParamDef: {
+            /** @description 기본값. 없거나 null 이면 필수 파라미터다 */
+            default?: components["schemas"]["JsonValue"];
+            /** @description `types.json` 의 타입 표현식. 문자열(`"INT"`)이거나 구조화 형태(`{"list": "Image"}`)다 */
+            type: components["schemas"]["JsonValue"];
+            /**
+             * Widget
+             * @description 위젯 힌트 (min·max·options 등). 열린 딕셔너리이고 실행은 읽지 않는다
+             */
+            widget?: {
+                [key: string]: components["schemas"]["JsonValue"];
+            };
+        };
+        /**
          * RunDetail
          * @description `GET /api/runs/{id}` — 상태와 결과.
          *
@@ -749,6 +803,48 @@ export interface components {
             /** Started At */
             started_at?: string | null;
             status: components["schemas"]["RunStatus"];
+        };
+        /**
+         * SubgraphDef
+         * @description 재사용 가능한 워크플로 조각. **MCP 툴의 단위**다 (design.md §12.2).
+         *
+         *     정의는 캐논 문서 **안에** 산다. 외부 파일 참조가 아니다 — 문서 하나가 그대로
+         *     재현 가능한 레시피여야 PNG `iTXt` 워크플로 복원(§6)이 성립하기 때문이다.
+         *
+         *     경계는 두 방향으로 뚫린다:
+         *
+         *     - **들어오는 값**은 `params` 로 선언하고 정의 안에서 `{"$param": ...}` 로 쓴다
+         *     - **나가는 값**은 `returns` 가 정의 안의 (노드, 소켓)에 이름을 붙인 것이다.
+         *       인스턴스를 소비하는 링크 `{"$link": ["<인스턴스>", "<이름>"]}` 가 이 이름을
+         *       가리키고, 평탄화가 그것을 안쪽 노드로 재배선한다 (§5.5)
+         *
+         *     `Graph.outputs` 가 아니라 `returns` 인 이유: 그쪽은 **실행을 요청할 노드
+         *     목록**이고 이쪽은 **노출할 소켓**이다. 한 문서 안에서 한 단계 차이로 나란히
+         *     놓이는 두 필드가 같은 단어면 반드시 헷갈린다. 노드 SDK 가 같은 역할을 이미
+         *     `returns` 로 부른다는 점도 맞물린다 — 인스턴스는 밖에서 보면 노드다.
+         */
+        SubgraphDef: {
+            /**
+             * Nodes
+             * @description 정의 안의 노드. 최상위 그래프와 **별개의 이름공간**이다
+             */
+            nodes?: {
+                [key: string]: components["schemas"]["Node"];
+            };
+            /**
+             * Params
+             * @description 이 정의가 받는 파라미터. 인스턴스의 입력 소켓이 된다
+             */
+            params?: {
+                [key: string]: components["schemas"]["ParamDef"];
+            };
+            /**
+             * Returns
+             * @description 인스턴스가 내보내는 출력 소켓 이름 → 정의 안의 (노드, 소켓). `Graph.outputs`(실행 요청 노드 목록)와 다른 것이라 이름도 다르다
+             */
+            returns?: {
+                [key: string]: components["schemas"]["Link"];
+            };
         };
         /** TensorBodyExpr */
         TensorBodyExpr: {

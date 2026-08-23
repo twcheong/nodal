@@ -27,6 +27,19 @@ class IssueCode(StrEnum):
     #: `outputs`에 같은 노드가 두 번 이상 등장.
     DUPLICATE_OUTPUT = "duplicate_output"
 
+    # --- 서브그래프 (M5, design.md §5.5). 레지스트리를 몰라도 판정할 수 있다.
+
+    #: 노드 타입이 `subgraph.<이름>` 인데 그 정의가 문서에 없음.
+    UNKNOWN_SUBGRAPH = "unknown_subgraph"
+    #: `$param`이 그 정의에 선언되지 않은 파라미터를 가리킴.
+    UNKNOWN_PARAM = "unknown_param"
+    #: `$param`을 정의 밖(최상위 그래프)에서 사용함.
+    PARAM_OUTSIDE_DEFINITION = "param_outside_definition"
+    #: 정의 안의 링크가 그 정의 밖의 노드를 가리킴.
+    SUBGRAPH_EXTERNAL_LINK = "subgraph_external_link"
+    #: 정의들이 서로를(또는 자기를) 참조해 순환함.
+    SUBGRAPH_CYCLE = "subgraph_cycle"
+
     # --- 아래는 레지스트리를 알아야만 판정할 수 있는 것들 (M1).
     #     `nodal.executor.validate_for_execution` 이 만든다.
 
@@ -53,21 +66,38 @@ class GraphIssue:
         message: 사람이 읽는 설명.
         node_id: 문제가 귀속되는 노드. 그래프 전역 문제면 ``None``.
         socket: 문제가 귀속되는 입력 소켓 이름. 노드 전체 문제면 ``None``.
+        definition: 문제가 서브그래프 정의 안에 있으면 그 정의 이름 (M5).
+            최상위 그래프의 문제면 ``None``.
+
+    Note:
+        `definition` 없이 `node_id` 만으로는 위치가 **모호하다.** 정의마다
+        별개의 이름공간이라 서로 다른 정의가 같은 노드 ID 를 쓸 수 있기
+        때문이다. 정의 안의 문제는 반드시 이 필드를 채운다.
     """
 
     code: IssueCode
     message: str
     node_id: str | None = None
     socket: str | None = None
+    definition: str | None = None
 
     @property
     def location(self) -> str:
         """캐논 문서 안에서의 경로. 프론트가 그대로 소비한다."""
+        if self.definition is None:
+            if self.node_id is None:
+                return "graph"
+            if self.socket is None:
+                return f"nodes.{self.node_id}"
+            return f"nodes.{self.node_id}.inputs.{self.socket}"
+
+        base = f"definitions.{self.definition}"
         if self.node_id is None:
-            return "graph"
+            # 노드가 없는 정의 내부 문제는 정의의 선언부다 — `params` 나 `returns`.
+            return f"{base}.returns.{self.socket}" if self.socket else base
         if self.socket is None:
-            return f"nodes.{self.node_id}"
-        return f"nodes.{self.node_id}.inputs.{self.socket}"
+            return f"{base}.nodes.{self.node_id}"
+        return f"{base}.nodes.{self.node_id}.inputs.{self.socket}"
 
     def __str__(self) -> str:
         return f"{self.location}: {self.message} [{self.code}]"
