@@ -42,6 +42,94 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-23 (6) · Claude Code · M5.1b 구현 — 소켓 단위 블로킹 · 캐시 히트(G1) · 확장 봉인
+
+`b638968`(M5.1a)이 스펙으로 적은 E1·E2 를 구현했다. **맨몸 블로커 경로의 동작은
+바꾸지 않았다** — Codex 프로브 결과가 회귀 기준이었고 그대로 재현된다:
+`executed ('sibling',)` · `blocked ('downstream_1','downstream_2','blocker')`.
+
+#### E2 구현 — 네 곳이 함께 움직였다
+
+- `_classify` 가 `NodeResult` 안의 블로커를 알아본다. 결과는 **`Success` 에
+  `blocked_sockets` 필드를 더해** 싣는다
+- `ExecutionList._blocked` 키를 `str` → `(str, str | None)` 으로 넓혔다.
+  소켓이 `None` 이면 **노드 전체** 블로킹이다
+- `blocker_for(node, socket)` 는 노드 전체 블로킹이면 어느 소켓을 묻든 답하고,
+  `socket=None` 으로 물으면 **노드 전체 블로킹만** 답한다 — 소켓 하나가 막혔다고
+  노드가 막힌 것은 아니기 때문이다 (그 노드는 `executed` 다)
+- `_inherited_blocker` 가 링크의 **출처 소켓**을 본다. 이 한 줄이 "같은 노드의
+  다른 출력을 쓰는 하류는 산다" 를 만든다
+- `propagate_blocker(..., sockets=...)` 와 `_consumers_of` 가 링크가 실제로 어느
+  소켓을 가리키는지 다시 본다. `dyn.dependents` 는 노드 단위라 그것만으로는
+  구분할 수 없다
+
+##### 왜 새 `NodeOutcome` 을 만들지 않았나
+
+`PartiallyBlocked` 를 여섯 번째 결과 타입으로 두는 안을 먼저 봤다. 버렸다 —
+실행 루프의 `Success` 분기가 하는 일(캐시 저장 · `node.done` · 참조 생성)을
+**두 벌로 복사**해야 하고, 한쪽만 고치는 날이 온다. 부분 블로킹은 "실행에
+성공했는데 출력 일부가 없다" 이지 별개의 결과 종류가 아니다.
+
+##### 막힌 소켓의 값은 `results` 에 넣지 않는다
+
+하류는 어차피 막혀 읽지 않는다. 혹시 전파에 구멍이 있어도 `resolve_inputs` 가
+"출력 소켓이 없다" 고 **노드와 소켓을 지목해** 실패한다 — 블로커가 인자로
+흘러드는 것보다 훨씬 낫다. `_output_refs` 도 블로커를 보지 않게 되어 빈
+`OutputRef` 가 생기지 않는다.
+
+#### G1 — 캐시 히트 경로 (사용자 결정)
+
+- **결정**: 캐시에는 블로커를 **그대로** 저장하고, **히트 시 알아본다.** 히트한
+  출력에 블로커가 있으면 마킹·전파는 갓 실행한 경로와 **같은 함수**를 탄다
+  (`_blocked_sockets` · `_block_sockets` 를 양쪽이 쓴다)
+- **왜 빼고 저장하지 않나**: 히트가 "출력이 없는 정상 결과" 로 보여 하류가 그냥
+  실행된다. 지금 고치려는 버그와 같은 모양이 된다
+- **캐시 히트한 노드는 `cached` 가 아니라 `blocked` 로 보고한다** (사용자 결정).
+  세 집합은 서로소로 유지된다
+- ⚠️ **알아 둘 비대칭**: 같은 노드가 1회차엔 `executed`, 2회차엔 `blocked` 로
+  보고된다 (1회차는 실제로 실행했고 2회차는 캐시에서 왔다). `cached` 로 보고하면
+  다른 노드와 같은 모양이 되지만, 그러면 "블로커를 낸 노드" 가 실행 보고에서
+  조용해진다. **후자가 더 나쁘다고 보고 결정대로 갔다** — 되돌리려면 한 줄이다
+  (`_block_sockets(..., own=False)`)
+- 확인함: 부분 블로킹 그래프를 같은 캐시로 두 번 돌리면 2회차에 **아무 노드도
+  재실행되지 않고**(`calls []`) 블로킹은 그대로 전파된다
+
+#### E1 — 확장 봉인
+
+`executor.py` 의 `Expanded` 분기가 `NotImplementedError` 를 던진다. 메시지가
+**어느 노드가 무슨 타입으로** 확장을 시도했는지 지목하고 §5.2 를 가리킨다
+(AGENTS.md: 익명 에러 금지). `splice` · `DynamicGraph` · `Expanded` 는 남겨
+뒀다 — M5.4 에서 다시 연다.
+
+봉인 전에는 `splice` 뒤에 `unstage()` 를 불렀고, `unstage` 는 노드를 `pending`
+에 되돌리기만 해서 **같은 노드가 다시 확장하는 무한 루프**였다. 지금은 즉시
+멈춘다 (확인함).
+
+- **영향 범위**: `packages/core/src/nodal/executor.py`, `docs/design.md`
+  §1.1 ④ · §5.3
+- **되돌릴 수 있나**: E2·G1 은 예. E1 은 봉인 자체가 되돌리기 쉬운 형태다
+
+#### Codex(M5.1c)에게 — `codex/m5-engine-tests` 7개의 현재 상태
+
+이 브랜치에서 실제로 돌려 본 결과다. **테스트는 손대지 않았다** (M5.1c 몫).
+
+| 테스트 | 결과 |
+|---|---|
+| `test_blocker.py::test_blocker_propagates_to_all_downstream_nodes` | ✅ 초록 |
+| `test_blocker.py::test_blocked_nodes_are_neither_executed_nor_cached` | ✅ 초록 |
+| `test_blocker.py::test_blocker_does_not_stop_an_independent_sibling_branch` | ⚠️ 의미 단언 3개는 초록, **마지막 `calls` 순서 단언만 실패** |
+| `test_expansion.py` 4개 | ❌ 봉인이라 통과 불가 — `NotImplementedError` 를 기대하는 형태로 바꾸거나 xfail |
+
+**`calls` 순서 단언은 테스트 쪽이 틀렸다.** `assert calls == ["blocker", "sibling"]`
+인데 실제는 `["sibling", "blocker"]` 다. 이것은 블로커 의미가 아니라 **출력 노드
+우선 휴리스틱**(§1.1 ②)의 스케줄링 순서이고, main 에서도 같은 순서였다 —
+Codex 자신의 프로브 결과(`calls ['sibling','blocker']`)와도 일치한다. 집합 비교나
+멤버십 검사로 완화하는 것을 권한다.
+
+참고로 **main 에서는 블로커 3개가 전부** `unsupported operand type(s) for +:
+'ExecutionBlocker' and 'int'` **로 실패했다** — 블로커가 값으로 흘러 엉뚱한 노드에서
+타입 에러가 나는, §1.1 ④ 가 서술한 바로 그 증상이다.
+
 ### 2026-08-23 (5) · Claude Code · M5.0b — `returns` rename · 평탄화를 검증 안으로
 
 `dee03f0` 계약의 마무리다. 그 커밋이 "사용자 확인 필요" 로 남긴 것과, `design.md`

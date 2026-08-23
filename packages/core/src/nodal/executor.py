@@ -169,9 +169,19 @@ class NodeOutcome:
 
 @dataclass(frozen=True, slots=True)
 class Success(NodeOutcome):
-    """정상 종료. `outputs` 는 소켓 이름 → 값."""
+    """정상 종료. `outputs` 는 소켓 이름 → 값.
+
+    `blocked_sockets` 가 비어 있지 않으면 **부분 블로킹**이다 (design.md §1.1 ④):
+    노드는 실제로 실행됐고(`executed`) 나머지 출력은 정상 값이지만, 여기 실린
+    소켓들은 값 대신 `ExecutionBlocker` 를 냈다.
+
+    블로킹인데도 `Blocked` 가 아니라 `Success` 인 이유: 실행 루프가 캐시 저장 ·
+    `node.done` · 참조 생성을 **똑같이** 해야 하기 때문이다. 분기를 나누면 그
+    셋이 두 벌이 되고, 한쪽만 고치는 날이 온다.
+    """
 
     outputs: Mapping[str, Any]
+    blocked_sockets: Mapping[str, ExecutionBlocker] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -470,7 +480,9 @@ class ExecutionList(TopologicalSort):
         self._registry = registry
         self._staged: str | None = None
         self._requested: set[str] = set()
-        self._blocked: dict[str, ExecutionBlocker] = {}
+        # 키는 (노드, 출력 소켓). 소켓이 None 이면 **노드 전체**가 막힌 것이다
+        # (맨몸 `ExecutionBlocker` 반환 또는 상류에서 상속). design.md §1.1 ④.
+        self._blocked: dict[tuple[str, str | None], ExecutionBlocker] = {}
         self._key_cache: dict[str, str] = {}
 
     @property
@@ -549,13 +561,30 @@ class ExecutionList(TopologicalSort):
             self.add_node(source)
             self.add_dependency(node_id, source)
 
-    def mark_blocked(self, node_id: str, blocker: ExecutionBlocker) -> None:
-        """이 노드를 블로커 상태로 표시한다. 하위 노드도 따라 막힌다."""
-        self._blocked[node_id] = blocker
+    def mark_blocked(
+        self, node_id: str, blocker: ExecutionBlocker, *, socket: str | None = None
+    ) -> None:
+        """블로커를 표시한다.
 
-    def blocker_for(self, node_id: str) -> ExecutionBlocker | None:
-        """이 노드에 걸린 블로커. 없으면 `None`."""
-        return self._blocked.get(node_id)
+        Args:
+            socket: 막힌 **출력** 소켓. `None` 이면 노드 전체가 막힌 것이고,
+                그 노드의 모든 출력이 막힌 것으로 취급된다.
+        """
+        self._blocked[(node_id, socket)] = blocker
+
+    def blocker_for(self, node_id: str, socket: str | None = None) -> ExecutionBlocker | None:
+        """이 출력에 걸린 블로커. 없으면 `None`.
+
+        노드 전체가 막혀 있으면 어느 소켓을 묻든 그 블로커가 나온다. 반대로
+        `socket=None` 으로 물으면 **노드 전체 블로킹만** 답한다 — 소켓 하나가
+        막혔다고 노드가 막힌 것은 아니기 때문이다 (그 노드는 `executed` 다).
+        """
+        whole = self._blocked.get((node_id, None))
+        if whole is not None:
+            return whole
+        if socket is None:
+            return None
+        return self._blocked.get((node_id, socket))
 
     def cache_key_for(self, node_id: str) -> str:
         """이 노드의 현재 캐시 키."""
@@ -694,9 +723,17 @@ async def execute(
             if schema.cacheable:
                 hit = cache.get(key)
                 if hit is not MISS:
-                    results[node_id] = hit
-                    cached.append(node_id)
-                    events.emit(NodeCached(t="node.cached", run_id=identifier, node_id=visible))
+                    # 캐시에 블로커가 실려 있을 수 있다 — 부분 블로킹 노드의
+                    # 출력을 그대로 저장하기 때문이다. 여기서 알아보지 않으면
+                    # 첫 실행만 맞고 두 번째 실행부터 블로커가 값으로 되살아난다
+                    # (design.md §5.3, decisions.md G1).
+                    hit_blocked = _blocked_sockets(hit)
+                    results[node_id] = _without(hit, hit_blocked)
+                    if hit_blocked:
+                        blocked.extend(_block_sockets(node_id, plan, hit_blocked, own=True))
+                    else:
+                        cached.append(node_id)
+                        events.emit(NodeCached(t="node.cached", run_id=identifier, node_id=visible))
                     plan.complete()
                     continue
 
@@ -710,10 +747,15 @@ async def execute(
 
             match outcome:
                 case Success():
-                    results[node_id] = outcome.outputs
+                    # 막힌 소켓은 `results` 에 넣지 않는다. 값이 없는 소켓이고,
+                    # 하류는 어차피 막혀 읽지 않는다. 혹시 전파에 구멍이 있어도
+                    # `resolve_inputs` 가 "출력 소켓이 없다" 고 **노드와 소켓을
+                    # 지목해** 실패한다 — 블로커가 인자로 흘러드는 것보다 낫다.
+                    visible_outputs = _without(outcome.outputs, outcome.blocked_sockets)
+                    results[node_id] = visible_outputs
                     executed.append(node_id)
                     try:
-                        refs = _output_refs(outcome.outputs, schema, asset_store)
+                        refs = _output_refs(visible_outputs, schema, asset_store)
                     except Exception as exc:
                         events.emit(
                             NodeError(
@@ -728,6 +770,8 @@ async def execute(
                         )
                         raise NodeExecutionError(visible, exc) from exc
                     if schema.cacheable:
+                        # 블로커까지 **그대로** 저장한다. 빼고 저장하면 히트 시
+                        # "출력이 없는 정상 결과" 로 보여 하류가 그냥 실행된다.
                         cache.set(key, outcome.outputs)
                     references[node_id] = refs
                     events.emit(
@@ -738,12 +782,26 @@ async def execute(
                             outputs=refs,
                         )
                     )
+                    if outcome.blocked_sockets:
+                        # 노드 자신은 `executed` 다 — 실제로 실행됐고 나머지
+                        # 출력은 값이다 (design.md §1.1 ④).
+                        blocked.extend(
+                            _block_sockets(node_id, plan, outcome.blocked_sockets, own=False)
+                        )
                     plan.complete()
 
-                case Expanded(subgraph):
-                    dyn.splice(node_id, subgraph)
-                    plan.invalidate_keys()
-                    plan.unstage()
+                case Expanded():
+                    # 봉인 (design.md §5.2, E1). 봉인 전에는 `splice` 뒤에
+                    # `unstage()` 를 불렀는데, `unstage` 는 노드를 pending 에
+                    # 되돌리기만 해서 같은 노드가 다시 확장하는 **무한 루프**가
+                    # 됐다. 열 때 채워야 할 것은 §5.2 "목표" 에 있다.
+                    raise NotImplementedError(
+                        f"nodes.{visible}: 노드 확장(서브그래프 반환)은 봉인돼 있다 "
+                        f"— 노드 타입 {dyn.node(node_id).type!r} 이 Expanded 를 돌려줬다. "
+                        "서브그래프는 로드가 아니라 검증 단계에서 평탄화된다 "
+                        "(design.md §5.2 · §12.7). 확장이 다시 필요하면 §5.2 의 "
+                        "'목표' 세 가지를 함께 구현해야 한다"
+                    )
 
                 case NeedsLazy(deps):
                     plan.add_deps(node_id, deps)
@@ -944,37 +1002,121 @@ def _classify(raw: Any, schema: NodeSchema) -> NodeOutcome:
 
     result = raw if isinstance(raw, NodeResult) else NodeResult(raw)
     try:
-        return Success(result.as_outputs(schema))
+        outputs = result.as_outputs(schema)
     except Exception as exc:
         return Failure(exc)
+    # 값 중 하나가 블로커면 **그 소켓만** 막힌다 (design.md §1.1 ④). 이것을 보지
+    # 않으면 블로커가 값처럼 하류 노드의 인자로 들어가고, 실패가 블로커를 만든
+    # 곳이 아니라 엉뚱한 노드의 타입 에러로 나타난다.
+    return Success(outputs, blocked_sockets=_blocked_sockets(outputs))
+
+
+def _blocked_sockets(outputs: Mapping[str, Any]) -> dict[str, ExecutionBlocker]:
+    """출력 중 `ExecutionBlocker` 인 소켓들.
+
+    갓 실행한 결과와 **캐시에서 꺼낸 결과**가 같은 판정을 받아야 하므로 한 곳에
+    둔다 (§5.3). 캐시가 블로커를 값으로 되살리면 첫 실행만 맞고 두 번째부터
+    틀린다.
+    """
+    return {
+        socket: value for socket, value in outputs.items() if isinstance(value, ExecutionBlocker)
+    }
+
+
+def _without(
+    outputs: Mapping[str, Any], blocked: Mapping[str, ExecutionBlocker]
+) -> Mapping[str, Any]:
+    """막힌 소켓을 뺀 출력. 하나도 안 막혔으면 원본을 그대로 돌려준다."""
+    if not blocked:
+        return outputs
+    return {socket: value for socket, value in outputs.items() if socket not in blocked}
+
+
+def _block_sockets(
+    node_id: str,
+    plan: ExecutionList,
+    blocked_sockets: Mapping[str, ExecutionBlocker],
+    *,
+    own: bool,
+) -> list[str]:
+    """부분 블로킹을 표시하고 하류로 전파한다.
+
+    갓 실행한 결과와 캐시 히트가 **같은 경로**를 타게 하려고 하나로 묶었다
+    (decisions.md G1). 둘로 나누면 한쪽만 고치는 날이 온다.
+
+    Args:
+        own: 이 노드 자신을 `blocked` 로 보고할지. 갓 실행한 노드는 `executed`
+            이므로 `False`, 캐시 히트는 `True` 다 (사용자 결정 G1).
+
+    Returns:
+        `blocked` 에 더할 노드 ID 들.
+    """
+    marked: list[str] = []
+    for socket, blocker in blocked_sockets.items():
+        plan.mark_blocked(node_id, blocker, socket=socket)
+    for socket, blocker in blocked_sockets.items():
+        marked.extend(propagate_blocker(node_id, plan, blocker, sockets=frozenset({socket})))
+    if own:
+        marked.append(node_id)
+    return marked
 
 
 def propagate_blocker(
     node_id: str,
     plan: ExecutionList,
     blocker: ExecutionBlocker,
+    *,
+    sockets: frozenset[str] | None = None,
 ) -> Sequence[str]:
     """블로커를 하위 노드로 전파한다 (design.md §1.1 ④).
 
+    Args:
+        sockets: 막힌 **출력 소켓** 이름들. `None` 이면 노드 전체가 막힌 것이라
+            이 노드를 읽는 모든 소비자가 막힌다. 집합을 주면 **그 소켓을 링크로
+            읽는 소비자만** 막히고, 다른 출력을 읽는 소비자는 산다.
+
     Returns:
         블로커 때문에 실행되지 않게 된 노드 ID 들.
+
+    Note:
+        전파된 노드는 **통째로** 막힌다. 입력 하나가 막히면 그 노드는 실행될 수
+        없고, 따라서 어떤 출력도 낼 수 없기 때문이다. 소켓 단위 블로킹은 노드가
+        스스로 만들어 낼 때만 생긴다.
     """
     dyn = plan._dyn
     marked: list[str] = []
-    frontier = [node_id]
+    frontier: list[tuple[str, frozenset[str] | None]] = [(node_id, sockets)]
     seen = {node_id}
 
     while frontier:
-        current = frontier.pop()
-        for consumer in dyn.dependents(current):
+        current, current_sockets = frontier.pop()
+        for consumer in _consumers_of(dyn, current, current_sockets):
             if consumer in seen or consumer not in plan.pending():
                 continue
             seen.add(consumer)
             plan.mark_blocked(consumer, blocker)
             marked.append(consumer)
-            frontier.append(consumer)
+            frontier.append((consumer, None))
 
     return marked
+
+
+def _consumers_of(
+    dyn: DynamicGraph,
+    source: str,
+    sockets: frozenset[str] | None,
+) -> Iterator[str]:
+    """`source` 의 (해당 소켓) 출력을 링크로 읽는 노드들.
+
+    `sockets` 가 `None` 이면 소켓을 가리지 않는다. `dyn.dependents` 는 노드
+    단위라서 그것만으로는 "같은 노드의 다른 출력을 쓰는 하류" 를 구분할 수 없다
+    — 링크가 실제로 어느 소켓을 가리키는지 여기서 다시 본다.
+    """
+    for consumer in dyn.dependents(source):
+        for src, src_socket in dyn.dependencies(consumer).values():
+            if src == source and (sockets is None or src_socket in sockets):
+                yield consumer
+                break
 
 
 def _inherited_blocker(
@@ -982,12 +1124,16 @@ def _inherited_blocker(
     dyn: DynamicGraph,
     plan: ExecutionList,
 ) -> ExecutionBlocker | None:
-    """입력 중 하나라도 블로커에서 왔으면 그 블로커를 돌려준다."""
+    """입력 중 하나라도 **막힌 출력 소켓**에서 왔으면 그 블로커를 돌려준다.
+
+    소켓을 보는 것이 요점이다. 상류 노드가 부분 블로킹이어도, 이 노드가 **막히지
+    않은 소켓**을 읽고 있으면 정상 실행된다 (design.md §1.1 ④).
+    """
     own = plan.blocker_for(node_id)
     if own is not None:
         return own
-    for source, _ in dyn.dependencies(node_id).values():
-        upstream = plan.blocker_for(source)
+    for source, source_socket in dyn.dependencies(node_id).values():
+        upstream = plan.blocker_for(source, source_socket)
         if upstream is not None:
             return upstream
     return None
