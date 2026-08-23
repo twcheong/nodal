@@ -58,6 +58,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import time
 import traceback
 import uuid
@@ -593,8 +594,10 @@ class ExecutionList(TopologicalSort):
 
         node = self._dyn.node(node_id)
         try:
-            version = self._registry.get(node.type, node_id=node_id).version
+            schema = self._registry.get(node.type, node_id=node_id)
+            version = schema.version
         except NodeTypeNotFoundError:
+            schema = None
             version = "?"
 
         resolved: dict[str, Any] = {}
@@ -604,9 +607,69 @@ class ExecutionList(TopologicalSort):
             else:
                 resolved[socket] = value
 
-        key = cache_key(node.type, version, resolved)
+        token = self._is_changed_token(node_id, node, schema)
+        key = cache_key(node.type, version, resolved, is_changed_token=token)
         self._key_cache[node_id] = key
         return key
+
+    def _is_changed_token(
+        self,
+        node_id: str,
+        node: Node,
+        schema: NodeSchema | None,
+    ) -> str | None:
+        """리터럴 입력만으로 ``is_changed`` 토큰을 한 번 평가한다 (§5.3)."""
+        if schema is None or schema.is_changed is None:
+            return None
+
+        kwargs: dict[str, Any] = {}
+        for name in inspect.signature(schema.is_changed).parameters:
+            if name in node.inputs:
+                value = node.inputs[name]
+                if isinstance(value, Link):
+                    linked_cause = ValueError(
+                        "`is_changed` 훅은 링크 입력을 받을 수 없다 — 리터럴/위젯 입력만 선언하라"
+                    )
+                    raise NodeExecutionError(
+                        self._dyn.visible_id(node_id),
+                        linked_cause,
+                        socket=name,
+                        ephemeral_id=node_id if self._dyn.is_ephemeral(node_id) else None,
+                    )
+                kwargs[name] = value
+                continue
+
+            spec = schema.inputs[name]
+            if spec.required:
+                missing_cause = ValueError("`is_changed` 훅에 전달할 필수 리터럴 입력이 없다")
+                raise NodeExecutionError(
+                    self._dyn.visible_id(node_id),
+                    missing_cause,
+                    socket=name,
+                    ephemeral_id=node_id if self._dyn.is_ephemeral(node_id) else None,
+                )
+            kwargs[name] = spec.default
+
+        try:
+            token = schema.is_changed(**kwargs)
+        except Exception as exc:
+            hook_cause = RuntimeError(f"`is_changed` 훅 평가 실패: {exc}")
+            raise NodeExecutionError(
+                self._dyn.visible_id(node_id),
+                hook_cause,
+                ephemeral_id=node_id if self._dyn.is_ephemeral(node_id) else None,
+            ) from exc
+
+        if not isinstance(token, str):
+            type_cause = TypeError(
+                f"`is_changed` 훅은 str 토큰을 반환해야 한다: {type(token).__name__} 반환"
+            )
+            raise NodeExecutionError(
+                self._dyn.visible_id(node_id),
+                type_cause,
+                ephemeral_id=node_id if self._dyn.is_ephemeral(node_id) else None,
+            )
+        return token
 
     def invalidate_keys(self) -> None:
         """캐시 키 메모를 버린다. 그래프가 확장으로 바뀌었을 때 부른다."""
@@ -719,7 +782,24 @@ async def execute(
                 plan.complete()
                 continue
 
-            key = plan.cache_key_for(node_id)
+            try:
+                key = plan.cache_key_for(node_id)
+            except NodeExecutionError as exc:
+                events.emit(
+                    NodeError(
+                        t="node.error",
+                        run_id=identifier,
+                        node_id=exc.node_id,
+                        message=str(exc.cause),
+                        traceback=tuple(
+                            traceback.format_exception(
+                                type(exc.cause), exc.cause, exc.cause.__traceback__
+                            )
+                        ),
+                        socket=exc.socket,
+                    )
+                )
+                raise
             if schema.cacheable:
                 hit = cache.get(key)
                 if hit is not MISS:

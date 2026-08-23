@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import io
+import os
 from typing import Any
 
 import numpy as np
@@ -85,6 +86,12 @@ class LoadImage:
     path: Str = Str("")
 
     returns = Image
+
+    @staticmethod
+    def is_changed(path: str) -> str:
+        """파일 내용 변경을 mtime 나노초와 크기로 캐시 키에 반영한다 (§5.3)."""
+        stat = os.stat(path)
+        return f"{stat.st_mtime_ns}:{stat.st_size}"
 
     def run(self, path: str) -> NodeResult:
         if not path:

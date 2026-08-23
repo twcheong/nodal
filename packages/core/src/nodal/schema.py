@@ -379,6 +379,8 @@ class NodeSchema:
             바꿨으면 올린다 — 안 올리면 옛 캐시가 새 스키마로 재사용된다.
         output_node: 참이면 실행 선택 휴리스틱이 우선한다 (design.md §1.1 ②).
         cacheable: 거짓이면 결과를 캐시하지 않는다.
+        is_changed: 그래프 밖 상태를 캐시 키 토큰으로 만드는 정적 훅. 없으면
+            ``None`` 이고 기존 캐시 키가 그대로 유지된다 (design.md §5.3).
         is_async: `run` 이 코루틴 함수인지. 엔진이 자동 감지한다.
         wants_ctx: `run` 시그니처에 `ctx` 파라미터가 있는지.
     """
@@ -396,6 +398,7 @@ class NodeSchema:
     is_async: bool
     wants_ctx: bool
     doc: str = ""
+    is_changed: Callable[..., str] | None = None
 
     def input(self, name: str) -> InputSpec:
         """입력 소켓 하나. 없으면 `SchemaError`."""
@@ -564,6 +567,7 @@ def reflect_node(node_class: type) -> NodeSchema:
 
     params = _run_parameters(run)
     _check_run_signature(node_id, run, params, inputs)
+    is_changed = _reflect_is_changed(node_class, node_id, inputs)
 
     return NodeSchema(
         id=node_id,
@@ -579,6 +583,7 @@ def reflect_node(node_class: type) -> NodeSchema:
         is_async=inspect.iscoroutinefunction(run),
         wants_ctx=_CTX_PARAM in params,
         doc=inspect.cleandoc(node_class.__doc__ or ""),
+        is_changed=is_changed,
     )
 
 
@@ -745,6 +750,83 @@ def _reflect_inputs(node_class: type, node_id: str) -> Mapping[str, InputSpec]:
 
 #: 입력 소켓이 아닌 클래스 속성 이름.
 _RESERVED_ATTRS = frozenset({"returns", "run"})
+
+
+def _reflect_is_changed(
+    node_class: type,
+    node_id: str,
+    inputs: Mapping[str, InputSpec],
+) -> Callable[..., str] | None:
+    """``is_changed`` 정적 훅을 검증하고 실행 스키마에 싣는다 (§5.3)."""
+    raw = inspect.getattr_static(node_class, "is_changed", None)
+    if raw is None:
+        return None
+    if not isinstance(raw, staticmethod):
+        raise SchemaError("`is_changed` 훅은 @staticmethod 여야 한다", node_id=node_id)
+
+    hook = raw.__func__
+    if inspect.iscoroutinefunction(hook):
+        raise SchemaError("`is_changed` 훅은 동기 함수여야 한다", node_id=node_id)
+
+    params = inspect.signature(hook).parameters
+    for name, param in params.items():
+        if param.kind not in (
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.KEYWORD_ONLY,
+        ):
+            raise SchemaError(
+                "`is_changed` 훅은 이름 있는 입력 파라미터만 받을 수 있다",
+                node_id=node_id,
+                socket=name,
+            )
+        if name not in inputs:
+            raise SchemaError(
+                "`is_changed` 파라미터에 대응하는 입력 소켓이 없다",
+                node_id=node_id,
+                socket=name,
+            )
+        if _is_link_only_input(node_class, name):
+            raise SchemaError(
+                "`is_changed` 훅은 링크 전용 Socket 입력을 받을 수 없다",
+                node_id=node_id,
+                socket=name,
+            )
+
+    try:
+        annotations = inspect.get_annotations(hook, eval_str=True)
+    except (NameError, AttributeError) as exc:
+        raise SchemaError(
+            f"`is_changed` 어노테이션을 평가할 수 없다: {exc}", node_id=node_id
+        ) from exc
+    return_type = annotations.get("return", inspect.Signature.empty)
+    if return_type is not inspect.Signature.empty and return_type is not str:
+        raise SchemaError(
+            "`is_changed` 반환 타입 힌트는 str 이어야 한다",
+            node_id=node_id,
+        )
+    return hook
+
+
+def _is_link_only_input(node_class: type, name: str) -> bool:
+    """위젯/리터럴 없이 링크로만 채울 수 있는 입력인지 판정한다."""
+    for klass in node_class.__mro__:
+        if klass is object:
+            continue
+        annotations = inspect.get_annotations(klass, eval_str=True)
+        if name not in annotations:
+            continue
+
+        declared = klass.__dict__.get(name)
+        if isinstance(declared, Socket):
+            return True
+        if isinstance(declared, InputDescriptor):
+            return False
+
+        annotation = annotations[name]
+        if isinstance(annotation, type) and issubclass(annotation, InputDescriptor):
+            return issubclass(annotation, Socket)
+        return _as_socket_type(annotation) is not None
+    return False
 
 
 def _input_spec(

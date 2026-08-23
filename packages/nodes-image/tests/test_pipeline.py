@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -179,6 +180,30 @@ def test_second_run_reports_cached_nodes(tmp_path, registry, source_png) -> None
     assert first.node_ids(NodeCached) == []
     assert set(second.node_ids(NodeCached)) == {"load", "resize"}
     assert second.node_ids(NodeStarted) == ["save"]
+
+
+def test_touching_loaded_file_invalidates_load_and_downstream_cache(
+    tmp_path, registry, source_png
+) -> None:
+    """파일이 그대로면 히트하고 mtime이 바뀌면 Load와 하류가 재실행된다 (§5.3)."""
+    assets = FileAssetStore(tmp_path / "assets")
+    cache = LRUCache()
+    graph = pipeline_graph(source_png)
+
+    _, first = run_graph(graph, registry, assets, cache=cache)
+    _, stable = run_graph(graph, registry, assets, cache=cache)
+
+    before = source_png.stat()
+    os.utime(
+        source_png,
+        ns=(before.st_atime_ns, before.st_mtime_ns + 1_000_000_000),
+    )
+    _, touched = run_graph(graph, registry, assets, cache=cache)
+
+    assert first.node_ids(NodeCached) == []
+    assert set(stable.node_ids(NodeCached)) == {"load", "resize"}
+    assert touched.node_ids(NodeCached) == []
+    assert set(touched.node_ids(NodeStarted)) == {"load", "resize", "save"}
 
 
 def test_changing_an_input_reruns_only_downstream(tmp_path, registry, source_png) -> None:
