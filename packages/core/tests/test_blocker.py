@@ -22,13 +22,13 @@ from nodal import (
 
 
 def _blocker_registry(calls: list[str]) -> NodeRegistry:
-    @node(id="test.BlockerSource", category="test")
-    class BlockerSource:
+    @node(id="test.BareBlocker", category="test")
+    class BareBlocker:
         returns: ClassVar[dict[str, Type]] = {"value": INT}
 
-        def run(self) -> NodeResult:
-            calls.append("blocker")
-            return NodeResult(ExecutionBlocker("disabled branch"))
+        def run(self) -> ExecutionBlocker:
+            calls.append("bare-blocker")
+            return ExecutionBlocker("whole node disabled")
 
     @node(id="test.BlockedStep", category="test")
     class BlockedStep:
@@ -39,25 +39,59 @@ def _blocker_registry(calls: list[str]) -> NodeRegistry:
             calls.append("blocked-step")
             return NodeResult(value + 1)
 
-    @node(id="test.BlockerSibling", category="test")
-    class BlockerSibling:
+    @node(id="test.IndependentSibling", category="test")
+    class IndependentSibling:
+        returns: ClassVar[dict[str, Type]] = {"value": INT}
+
+        def run(self) -> NodeResult:
+            calls.append("sibling")
+            return NodeResult(9)
+
+    @node(id="test.PartialBlocker", category="test")
+    class PartialBlocker:
+        returns: ClassVar[dict[str, Type]] = {"live": INT, "blocked": INT}
+
+        def run(self) -> NodeResult:
+            calls.append("partial-blocker")
+            return NodeResult(7, ExecutionBlocker("blocked socket"))
+
+    @node(id="test.BlockedSocketConsumer", category="test")
+    class BlockedSocketConsumer:
         value: Int = Int()
         returns: ClassVar[dict[str, Type]] = {"value": INT}
 
         def run(self, value: int) -> NodeResult:
-            calls.append("sibling")
+            calls.append("blocked-consumer")
             return NodeResult(value)
 
+    @node(id="test.LiveSocketConsumer", category="test")
+    class LiveSocketConsumer:
+        value: Int = Int()
+        returns: ClassVar[dict[str, Type]] = {"value": INT}
+
+        def run(self, value: int) -> NodeResult:
+            calls.append("live-consumer")
+            return NodeResult(value + 1)
+
     registry = NodeRegistry()
-    registry.register_all((BlockerSource, BlockedStep, BlockerSibling))
+    registry.register_all(
+        (
+            BareBlocker,
+            BlockedStep,
+            IndependentSibling,
+            PartialBlocker,
+            BlockedSocketConsumer,
+            LiveSocketConsumer,
+        )
+    )
     return registry
 
 
-def _blocker_graph() -> Graph:
+def _bare_blocker_graph() -> Graph:
     return parse_graph(
         {
             "nodes": {
-                "blocker": {"type": "test.BlockerSource"},
+                "blocker": {"type": "test.BareBlocker"},
                 "blocked_child": {
                     "type": "test.BlockedStep",
                     "inputs": {"value": {"$link": ["blocker", "value"]}},
@@ -66,22 +100,38 @@ def _blocker_graph() -> Graph:
                     "type": "test.BlockedStep",
                     "inputs": {"value": {"$link": ["blocked_child", "value"]}},
                 },
-                "sibling": {
-                    "type": "test.BlockerSibling",
-                    "inputs": {"value": 9},
-                },
+                "sibling": {"type": "test.IndependentSibling"},
             },
             "outputs": ["blocked_leaf", "sibling"],
         }
     )
 
 
-async def test_blocker_propagates_to_all_downstream_nodes() -> None:
-    """블로커를 받은 노드와 그 하류가 모두 blocked에 기록된다 (§1.1 ④)."""
+def _partial_blocker_graph() -> Graph:
+    return parse_graph(
+        {
+            "nodes": {
+                "producer": {"type": "test.PartialBlocker"},
+                "blocked_consumer": {
+                    "type": "test.BlockedSocketConsumer",
+                    "inputs": {"value": {"$link": ["producer", "blocked"]}},
+                },
+                "live_consumer": {
+                    "type": "test.LiveSocketConsumer",
+                    "inputs": {"value": {"$link": ["producer", "live"]}},
+                },
+            },
+            "outputs": ["blocked_consumer", "live_consumer"],
+        }
+    )
+
+
+async def test_bare_blocker_blocks_the_node_and_all_downstream_only() -> None:
+    """맨몸 반환은 노드 전체와 하류만 막고 독립 형제는 살린다 (§1.1 ④)."""
     calls: list[str] = []
 
     result = await execute(
-        _blocker_graph(),
+        _bare_blocker_graph(),
         ["blocked_leaf", "sibling"],
         registry=_blocker_registry(calls),
         cache=LRUCache(32),
@@ -89,43 +139,68 @@ async def test_blocker_propagates_to_all_downstream_nodes() -> None:
         cancel_token=CancelToken(),
     )
 
-    assert set(result.blocked) == {"blocked_child", "blocked_leaf"}
-    assert "blocked-step" not in calls
+    assert set(result.blocked) == {"blocker", "blocked_child", "blocked_leaf"}
+    assert set(result.executed) == {"sibling"}
+    assert result.cached == ()
+    assert result.outputs == {"sibling": {"value": 9}}
+    assert set(calls) == {"sibling", "bare-blocker"}
+    assert len(calls) == 2
+    assert set(result.blocked).isdisjoint(result.executed)
+    assert set(result.blocked).isdisjoint(result.cached)
 
 
-async def test_blocker_does_not_stop_an_independent_sibling_branch() -> None:
-    """블로커와 의존 관계가 없는 형제 출력은 정상 실행된다 (§1.1 ④)."""
+async def test_socket_blocker_only_blocks_consumers_of_that_output() -> None:
+    """막힌 출력 소비자는 막고 같은 노드의 정상 출력 소비자는 실행한다 (§1.1 ④)."""
     calls: list[str] = []
 
     result = await execute(
-        _blocker_graph(),
-        ["blocked_leaf", "sibling"],
+        _partial_blocker_graph(),
+        ["blocked_consumer", "live_consumer"],
         registry=_blocker_registry(calls),
         cache=LRUCache(32),
         events=NullEventSink(),
         cancel_token=CancelToken(),
     )
 
-    assert result.outputs["sibling"] == {"value": 9}
-    assert "sibling" in result.executed
-    assert "sibling" not in result.blocked
-    assert calls == ["blocker", "sibling"]
+    assert result.blocked == ("blocked_consumer",)
+    assert set(result.executed) == {"producer", "live_consumer"}
+    assert result.cached == ()
+    assert result.outputs == {"live_consumer": {"value": 8}}
+    assert set(calls) == {"partial-blocker", "live-consumer"}
+    assert len(calls) == 2
 
 
-async def test_blocked_nodes_are_neither_executed_nor_cached() -> None:
-    """전파로 막힌 노드는 실행 및 캐시 히트 집합에서 제외된다 (§5.1)."""
+async def test_cached_partial_blocker_still_blocks_its_socket_consumer() -> None:
+    """부분 블로킹 결과의 캐시 히트도 블로커를 값으로 하류에 흘리지 않는다 (§5.3)."""
     calls: list[str] = []
+    registry = _blocker_registry(calls)
+    graph = _partial_blocker_graph()
+    cache = LRUCache(32)
 
-    result = await execute(
-        _blocker_graph(),
-        ["blocked_leaf", "sibling"],
-        registry=_blocker_registry(calls),
-        cache=LRUCache(32),
+    first = await execute(
+        graph,
+        ["blocked_consumer", "live_consumer"],
+        registry=registry,
+        cache=cache,
         events=NullEventSink(),
         cancel_token=CancelToken(),
+        run_id="partial-first",
+    )
+    second = await execute(
+        graph,
+        ["blocked_consumer", "live_consumer"],
+        registry=registry,
+        cache=cache,
+        events=NullEventSink(),
+        cancel_token=CancelToken(),
+        run_id="partial-second",
     )
 
-    blocked = set(result.blocked)
-    assert blocked
-    assert blocked.isdisjoint(result.executed)
-    assert blocked.isdisjoint(result.cached)
+    assert first.blocked == ("blocked_consumer",)
+    assert set(second.blocked) == {"producer", "blocked_consumer"}
+    assert set(second.blocked).isdisjoint(second.executed)
+    assert set(second.blocked).isdisjoint(second.cached)
+    assert second.cached == ("live_consumer",)
+    assert second.outputs == {"live_consumer": {"value": 8}}
+    assert set(calls) == {"partial-blocker", "live-consumer"}
+    assert len(calls) == 2

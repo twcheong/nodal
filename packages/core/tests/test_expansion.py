@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from typing import ClassVar
 
 import pytest
@@ -34,6 +33,10 @@ def _register(registry: NodeRegistry, *node_classes: type[object]) -> NodeRegist
     return registry
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="노드 확장은 M5.4까지 봉인됐다 (docs/design.md §5.2)",
+)
 async def test_returned_subgraph_executes_and_feeds_downstream() -> None:
     """Expanded의 출력은 부모 출력처럼 하류 입력으로 흐른다 (§5.1, §5.2)."""
 
@@ -102,21 +105,22 @@ async def test_returned_subgraph_executes_and_feeds_downstream() -> None:
         }
     )
 
-    result = await asyncio.wait_for(
-        execute(
-            graph,
-            ["downstream"],
-            registry=registry,
-            cache=NullCache(),
-            events=RecordingEventSink(),
-            cancel_token=CancelToken(),
-        ),
-        timeout=2,
+    result = await execute(
+        graph,
+        ["downstream"],
+        registry=registry,
+        cache=NullCache(),
+        events=RecordingEventSink(),
+        cancel_token=CancelToken(),
     )
 
     assert result.outputs == {"downstream": {"value": 14}}
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="노드 확장은 M5.4까지 봉인됐다 (docs/design.md §5.2)",
+)
 async def test_ephemeral_progress_is_reported_as_the_parent_node() -> None:
     """서브그래프 노드의 진행률과 생명주기에는 부모 ID만 노출된다 (§5.2)."""
 
@@ -145,21 +149,18 @@ async def test_ephemeral_progress_is_reported_as_the_parent_node() -> None:
     registry = _register(NodeRegistry(), ExpansionProgress, ProgressExpander)
     events = RecordingEventSink()
 
-    result = await asyncio.wait_for(
-        execute(
-            parse_graph(
-                {
-                    "nodes": {"expand": {"type": "test.ProgressExpander"}},
-                    "outputs": ["expand"],
-                }
-            ),
-            ["expand"],
-            registry=registry,
-            cache=NullCache(),
-            events=events,
-            cancel_token=CancelToken(),
+    result = await execute(
+        parse_graph(
+            {
+                "nodes": {"expand": {"type": "test.ProgressExpander"}},
+                "outputs": ["expand"],
+            }
         ),
-        timeout=2,
+        ["expand"],
+        registry=registry,
+        cache=NullCache(),
+        events=events,
+        cancel_token=CancelToken(),
     )
 
     assert result.outputs == {"expand": {"value": 7}}
@@ -168,6 +169,10 @@ async def test_ephemeral_progress_is_reported_as_the_parent_node() -> None:
     assert all(":" not in node_id for node_id in events.node_ids(NodeStarted))
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="노드 확장은 M5.4까지 봉인됐다 (docs/design.md §5.2)",
+)
 async def test_expansion_recomputes_cache_keys_after_splicing() -> None:
     """확장 전 부모 키가 서브그래프 결과의 캐시 키로 남지 않는다 (§5.2, §5.3)."""
     calls: list[tuple[str, int]] = []
@@ -229,28 +234,22 @@ async def test_expansion_recomputes_cache_keys_after_splicing() -> None:
     )
     cache = LRUCache(32)
 
-    first = await asyncio.wait_for(
-        execute(
-            graph,
-            ["sink"],
-            registry=registry,
-            cache=cache,
-            events=RecordingEventSink(),
-            cancel_token=CancelToken(),
-        ),
-        timeout=2,
+    first = await execute(
+        graph,
+        ["sink"],
+        registry=registry,
+        cache=cache,
+        events=RecordingEventSink(),
+        cancel_token=CancelToken(),
     )
     payload["value"] = 20
-    second = await asyncio.wait_for(
-        execute(
-            graph,
-            ["sink"],
-            registry=registry,
-            cache=cache,
-            events=RecordingEventSink(),
-            cancel_token=CancelToken(),
-        ),
-        timeout=2,
+    second = await execute(
+        graph,
+        ["sink"],
+        registry=registry,
+        cache=cache,
+        events=RecordingEventSink(),
+        cancel_token=CancelToken(),
     )
 
     assert first.outputs == {"sink": {"value": 10}}
@@ -266,6 +265,10 @@ async def test_expansion_recomputes_cache_keys_after_splicing() -> None:
     assert second.cached == ()
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="노드 확장은 M5.4까지 봉인됐다 (docs/design.md §5.2)",
+)
 async def test_expanded_subgraph_error_names_parent_and_input_socket() -> None:
     """서브그래프 입력 해석 실패는 부모 노드와 소비 소켓을 지목한다 (§5.2)."""
 
@@ -308,21 +311,18 @@ async def test_expanded_subgraph_error_names_parent_and_input_socket() -> None:
     events = RecordingEventSink()
 
     with pytest.raises(NodeExecutionError) as excinfo:
-        await asyncio.wait_for(
-            execute(
-                parse_graph(
-                    {
-                        "nodes": {"expand": {"type": "test.BrokenExpander"}},
-                        "outputs": ["expand"],
-                    }
-                ),
-                ["expand"],
-                registry=registry,
-                cache=NullCache(),
-                events=events,
-                cancel_token=CancelToken(),
+        await execute(
+            parse_graph(
+                {
+                    "nodes": {"expand": {"type": "test.BrokenExpander"}},
+                    "outputs": ["expand"],
+                }
             ),
-            timeout=2,
+            ["expand"],
+            registry=registry,
+            cache=NullCache(),
+            events=events,
+            cancel_token=CancelToken(),
         )
 
     assert excinfo.value.node_id == "expand"
@@ -335,3 +335,33 @@ async def test_expanded_subgraph_error_names_parent_and_input_socket() -> None:
     assert isinstance(error, NodeError)
     assert error.node_id == "expand"
     assert error.socket == "value"
+
+
+async def test_expanded_is_sealed_with_a_located_not_implemented_error() -> None:
+    """M5.4 전 Expanded는 무한 대기 대신 부모 노드를 지목하며 즉시 실패한다 (§5.2)."""
+
+    @node(id="test.SealedExpander", category="test")
+    class SealedExpander:
+        returns: ClassVar[dict[str, Type]] = {"value": INT}
+
+        def run(self) -> Expanded:
+            return Expanded(parse_graph({"nodes": {}}))
+
+    registry = _register(NodeRegistry(), SealedExpander)
+
+    with pytest.raises(NotImplementedError) as excinfo:
+        await execute(
+            parse_graph(
+                {
+                    "nodes": {"sealed_expand": {"type": "test.SealedExpander"}},
+                    "outputs": ["sealed_expand"],
+                }
+            ),
+            ["sealed_expand"],
+            registry=registry,
+            cache=NullCache(),
+            events=RecordingEventSink(),
+            cancel_token=CancelToken(),
+        )
+
+    assert "sealed_expand" in str(excinfo.value)
