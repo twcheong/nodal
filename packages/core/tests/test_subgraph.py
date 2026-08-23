@@ -46,7 +46,7 @@ DESIGN_DOC_SUBGRAPH: dict[str, Any] = {
                     },
                 }
             },
-            "outputs": {"image": {"$link": ["fit", "image"]}},
+            "returns": {"image": {"$link": ["fit", "image"]}},
         }
     },
     "nodes": {
@@ -107,6 +107,40 @@ def test_default_absent_means_required() -> None:
     explicit_null = ParamDef.model_validate({"type": "Image", "default": None})
     assert declared.required and explicit_null.required
     assert not ParamDef.model_validate({"type": "INT", "default": 0}).required
+
+
+def test_the_old_field_name_is_rejected() -> None:
+    """`outputs` → `returns` rename (2026-08-23). 옛 이름이 조용히 무시되면 안 된다.
+
+    `SubgraphDef` 가 `extra="forbid"` 라 옛 문서는 **파싱에서** 걸린다. 이 테스트가
+    없으면 누가 옛 이름으로 되돌려 놓아도 정의가 출력 없이 통과한다.
+    """
+    with pytest.raises(GraphValidationError):
+        parse_graph(
+            {
+                "nodal_version": "1",
+                "definitions": {
+                    "d": {
+                        "nodes": {"n": {"type": "core.A"}},
+                        "outputs": {"image": {"$link": ["n", "out"]}},
+                    }
+                },
+            }
+        )
+
+
+def test_malformed_return_link_keeps_its_location() -> None:
+    """정의의 `returns` 안에서 난 파싱 실패도 정의 이름을 잃지 않는다."""
+    with pytest.raises(GraphValidationError) as caught:
+        parse_graph(
+            {
+                "nodal_version": "1",
+                "definitions": {"d": {"returns": {"image": {"$link": ["n"]}}}},
+            }
+        )
+    issue = caught.value.issues[0]
+    assert issue.definition == "d"
+    assert issue.node_id is None
 
 
 def test_subgraph_name_helper() -> None:
@@ -235,21 +269,21 @@ def test_link_to_a_nonexistent_node_inside_a_definition() -> None:
     assert issue.definition == "d"
 
 
-def test_definition_output_must_point_inside() -> None:
+def test_definition_return_must_point_inside() -> None:
     graph = parse_graph(
         {
             "nodal_version": "1",
             "definitions": {
                 "d": {
                     "nodes": {"n": {"type": "core.A"}},
-                    "outputs": {"image": {"$link": ["x", "v"]}},
+                    "returns": {"image": {"$link": ["x", "v"]}},
                 }
             },
         }
     )
     (issue,) = validate_graph(graph)
     assert issue.code is IssueCode.UNKNOWN_LINK_TARGET
-    assert issue.location == "definitions.d.outputs.image"
+    assert issue.location == "definitions.d.returns.image"
 
 
 def test_consuming_an_undeclared_instance_output() -> None:
@@ -260,7 +294,7 @@ def test_consuming_an_undeclared_instance_output() -> None:
             "definitions": {
                 "d": {
                     "nodes": {"n": {"type": "core.A"}},
-                    "outputs": {"image": {"$link": ["n", "out"]}},
+                    "returns": {"image": {"$link": ["n", "out"]}},
                 }
             },
             "nodes": {
@@ -357,9 +391,9 @@ def test_models_can_be_built_in_python() -> None:
             "d": SubgraphDef(
                 params={"n": ParamDef(type="INT", default=1)},
                 nodes={"a": {"type": "core.Add", "inputs": {"x": Param.of("n")}}},  # type: ignore[dict-item]
-                outputs={"sum": Link.to("a", "sum")},
+                returns={"sum": Link.to("a", "sum")},
             )
         },
     )
     assert validate_graph(graph) == []
-    assert graph.definitions["d"].outputs["sum"].source_node == "a"
+    assert graph.definitions["d"].returns["sum"].source_node == "a"

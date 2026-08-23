@@ -93,8 +93,8 @@ class GraphIssue:
 
         base = f"definitions.{self.definition}"
         if self.node_id is None:
-            # 노드가 없는 정의 내부 문제는 정의의 선언부다 — `params` 나 `outputs`.
-            return f"{base}.outputs.{self.socket}" if self.socket else base
+            # 노드가 없는 정의 내부 문제는 정의의 선언부다 — `params` 나 `returns`.
+            return f"{base}.returns.{self.socket}" if self.socket else base
         if self.socket is None:
             return f"{base}.nodes.{self.node_id}"
         return f"{base}.nodes.{self.node_id}.inputs.{self.socket}"

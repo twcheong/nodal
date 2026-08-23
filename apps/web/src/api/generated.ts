@@ -814,9 +814,14 @@ export interface components {
          *     경계는 두 방향으로 뚫린다:
          *
          *     - **들어오는 값**은 `params` 로 선언하고 정의 안에서 `{"$param": ...}` 로 쓴다
-         *     - **나가는 값**은 `outputs` 가 정의 안의 (노드, 소켓)에 이름을 붙인 것이다.
+         *     - **나가는 값**은 `returns` 가 정의 안의 (노드, 소켓)에 이름을 붙인 것이다.
          *       인스턴스를 소비하는 링크 `{"$link": ["<인스턴스>", "<이름>"]}` 가 이 이름을
          *       가리키고, 평탄화가 그것을 안쪽 노드로 재배선한다 (§5.5)
+         *
+         *     `Graph.outputs` 가 아니라 `returns` 인 이유: 그쪽은 **실행을 요청할 노드
+         *     목록**이고 이쪽은 **노출할 소켓**이다. 한 문서 안에서 한 단계 차이로 나란히
+         *     놓이는 두 필드가 같은 단어면 반드시 헷갈린다. 노드 SDK 가 같은 역할을 이미
+         *     `returns` 로 부른다는 점도 맞물린다 — 인스턴스는 밖에서 보면 노드다.
          */
         SubgraphDef: {
             /**
@@ -827,18 +832,18 @@ export interface components {
                 [key: string]: components["schemas"]["Node"];
             };
             /**
-             * Outputs
-             * @description 인스턴스가 내보내는 출력 소켓 이름 → 정의 안의 (노드, 소켓)
-             */
-            outputs?: {
-                [key: string]: components["schemas"]["Link"];
-            };
-            /**
              * Params
              * @description 이 정의가 받는 파라미터. 인스턴스의 입력 소켓이 된다
              */
             params?: {
                 [key: string]: components["schemas"]["ParamDef"];
+            };
+            /**
+             * Returns
+             * @description 인스턴스가 내보내는 출력 소켓 이름 → 정의 안의 (노드, 소켓). `Graph.outputs`(실행 요청 노드 목록)와 다른 것이라 이름도 다르다
+             */
+            returns?: {
+                [key: string]: components["schemas"]["Link"];
             };
         };
         /** TensorBodyExpr */

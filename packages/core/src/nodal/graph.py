@@ -288,9 +288,14 @@ class SubgraphDef(BaseModel):
     경계는 두 방향으로 뚫린다:
 
     - **들어오는 값**은 `params` 로 선언하고 정의 안에서 `{"$param": ...}` 로 쓴다
-    - **나가는 값**은 `outputs` 가 정의 안의 (노드, 소켓)에 이름을 붙인 것이다.
+    - **나가는 값**은 `returns` 가 정의 안의 (노드, 소켓)에 이름을 붙인 것이다.
       인스턴스를 소비하는 링크 `{"$link": ["<인스턴스>", "<이름>"]}` 가 이 이름을
       가리키고, 평탄화가 그것을 안쪽 노드로 재배선한다 (§5.5)
+
+    `Graph.outputs` 가 아니라 `returns` 인 이유: 그쪽은 **실행을 요청할 노드
+    목록**이고 이쪽은 **노출할 소켓**이다. 한 문서 안에서 한 단계 차이로 나란히
+    놓이는 두 필드가 같은 단어면 반드시 헷갈린다. 노드 SDK 가 같은 역할을 이미
+    `returns` 로 부른다는 점도 맞물린다 — 인스턴스는 밖에서 보면 노드다.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -305,9 +310,12 @@ class SubgraphDef(BaseModel):
         description="정의 안의 노드. 최상위 그래프와 **별개의 이름공간**이다",
         json_schema_extra={"additionalProperties": False},
     )
-    outputs: dict[SocketName, Link] = Field(
+    returns: dict[SocketName, Link] = Field(
         default_factory=dict,
-        description="인스턴스가 내보내는 출력 소켓 이름 → 정의 안의 (노드, 소켓)",
+        description=(
+            "인스턴스가 내보내는 출력 소켓 이름 → 정의 안의 (노드, 소켓). "
+            "`Graph.outputs`(실행 요청 노드 목록)와 다른 것이라 이름도 다르다"
+        ),
         json_schema_extra={"additionalProperties": False},
     )
 
@@ -589,7 +597,7 @@ def _definition_issues(graph: Graph, def_name: str, definition: SubgraphDef) -> 
     for node_id, nested in definition.instances():
         issues.extend(_instance_issues(graph, node_id, nested, definition=def_name))
 
-    for out_socket, link in definition.outputs.items():
+    for out_socket, link in definition.returns.items():
         if link.source_node not in inner:
             issues.append(_out_of_scope_link(graph, link.source_node, None, out_socket, def_name))
 
@@ -651,13 +659,13 @@ def _instance_output_issue(
     if name is None:
         return None
     target_def = graph.definitions.get(name)
-    if target_def is None or link.source_socket in target_def.outputs:
+    if target_def is None or link.source_socket in target_def.returns:
         return None
     return GraphIssue(
         code=IssueCode.UNKNOWN_OUTPUT_SOCKET,
         message=(
             f"서브그래프 {name!r} 가 선언하지 않은 출력을 가리킨다: "
-            f"{link.source_socket!r} (선언된 것: {_names(target_def.outputs)})"
+            f"{link.source_socket!r} (선언된 것: {_names(target_def.returns)})"
         ),
         node_id=node_id,
         socket=socket,
@@ -731,6 +739,7 @@ def _issue_from_pydantic(error: Mapping[str, Any]) -> GraphIssue:
 
     `("nodes", "n_a1b2", "inputs", "image", ...)` → node_id=n_a1b2, socket=image.
     `("definitions", "thumb", "nodes", ...)` → definition=thumb 이 앞에 붙는다.
+    최상위의 `outputs` 와 정의의 `returns` 는 둘 다 노드에 귀속되지 않는다.
     """
     loc: tuple[Any, ...] = tuple(error.get("loc", ()))
     node_id: str | None = None
@@ -747,7 +756,7 @@ def _issue_from_pydantic(error: Mapping[str, Any]) -> GraphIssue:
         node_id = str(rest[1])
         if len(rest) >= 4 and rest[2] == "inputs":
             socket = str(rest[3])
-    elif len(rest) >= 2 and rest[0] == "outputs":
+    elif len(rest) >= 2 and rest[0] in ("outputs", "returns"):
         node_id = None
 
     path = ".".join(str(part) for part in loc) or "graph"
