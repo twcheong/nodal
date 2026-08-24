@@ -690,8 +690,8 @@ export interface components {
          * ParamDef
          * @description 서브그래프 파라미터 하나의 선언 — 인스턴스가 채우는 구멍이다.
          *
-         *     MCP `run_template(id, params)` 이 받는 파라미터가 정확히 이 목록이다
-         *     (docs/design.md §12.3).
+         *     MCP 툴 `run_template_<템플릿 ID>` 가 받는 파라미터가 정확히 이 목록이다.
+         *     이 선언에서 툴의 `inputSchema` 가 기계적으로 생성된다 (docs/design.md §12.3).
          *
          *     `default` 가 **없거나 `null`** 이면 필수 파라미터다. 둘을 구분하지 않는 이유는
          *     캐논 문서에 빈 값이 두 가지 생기면 안 되기 때문이고, 카탈로그 타입 중 `null`
