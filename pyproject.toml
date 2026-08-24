@@ -168,6 +168,7 @@ known-first-party = [
 # 환경에서도 "스키마는 torch 없이 나온다" 는 주장이 실제로 검증된다.
 testpaths = [
     "packages/core/tests",
+    "packages/nodes-core/tests",
     "packages/server/tests",
     "packages/nodes-image/tests",
     "packages/nodes-diffusion/tests",

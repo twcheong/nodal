@@ -9,13 +9,17 @@
 
 from __future__ import annotations
 
+import json
 import time
+from pathlib import Path
 from typing import Any
 
 from conftest import simple_graph, slow_graph, wait_for
 from fastapi.testclient import TestClient
 
 from nodal import AssetStore as AssetStoreContract
+from nodal_nodes_core.cli import DEFAULT_OPTIONAL_PACKS, _build_registry
+from nodal_server.app import create_app
 from nodal_server.assets import AssetStore
 
 # ------------------------------------------------------------------ 노드 · 검증
@@ -40,6 +44,19 @@ def test_nodes_endpoint_feeds_the_palette(client: TestClient) -> None:
 
 def test_validate_accepts_a_good_graph(client: TestClient) -> None:
     response = client.post("/api/graph/validate", json={"graph": simple_graph()})
+    assert response.status_code == 200
+    assert response.json() == {"valid": True, "issues": []}
+
+
+def test_validate_accepts_first_party_subgraph_example() -> None:
+    """서브그래프 예제가 실제 1st-party 이미지 팩의 타입 검사를 통과한다."""
+    root = Path(__file__).resolve().parents[3]
+    graph = json.loads((root / "examples/subgraph.nodal.json").read_text(encoding="utf-8"))
+    registry = _build_registry(optional_packs=DEFAULT_OPTIONAL_PACKS)
+
+    with TestClient(create_app(registry)) as client:
+        response = client.post("/api/graph/validate", json={"graph": graph})
+
     assert response.status_code == 200
     assert response.json() == {"valid": True, "issues": []}
 

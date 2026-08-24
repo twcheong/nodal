@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from .batch_nodes import BatchRange, GetListItem, ListCount, RepeatBatch
+from .flow_nodes import Switch
 from .math_nodes import (
     Add,
     Clamp,
@@ -46,21 +48,31 @@ NODES: tuple[type, ...] = (
     Sum3,
     Format,
     Print,
+    Switch,
+    BatchRange,
+    RepeatBatch,
+    GetListItem,
+    ListCount,
 )
 
 __all__ = [
     "NODES",
     "Add",
+    "BatchRange",
     "Clamp",
     "Const",
     "Divide",
     "Format",
+    "GetListItem",
+    "ListCount",
     "Multiply",
     "Negate",
     "Power",
     "Print",
+    "RepeatBatch",
     "Subtract",
     "Sum3",
+    "Switch",
     "register_all",
 ]
 
