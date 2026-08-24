@@ -1,0 +1,116 @@
+{
+  "nodal_version": "1",
+  "id": "018f2c00-0000-7000-8000-0000000e0001",
+
+  "definitions": {
+    "square": {
+      "params": {
+        "source": {
+          "type": "Image"
+        },
+        "size": {
+          "type": "INT",
+          "default": 256
+        },
+        "method": {
+          "type": "STRING",
+          "default": "lanczos"
+        }
+      },
+      "nodes": {
+        "fit": {
+          "type": "image.Resize",
+          "inputs": {
+            "image": { "$param": "source" },
+            "width": { "$param": "size" },
+            "height": { "$param": "size" },
+            "method": { "$param": "method" }
+          },
+          "meta": {
+            "title": "정사각으로 맞추기",
+            "notes": "이 정의는 노출되지 않으므로 Image 파라미터를 받아도 된다. 툴 inputSchema 가 되는 것은 파일 이름과 같은 정의의 params 뿐이고, 텐서는 MCP 인자로 표현할 수 없다 (design.md §12.3)"
+          }
+        }
+      },
+      "returns": {
+        "image": { "$link": ["fit", "image"] }
+      }
+    },
+
+    "thumbnail": {
+      "params": {
+        "source_path": {
+          "type": "STRING"
+        },
+        "size": {
+          "type": "INT",
+          "default": 256,
+          "widget": { "min": 16, "max": 2048, "step": 8 }
+        },
+        "method": {
+          "type": "STRING",
+          "default": "lanczos",
+          "widget": { "options": ["nearest", "bilinear", "bicubic", "lanczos"] }
+        }
+      },
+      "nodes": {
+        "load": {
+          "type": "image.Load",
+          "inputs": {
+            "path": { "$param": "source_path" }
+          },
+          "meta": {
+            "title": "원본 읽기",
+            "notes": "기본값이 없으므로 source_path 는 필수 파라미터다 — inputSchema 의 required 에 나온다"
+          }
+        },
+        "shrink": {
+          "type": "subgraph.square",
+          "inputs": {
+            "source": { "$link": ["load", "image"] },
+            "size": { "$param": "size" },
+            "method": { "$param": "method" }
+          },
+          "meta": {
+            "title": "중첩 서브그래프",
+            "notes": "정의가 여럿이어도 된다. 노출은 파일 이름과 같은 정의 하나뿐이다"
+          }
+        },
+        "save": {
+          "type": "image.Save",
+          "inputs": {
+            "image": { "$link": ["shrink", "image"] },
+            "embed_workflow": true
+          },
+          "meta": {
+            "title": "에셋으로 저장",
+            "notes": "image.Save 의 asset 출력이 content-addressed 참조다 — 툴 결과에 이미지 바이트를 싣지 않는 이유 (§12.3 · §4.5)"
+          }
+        }
+      },
+      "returns": {
+        "image": { "$link": ["save", "asset"] }
+      }
+    }
+  },
+
+  "nodes": {
+    "call": {
+      "type": "subgraph.thumbnail",
+      "inputs": {
+        "source_path": "examples/sample.png",
+        "size": 128
+      },
+      "meta": {
+        "title": "저작용 하네스",
+        "notes": "MCP 표면은 최상위 nodes 를 읽지 않는다. `nodal run examples/templates/thumbnail.nodal.json` 으로 템플릿을 손으로 돌려보라고 남겨둔 것이다"
+      }
+    }
+  },
+
+  "outputs": ["call"],
+
+  "ui": {
+    "$comment": "M6.0 계약 예제. 카탈로그 규약(design.md §12.8)과 params → inputSchema 변환(§12.3)이 실제로 표현 가능한지 증명한다"
+  }
+}

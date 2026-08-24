@@ -11,6 +11,11 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "python-multipart>=0.0.32",
+    # MCP 표면 (design.md §12). 브리지를 두지 않으므로 SDK 는 **서버 안에** 있다 —
+    # 별도 프로세스면 스키마·타입·에러를 두 번 표현하게 된다 (§12.1 · §12.9).
+    # 라이선스: MIT (modelcontextprotocol/python-sdk). AGENTS.md 기술 스택이
+    # 요구하는 허용적 라이선스이고, CI 의 licence-guard 가 GPL 표기를 거부한다.
+    "mcp>=2.0",
 ]
 
 [build-system]
