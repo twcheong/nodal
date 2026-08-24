@@ -264,6 +264,14 @@ class ParamDef(BaseModel):
             '`types.json` 의 타입 표현식. 문자열(`"INT"`)이거나 구조화 형태(`{"list": "Image"}`)다'
         ),
     )
+    doc: str | None = Field(
+        default=None,
+        description=(
+            "이 파라미터가 무엇인지. MCP 툴 `inputSchema` 의 `description` 이 되고 "
+            "(§12.3), 프론트의 위젯 툴팁이 된다. 선택이다 — 이름과 타입만으로 "
+            "충분한 파라미터가 있다"
+        ),
+    )
     default: JsonValue = Field(
         default=None,
         description="기본값. 없거나 null 이면 필수 파라미터다",
@@ -296,10 +304,24 @@ class SubgraphDef(BaseModel):
     목록**이고 이쪽은 **노출할 소켓**이다. 한 문서 안에서 한 단계 차이로 나란히
     놓이는 두 필드가 같은 단어면 반드시 헷갈린다. 노드 SDK 가 같은 역할을 이미
     `returns` 로 부른다는 점도 맞물린다 — 인스턴스는 밖에서 보면 노드다.
+
+    `doc` 이 `Node.meta.notes` 재사용이 아닌 이유: `NodeMeta` 는 "실행에 영향을
+    주지 않는 노드 부가 정보" 이고 `title` · `notes` 는 사람이 캔버스에 적는
+    메모 자리다. 그것을 MCP 툴 설명으로 승격시키면 사용자가 적어 둔
+    "TODO: 나중에 고칠 것" 이 AI 의 툴 선택 근거가 된다. 용도가 다르다.
     """
 
     model_config = ConfigDict(extra="forbid")
 
+    doc: str | None = Field(
+        default=None,
+        description=(
+            "이 정의가 무엇을 하는지 — **정의의 자기 서술**이다. MCP 툴 설명 "
+            "(§12.2) · 프론트 위젯 툴팁 · 캔버스의 서브그래프 노드 표시가 "
+            "이것을 읽는다. 서브그래프 일반에서는 선택이지만 "
+            "**카탈로그에 노출되려면 필수다** (§12.8)"
+        ),
+    )
     params: dict[SocketName, ParamDef] = Field(
         default_factory=dict,
         description="이 정의가 받는 파라미터. 인스턴스의 입력 소켓이 된다",

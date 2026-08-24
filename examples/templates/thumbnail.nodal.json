@@ -4,9 +4,11 @@
 
   "definitions": {
     "square": {
+      "doc": "이미지를 정사각형으로 리샘플한다. thumbnail 이 안에서 쓰는 조각이다.",
       "params": {
         "source": {
-          "type": "Image"
+          "type": "Image",
+          "doc": "리샘플할 이미지. 밖에서 오지 않고 위쪽 노드에서 온다"
         },
         "size": {
           "type": "INT",
@@ -38,13 +40,16 @@
     },
 
     "thumbnail": {
+      "doc": "이미지를 정사각형 썸네일로 줄여 PNG 에셋으로 저장한다. 제품 사진을 목록용 이미지로 만들 때 쓴다.",
       "params": {
-        "source_path": {
-          "type": "STRING"
+        "source": {
+          "type": "Image",
+          "doc": "줄일 원본 이미지."
         },
         "size": {
           "type": "INT",
           "default": 256,
+          "doc": "결과 한 변의 픽셀 크기. 가로세로가 같아진다.",
           "widget": { "min": 16, "max": 2048, "step": 8 }
         },
         "method": {
@@ -57,11 +62,11 @@
         "load": {
           "type": "image.Load",
           "inputs": {
-            "path": { "$param": "source_path" }
+            "path": { "$param": "source" }
           },
           "meta": {
             "title": "원본 읽기",
-            "notes": "기본값이 없으므로 source_path 는 필수 파라미터다 — inputSchema 의 required 에 나온다"
+            "notes": "기본값이 없으므로 source 는 필수 파라미터다 — inputSchema 의 required 에 나온다. Image 파라미터의 값은 지금 파일 경로다 (design.md §12.3 의 현재/목표)"
           }
         },
         "shrink": {
@@ -98,7 +103,7 @@
     "call": {
       "type": "subgraph.thumbnail",
       "inputs": {
-        "source_path": "examples/sample.png",
+        "source": "examples/sample.png",
         "size": 128
       },
       "meta": {
@@ -111,6 +116,6 @@
   "outputs": ["call"],
 
   "ui": {
-    "$comment": "M6.0 계약 예제. 카탈로그 규약(design.md §12.8)과 params → inputSchema 변환(§12.3)이 실제로 표현 가능한지 증명한다"
+    "$comment": "M6.0/M6.0b 계약 예제. 카탈로그 규약(design.md §12.8)과 params → inputSchema 변환(§12.3)이 실제로 표현 가능한지 증명한다. method 에는 doc 이 없다 — 없을 때 description 이 비는 것을 보이려고 일부러 비워 뒀다"
   }
 }

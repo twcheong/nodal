@@ -36,6 +36,8 @@ from nodal.types import (
 )
 
 __all__ = [
+    "ASSET_PREFIX",
+    "IMAGE_VALUE_DOC",
     "PRIMITIVE_JSON_TYPE",
     "InputSchema",
     "SchemaNote",
@@ -55,6 +57,25 @@ _NUMERIC: Final = frozenset({"integer", "number"})
 
 #: 표현만 바꾸는 위젯 힌트. JSON Schema 에 대응물이 없고, 없어도 잃는 것이 없다.
 _PRESENTATION_HINTS: Final = frozenset({"seed", "control", "multiline", "placeholder"})
+
+#: 에셋 참조 값의 **예약 접두** (§12.3 H2). `$link` · `$param` 이 캐논 문서에서
+#: 예약 키인 것과 같은 방식이다 — 한 문자열 안에 두 형식(경로 · 에셋 참조)을
+#: 섞을 때 생기는 판별 모호성을 접두 하나로 없앤다.
+#:
+#: **아직 동작하지 않는다.** 계약만 박아 둔 것이고, 지금 이 접두로 시작하는 값을
+#: 넘기면 명확한 미구현 에러다 (`templates.build_call_graph`). 조용히 경로로
+#: 취급하지 않는다.
+ASSET_PREFIX: Final = "asset:"
+
+#: `Image` 파라미터의 값 형식 설명. 스키마의 `description` 으로 나간다.
+#:
+#: 이것은 선택이 아니다 — 타입이 `{"type": "string"}` 이라 **무엇을 담는
+#: 문자열인지** 말해 주지 않으면 클라이언트가 알 방법이 없다.
+IMAGE_VALUE_DOC: Final = (
+    f"이미지 값: 파일 경로이거나 에셋 참조 `{ASSET_PREFIX}<hash>` 다. "
+    f"`{ASSET_PREFIX}` 형식은 계약에만 있고 아직 동작하지 않는다 — "
+    "지금 넘기면 미구현 에러로 답한다 (docs/design.md §12.3)."
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,6 +120,8 @@ def build_input_schema(params: Mapping[str, ParamDef]) -> InputSchema:
       나누지 않는다)
     - `widget` 의 `min`·`max`·`step`·`options` 는 JSON Schema 제약이 된다
     - `additionalProperties: false` — 템플릿이 선언한 파라미터만 받는다 (§12.3)
+    - `doc` 은 `description` 이 된다. **없으면 비어 있다** — AI 에게는 이름과
+      타입만 보이므로, 이름이 스스로 말하지 못하는 파라미터는 `doc` 을 적는다
 
     Returns:
         `InputSchema`. 예외는 던지지 않는다 — 카탈로그는 파일 하나가 잘못됐다고
@@ -129,6 +152,7 @@ def build_input_schema(params: Mapping[str, ParamDef]) -> InputSchema:
             continue
 
         notes.extend(_apply_widget(name, prop, param.widget))
+        _apply_doc(prop, param.doc)
 
         if param.required:
             required.append(name)
@@ -162,6 +186,12 @@ def _type_schema(parsed: Type) -> dict[str, Any] | None:
     if isinstance(parsed, PrimitiveType):
         json_type = PRIMITIVE_JSON_TYPE.get(parsed.name)
         return None if json_type is None else {"type": json_type}
+    if isinstance(parsed, TensorType) and parsed.name == "Image":
+        # 유일한 예외다 (§12.3 H2). 텐서 자체는 JSON 이 될 수 없지만 **이미지는
+        # 클라이언트가 이미 가지고 있는 값**이고, 그것을 가리키는 문자열은 만들 수
+        # 있다. 이름 없는 즉석 텐서 서술자(`{"tensor": ...}`)는 여기 해당하지
+        # 않는다 — 계약이 붙은 것은 카탈로그의 `Image` 하나다.
+        return {"type": "string", "description": IMAGE_VALUE_DOC}
     if isinstance(parsed, ListType):
         item = _type_schema(parsed.item)
         return None if item is None else {"type": "array", "items": item}
@@ -170,10 +200,23 @@ def _type_schema(parsed: Type) -> dict[str, Any] | None:
         if any(m is None for m in members):
             return None
         return {"anyOf": members}
-    # AnyType · TensorType · OpaqueType 은 의도적으로 여기 없다.
+    # AnyType · (Image 를 제외한) TensorType · OpaqueType 은 의도적으로 여기 없다.
     if isinstance(parsed, AnyType | TensorType | OpaqueType):
         return None
     return None
+
+
+def _apply_doc(prop: dict[str, Any], doc: str | None) -> None:
+    """`doc` 을 `description` 으로 옮긴다.
+
+    타입이 이미 설명을 붙여 놓았으면(`Image` 의 값 형식) **둘 다 남긴다.** 사람이
+    쓴 설명이 앞이고 형식 설명이 뒤다 — 앞의 것이 "무엇인지", 뒤의 것이 "어떻게
+    쓰는지" 라서 순서가 그래야 읽힌다.
+    """
+    if not doc:
+        return
+    existing = prop.get("description")
+    prop["description"] = f"{doc} {existing}" if existing else doc
 
 
 def _apply_widget(name: str, prop: dict[str, Any], widget: Mapping[str, Any]) -> list[SchemaNote]:

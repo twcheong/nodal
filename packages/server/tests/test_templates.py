@@ -15,11 +15,13 @@ import pytest
 from nodal.subgraph import flatten
 from nodal_server.templates import (
     CALL_NODE_ID,
+    AssetReferenceNotSupportedError,
     Template,
     build_call_graph,
     default_templates_dir,
     load_catalog,
 )
+from nodal_server.toolschema import IMAGE_VALUE_DOC
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 EXAMPLES = REPO_ROOT / "examples" / "templates"
@@ -37,6 +39,7 @@ def minimal(definition_name: str = "demo", **params: dict[str, Any]) -> dict[str
         "nodal_version": "1",
         "definitions": {
             definition_name: {
+                "doc": "테스트용 정의.",
                 "params": params or {"text": {"type": "STRING", "default": "hi"}},
                 "nodes": {"echo": {"type": "text.Print", "inputs": {"text": {"$param": "text"}}}},
                 "returns": {"out": {"$link": ["echo", "text"]}},
@@ -110,6 +113,40 @@ def test_self_contradicting_document_is_rejected_with_issue_locations(tmp_path: 
     assert detail.param == "definitions.demo.nodes.echo.inputs.text"
 
 
+def test_definition_without_doc_is_rejected(tmp_path: Path) -> None:
+    """카탈로그에 노출되려면 doc 이 필수다 (§12.8) — 서버가 지어낼 수 없다."""
+    document = minimal("demo")
+    del document["definitions"]["demo"]["doc"]
+    write(tmp_path, "demo.nodal.json", document)
+    catalog = load_catalog(tmp_path)
+    assert len(catalog) == 0
+    assert "doc" in catalog.rejections[0].reason
+
+
+def test_blank_doc_is_not_a_doc(tmp_path: Path) -> None:
+    document = minimal("demo")
+    document["definitions"]["demo"]["doc"] = "   "
+    write(tmp_path, "demo.nodal.json", document)
+    assert len(load_catalog(tmp_path)) == 0
+
+
+def test_nested_definition_needs_no_doc(tmp_path: Path) -> None:
+    """필수는 **노출 지점**에서만이다. 서브그래프 일반에서는 선택이다."""
+    document = minimal("demo")
+    document["definitions"]["helper"] = dict(document["definitions"]["demo"])
+    del document["definitions"]["helper"]["doc"]
+    write(tmp_path, "demo.nodal.json", document)
+    assert [t.id for t in load_catalog(tmp_path).templates] == ["demo"]
+
+
+def test_doc_is_the_first_line_of_the_tool_description(tmp_path: Path) -> None:
+    document = minimal("demo")
+    document["definitions"]["demo"]["doc"] = "제품 사진을 광고용으로 다듬는다."
+    write(tmp_path, "demo.nodal.json", document)
+    template = load_catalog(tmp_path).templates[0]
+    assert template.describe().splitlines()[0] == "제품 사진을 광고용으로 다듬는다."
+
+
 def test_definition_without_returns_is_rejected(tmp_path: Path) -> None:
     document = minimal("demo")
     document["definitions"]["demo"]["returns"] = {}
@@ -119,12 +156,12 @@ def test_definition_without_returns_is_rejected(tmp_path: Path) -> None:
 
 
 def test_unconvertible_param_rejects_the_template(tmp_path: Path) -> None:
-    document = minimal("demo", image={"type": "Image"})
-    document["definitions"]["demo"]["nodes"]["echo"]["inputs"]["text"] = {"$param": "image"}
+    document = minimal("demo", mask={"type": "Mask"})
+    document["definitions"]["demo"]["nodes"]["echo"]["inputs"]["text"] = {"$param": "mask"}
     write(tmp_path, "demo.nodal.json", document)
     catalog = load_catalog(tmp_path)
     assert len(catalog) == 0
-    assert catalog.rejections[0].details[0].param == "image"
+    assert catalog.rejections[0].details[0].param == "mask"
 
 
 def test_one_bad_file_does_not_hide_the_good_ones(tmp_path: Path) -> None:
@@ -192,14 +229,20 @@ def test_example_input_schema(thumbnail: Template) -> None:
     assert thumbnail.input_schema == {
         "type": "object",
         "properties": {
-            "source_path": {"type": "string"},
+            "source": {
+                "type": "string",
+                "description": f"줄일 원본 이미지. {IMAGE_VALUE_DOC}",
+            },
             "size": {
                 "type": "integer",
                 "minimum": 16,
                 "maximum": 2048,
                 "multipleOf": 8,
+                "description": "결과 한 변의 픽셀 크기. 가로세로가 같아진다.",
                 "default": 256,
             },
+            # `method` 에는 doc 이 없다 — 없으면 description 도 없다는 것을
+            # 예제가 함께 보인다 (§12.3).
             "method": {
                 "type": "string",
                 "enum": ["nearest", "bilinear", "bicubic", "lanczos"],
@@ -207,12 +250,12 @@ def test_example_input_schema(thumbnail: Template) -> None:
             },
         },
         "additionalProperties": False,
-        "required": ["source_path"],
+        "required": ["source"],
     }
 
 
 def test_call_graph_flattens(thumbnail: Template) -> None:
-    graph = build_call_graph(thumbnail, {"source_path": "examples/sample.png", "size": 128})
+    graph = build_call_graph(thumbnail, {"source": "examples/sample.png", "size": 128})
     result = flatten(graph, (CALL_NODE_ID,))
     assert result.issues == ()
     # 평탄화가 끝난 그래프에 `subgraph.*` 는 남지 않는다 (§5.5 ⑤).
@@ -228,13 +271,38 @@ def test_missing_argument_points_at_the_parameter(thumbnail: Template) -> None:
     (issue,) = result.issues
     assert issue.code == "missing_param"
     assert issue.node_id == CALL_NODE_ID
-    assert issue.socket == "source_path"
+    assert issue.socket == "source"
 
 
 def test_defaults_come_from_the_definition(thumbnail: Template) -> None:
     """인자를 주지 않으면 선언된 기본값이 들어간다 — 서버가 지어내지 않는다."""
     result = flatten(
-        build_call_graph(thumbnail, {"source_path": "examples/sample.png"}), (CALL_NODE_ID,)
+        build_call_graph(thumbnail, {"source": "examples/sample.png"}), (CALL_NODE_ID,)
     )
     assert result.issues == ()
     assert result.graph.nodes["call:shrink:fit"].inputs["width"] == 256
+
+
+def test_asset_reference_is_an_explicit_not_implemented_error(thumbnail: Template) -> None:
+    """§12.3 H2 — 조용히 경로로 취급하지 않는다."""
+    with pytest.raises(AssetReferenceNotSupportedError) as excinfo:
+        build_call_graph(thumbnail, {"source": "asset:ab12cd34"})
+    message = str(excinfo.value)
+    assert "source" in message, "어느 파라미터인지 지목한다"
+    assert "asset:ab12cd34" in message
+
+
+def test_asset_prefix_is_reserved_on_every_parameter(thumbnail: Template) -> None:
+    """예약 접두는 타입과 무관하다 — STRING 파라미터에 들어와도 걸린다."""
+    with pytest.raises(AssetReferenceNotSupportedError):
+        build_call_graph(thumbnail, {"source": "a.png", "method": "asset:ab12"})
+
+
+def test_asset_reference_inside_a_list_is_caught(thumbnail: Template) -> None:
+    with pytest.raises(AssetReferenceNotSupportedError):
+        build_call_graph(thumbnail, {"source": ["a.png", "asset:ab12"]})
+
+
+def test_ordinary_paths_are_untouched(thumbnail: Template) -> None:
+    graph = build_call_graph(thumbnail, {"source": "assets/cat.png"})
+    assert graph.nodes[CALL_NODE_ID].inputs["source"] == "assets/cat.png"

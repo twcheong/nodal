@@ -35,13 +35,14 @@ from nodal import (
     validate_graph,
 )
 
-from .toolschema import InputSchema, SchemaNote, build_input_schema
+from .toolschema import ASSET_PREFIX, InputSchema, SchemaNote, build_input_schema
 
 __all__ = [
     "CALL_NODE_ID",
     "TEMPLATE_ID_RE",
     "TEMPLATE_SUFFIX",
     "TOOL_PREFIX",
+    "AssetReferenceNotSupportedError",
     "Rejection",
     "Template",
     "TemplateCatalog",
@@ -73,6 +74,15 @@ TEMPLATE_ID_RE: Final = re.compile(r"^[a-z][a-z0-9_]{0,47}$")
 #: 그 이슈는 **툴 인자**에 귀속되고, `socket` 이 곧 파라미터 이름이다 (§12.3).
 #: 평탄화 후 내부 노드는 `call:<안쪽 ID>` 가 된다 (§5.5 ②).
 CALL_NODE_ID: Final = "call"
+
+
+class AssetReferenceNotSupportedError(NotImplementedError):
+    """툴 인자가 `asset:<hash>` 인데 그 경로가 아직 없다 (§12.3 H2).
+
+    **조용히 경로로 취급하지 않는다.** 그러면 `asset:ab12...` 라는 이름의 파일을
+    찾다가 "그런 파일이 없다" 로 죽고, 클라이언트는 자기가 해시를 잘못 줬다고
+    생각한다. 실제로는 서버가 아직 못 하는 일이다 — 둘은 다른 문제이고 답도 다르다.
+    """
 
 
 @dataclass(frozen=True, slots=True)
@@ -139,12 +149,16 @@ class Template:
     def describe(self) -> str:
         """MCP 툴 설명 (§12.2).
 
-        캐논 포맷에 설명 필드가 없으므로 **선언에서 만들어 낸다.** 여기 담기는
-        것은 클라이언트가 스키마만으로는 알 수 없는 두 가지다 — 호출이 비동기라는
-        것(§12.6)과 시드 여부(§12.3).
+        **첫 줄은 정의가 스스로 쓴 `doc` 이다.** 카탈로그가 `doc` 없는 템플릿을
+        노출하지 않으므로 (§12.8) 여기서 비어 있을 수 없다. 툴 설명은 AI 가 툴을
+        고르는 유일한 근거라, 이 자리를 서버가 지어낸 문장으로 채우면 제품이 그만큼
+        나빠진다.
+
+        나머지는 스키마만으로는 알 수 없는 것들이다 — 호출이 비동기라는 것(§12.6)과
+        시드 여부(§12.3).
         """
         lines = [
-            f"템플릿 '{self.id}' 를 실행한다.",
+            self.definition.doc or f"템플릿 '{self.id}'.",
             "즉시 run_id 를 돌려준다 — 진행과 결과는 get_run(run_id) 로 받고, "
             "중단은 cancel_run(run_id) 이다.",
             f"결과 소켓: {', '.join(self.returns) or '(없음)'}",
@@ -245,6 +259,14 @@ def _load_one(path: Path) -> Template | Rejection:
             "템플릿 ID 는 파일명이고, 노출되는 것은 같은 이름의 정의다",
         )
 
+    if not definition.doc or not definition.doc.strip():
+        return Rejection(
+            path,
+            f"정의 {template_id!r} 에 doc 이 없다 — 카탈로그에 노출되려면 필수다. "
+            "툴 설명은 AI 가 이 툴을 고를지 판단하는 유일한 근거이고, "
+            "서버가 지어낸 문장으로 채울 수 없다 (design.md §12.8)",
+        )
+
     if not definition.returns:
         return Rejection(
             path,
@@ -286,7 +308,16 @@ def build_call_graph(template: Template, arguments: Mapping[str, Any]) -> Graph:
     `validate_for_execution` 이 `GraphIssue` 로 답한다 (§5.5). 그 이슈의
     `node_id` 는 `CALL_NODE_ID` 이고 `socket` 이 곧 파라미터 이름이라, MCP 에러는
     **어느 인자인지** 그대로 지목할 수 있다 (§12.3).
+
+    예외가 하나 있다 — `asset:` 로 시작하는 값이다. 그 경로는 아직 구현되지
+    않았고 (§12.3 H2), 그대로 흘려보내면 파일을 찾다가 죽어 **클라이언트가 자기
+    해시를 의심한다.** 미구현은 검증 실패가 아니라 서버가 못 하는 일이므로
+    `GraphIssue` 가 아니라 예외로 답한다.
+
+    Raises:
+        AssetReferenceNotSupportedError: 인자에 `asset:` 값이 있을 때.
     """
+    _reject_asset_values(arguments)
     return Graph(
         definitions=dict(template.graph.definitions),
         nodes={
@@ -297,6 +328,24 @@ def build_call_graph(template: Template, arguments: Mapping[str, Any]) -> Graph:
         },
         outputs=[CALL_NODE_ID],
     )
+
+
+def _reject_asset_values(arguments: Mapping[str, Any]) -> None:
+    """`asset:` 예약 접두를 쓴 인자를 찾아 미구현으로 답한다 (§12.3 H2).
+
+    **타입이 아니라 값을 본다.** `asset:` 는 예약 접두라 어떤 파라미터에서도
+    다른 뜻을 가질 수 없고, 그래서 `Image` 로 선언되지 않은 파라미터에 들어온
+    에셋 참조도 여기서 걸린다. 타입만 보면 `List[Image]` 나 `STRING` 경로
+    파라미터에 들어온 것이 조용히 지나간다.
+    """
+    for name, value in arguments.items():
+        for item in value if isinstance(value, list) else [value]:
+            if isinstance(item, str) and item.startswith(ASSET_PREFIX):
+                raise AssetReferenceNotSupportedError(
+                    f"파라미터 {name!r} 의 값 {item!r} 는 에셋 참조다. "
+                    "형식은 계약에 있지만 (design.md §12.3) 서버가 아직 에셋으로 "
+                    "이미지를 읽지 못한다 — 지금은 파일 경로를 넘겨라"
+                )
 
 
 def _details(issues: Iterable[GraphIssue]) -> tuple[SchemaNote, ...]:

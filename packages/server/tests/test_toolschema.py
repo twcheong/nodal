@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 
 from nodal import ParamDef
-from nodal_server.toolschema import build_input_schema
+from nodal_server.toolschema import IMAGE_VALUE_DOC, build_input_schema
 
 
 def param(type_expr: Any, **kwargs: Any) -> ParamDef:
@@ -40,6 +40,12 @@ def param(type_expr: Any, **kwargs: Any) -> ParamDef:
             {"list": {"union": ["INT", "STRING"]}},
             {"type": "array", "items": {"anyOf": [{"type": "integer"}, {"type": "string"}]}},
         ),
+        # H2 — 텐서 중 `Image` 하나만 값 형식을 계약으로 갖는다 (§12.3).
+        ("Image", {"type": "string", "description": IMAGE_VALUE_DOC}),
+        (
+            {"list": "Image"},
+            {"type": "array", "items": {"type": "string", "description": IMAGE_VALUE_DOC}},
+        ),
     ],
 )
 def test_convertible_types(type_expr: Any, expected: dict[str, Any]) -> None:
@@ -52,13 +58,14 @@ def test_convertible_types(type_expr: Any, expected: dict[str, Any]) -> None:
     "type_expr",
     [
         "Any",  # 검증할 것이 없으면 툴을 템플릿당 하나 만든 이유가 사라진다
-        "Image",  # 텐서 — 클라이언트가 JSON 으로 만들 수 없다
-        "Mask",
+        "Mask",  # 텐서 — 클라이언트가 JSON 으로 만들 수 없다
         "Latent",
         "Model",  # 불투명 핸들 — 엔진 안에서만 산다
         "VAE",
-        {"list": "Image"},  # 담는 그릇이 바뀌어도 안의 것은 그대로다
-        {"union": ["INT", "Image"]},  # 멤버 하나가 안 되면 union 도 안 된다
+        {"list": "Mask"},  # 담는 그릇이 바뀌어도 안의 것은 그대로다
+        {"union": ["INT", "Mask"]},  # 멤버 하나가 안 되면 union 도 안 된다
+        # 이름 없는 즉석 텐서 서술자. 모양이 Image 와 같아도 계약이 붙은 것은
+        # **카탈로그의 이름**이지 shape 가 아니다.
         {"tensor": {"dtypes": ["float32"], "shape": ["B", "H", "W", "C"]}},
     ],
 )
@@ -76,9 +83,40 @@ def test_broken_type_expression_is_reported_not_raised() -> None:
 
 def test_one_bad_param_blocks_but_all_are_reported() -> None:
     """파라미터 셋이 잘못됐으면 셋 다 보고한다 — 한 번에 고칠 수 있어야 한다."""
-    result = build_input_schema({"a": param("Image"), "b": param("INT"), "c": param("Model")})
+    result = build_input_schema({"a": param("Mask"), "b": param("INT"), "c": param("Model")})
     assert result.schema is None
     assert {note.param for note in result.errors} == {"a", "c"}
+
+
+# ------------------------------------------------------------------ doc (H1)
+
+
+def test_doc_becomes_description() -> None:
+    result = build_input_schema({"size": param("INT", doc="결과 한 변의 픽셀 크기.")})
+    assert result.schema is not None
+    assert result.schema["properties"]["size"]["description"] == "결과 한 변의 픽셀 크기."
+
+
+def test_missing_doc_leaves_description_empty() -> None:
+    """AI 에게는 이름과 타입만 보인다. 조용히 지어내지 않는다 (§12.3)."""
+    result = build_input_schema({"size": param("INT")})
+    assert result.schema is not None
+    assert "description" not in result.schema["properties"]["size"]
+
+
+def test_image_value_format_is_always_stated() -> None:
+    """`{"type": "string"}` 만으로는 무엇을 담는 문자열인지 알 수 없다."""
+    result = build_input_schema({"source": param("Image")})
+    assert result.schema is not None
+    assert result.schema["properties"]["source"]["description"] == IMAGE_VALUE_DOC
+
+
+def test_image_doc_precedes_the_value_format() -> None:
+    """사람이 쓴 "무엇인지" 가 앞, 형식의 "어떻게 쓰는지" 가 뒤다."""
+    result = build_input_schema({"source": param("Image", doc="줄일 원본 이미지.")})
+    assert result.schema is not None
+    description = result.schema["properties"]["source"]["description"]
+    assert description == f"줄일 원본 이미지. {IMAGE_VALUE_DOC}"
 
 
 # ------------------------------------------------------------------ 필수 · 기본값
