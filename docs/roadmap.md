@@ -127,10 +127,20 @@
       비-LoRA 분기가 오염되지 않는지 (`test_output_differs.py`)
 
 **완료 기준**: txt2img 워크플로가 SDXL에서 돌고 스텝 프리뷰가 보인다.
-— **절반 확인됨.** tiny SDXL 픽스처로 전 경로가 CPU 에서 돌고 프리뷰가 나가는
-것은 CI 가 증명한다. **실제 SDXL 가중치로 그럴듯한 그림이 나오는지는 기계가
-판단할 수 없으므로** NVIDIA 장비에서 사람이 확인한다 (`docs/dev.md` 의
-"NVIDIA 장비에서 실제 SDXL 확인하기").
+— ✅ **2026-08-24 실제 NVIDIA 장비에서 확인 완료.** 측정 커밋은 `f65ff82`
+(M5.4), 비교 기준은 `9445d56`(M4 마무리)이다. tiny 픽스처가 아니라 실제 SDXL
+체크포인트 3종(`sd_xl_base_1.0` · `RealVisXL_V5.0` · `Juggernaut-XL_v9`)을
+`seed=12345`, `cfg=7.0`, `euler/normal`, 1024×1024 공통 조건으로 검증했다.
+
+| 항목 | 실제 장비 확인 결과 |
+|---|---|
+| **A · 최종 출력** | nodal 출력과 `diffusers` 직접 호출 골든 레퍼런스를 나란히 놓고 사람이 판정해 3종 모두 통과. “그림이 프롬프트와 관련 있는가”만 보면 에러 없이 이상한 그림을 내는 실패를 놓치므로, 기준을 레퍼런스 대조로 강화했다 |
+| **B · 스텝 프리뷰** | `steps=60`에서 브라우저가 아니라 WS 이벤트 스트림에 직접 붙어 `node.preview` 11프레임을 수신. `PREVIEW_COUNT=8`에서 계산되는 샘플러 9프레임 + VAEDecode/Save 2프레임과 일치 |
+| **C · 모델 수명·VRAM** | 3사이클 동안 체크포인트 3종을 총 9회 로드. live pipelines가 `DEFAULT_CAPACITY`(2)를 넘지 않았고 allocated 추세가 평평해 누수 없음 |
+| **D · LoRA 격리** | 체크포인트 3종 모두 (1) 미적용과 (3) 해제 후 출력의 SHA-256이 같고, (2) 적용 출력만 달라 통과 |
+
+재검증 절차와 항목별 판정 기준은 `docs/dev.md`의 “NVIDIA 장비에서 실제 SDXL
+확인하기”에 보존한다.
 
 **CI 검증**: `hf-internal-testing/tiny-sd-pipe` (8.7 MB) · `tiny-sdxl-pipe`
 (11.2 MB) 로 CPU 에서 돈다. 출력의 **의미**는 검증하지 못한다 (가중치가
