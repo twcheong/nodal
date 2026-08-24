@@ -11,8 +11,10 @@ from nodal import (
     CancelToken,
     DynamicGraph,
     ExecutionList,
+    GraphValidationError,
     Image,
     Int,
+    IssueCode,
     LRUCache,
     NodeError,
     NodeExecutionError,
@@ -27,6 +29,7 @@ from nodal import (
     execute,
     node,
     parse_graph,
+    validate_for_execution,
 )
 
 
@@ -280,27 +283,45 @@ async def test_is_changed_does_not_receive_a_linked_widget_input() -> None:
     registry = NodeRegistry()
     registry.register_all((ChangedLinkSource, ChangedLinkConsumer))
 
-    with pytest.raises(NodeExecutionError) as excinfo:
+    graph = parse_graph(
+        {
+            "nodes": {
+                "source": {"type": "test.ChangedLinkSource"},
+                "linked_hook": {
+                    "type": "test.ChangedLinkConsumer",
+                    "inputs": {"value": {"$link": ["source", "value"]}},
+                },
+            },
+            "outputs": ["linked_hook"],
+        }
+    )
+
+    # M5.3 부터 이것은 **검증**이 잡는다 — 실행을 시작하기 전에 답해야 하기
+    # 때문이다 (design.md §2 원칙 2 · §12.3). 평탄화 뒤에 판정하는 이유는
+    # 정의 안의 `$param` 이 인스턴스에서 링크로 채워질 수 있어서다 (§5.5).
+    issues = validate_for_execution(graph, registry, ["linked_hook"])
+    (issue,) = [i for i in issues if i.code is IssueCode.IS_CHANGED_LINKED_INPUT]
+    assert issue.node_id == "linked_hook"
+    assert issue.socket == "value"
+    assert "링크" in issue.message
+
+    # `execute` 는 그 검증을 지나므로 GraphValidationError 로 멈춘다.
+    with pytest.raises(GraphValidationError):
         await execute(
-            parse_graph(
-                {
-                    "nodes": {
-                        "source": {"type": "test.ChangedLinkSource"},
-                        "linked_hook": {
-                            "type": "test.ChangedLinkConsumer",
-                            "inputs": {"value": {"$link": ["source", "value"]}},
-                        },
-                    },
-                    "outputs": ["linked_hook"],
-                }
-            ),
+            graph,
             ["linked_hook"],
             registry=registry,
             cache=LRUCache(8),
             events=NullEventSink(),
             cancel_token=CancelToken(),
         )
+    assert hook_calls == []
 
+    # 실행 시점 방어는 남아 있다. 검증을 건너뛰고 실행 계획을 직접 모는
+    # 호출자가 있기 때문이다 (라이브러리 사용).
+    plan = ExecutionList(DynamicGraph(graph), LRUCache(8), registry)
+    with pytest.raises(NodeExecutionError) as excinfo:
+        plan.cache_key_for("linked_hook")
     assert excinfo.value.node_id == "linked_hook"
     assert excinfo.value.socket == "value"
     assert "링크 입력" in str(excinfo.value)

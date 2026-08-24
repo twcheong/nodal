@@ -40,6 +40,20 @@ class IssueCode(StrEnum):
     #: 정의들이 서로를(또는 자기를) 참조해 순환함.
     SUBGRAPH_CYCLE = "subgraph_cycle"
 
+    # --- 평탄화(M5.3)가 만드는 것들. 예외가 아니라 이슈다 (design.md §5.5).
+
+    #: 인스턴스가 필수 파라미터를 채우지 않았고 정의에 기본값도 없음.
+    MISSING_PARAM = "missing_param"
+    #: 파라미터 선언의 타입 표현식이 `types.json` 문법을 벗어남.
+    INVALID_PARAM_TYPE = "invalid_param_type"
+    #: 서브그래프 중첩이 깊이 상한을 넘음.
+    SUBGRAPH_TOO_DEEP = "subgraph_too_deep"
+    #: 평탄화 결과 노드 수가 상한을 넘음.
+    SUBGRAPH_TOO_LARGE = "subgraph_too_large"
+
+    #: `is_changed` 훅이 선언한 입력이 링크로 채워져 있음 (§5.3).
+    IS_CHANGED_LINKED_INPUT = "is_changed_linked_input"
+
     # --- 아래는 레지스트리를 알아야만 판정할 수 있는 것들 (M1).
     #     `nodal.executor.validate_for_execution` 이 만든다.
 

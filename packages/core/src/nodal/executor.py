@@ -169,6 +169,20 @@ class NodeOutcome:
 
 
 @dataclass(frozen=True, slots=True)
+class PreparedGraph:
+    """`prepare_for_execution` 의 결과 — 평탄화된 그래프와 검증 결과 (§5.5).
+
+    `issues` 가 비어 있지 않으면 `graph` 를 실행하지 않는다. 평탄화가 문제를
+    만난 자리를 건너뛰고 나머지를 폈으므로 불완전할 수 있다.
+    """
+
+    graph: Graph
+    #: 요청된 출력을 평탄화 후 ID 로 옮긴 것. 인스턴스는 안쪽 노드로 바뀐다.
+    outputs: tuple[str, ...]
+    issues: tuple[GraphIssue, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class Success(NodeOutcome):
     """정상 종료. `outputs` 는 소켓 이름 → 값.
 
@@ -741,16 +755,20 @@ async def execute(
         NodeExecutionError: 노드가 실패했을 때. 어느 노드인지 지목한다.
         Cancelled: 실행 중 취소됐을 때.
     """
-    issues = validate_for_execution(graph, registry, requested_outputs)
-    if issues:
-        raise GraphValidationError(list(issues))
+    prepared = prepare_for_execution(graph, registry, requested_outputs)
+    if prepared.issues:
+        raise GraphValidationError(list(prepared.issues))
+
+    # 실행되는 것은 **평탄화된** 그래프다. 서브그래프 인스턴스는 여기 없다 (§5.5).
+    executable = prepared.graph
+    requested_outputs = prepared.outputs
 
     identifier = run_id or uuid.uuid4().hex
     started_at = time.perf_counter()
 
     asset_store = assets if assets is not None else NullAssetStore()
     model_store = models if models is not None else NullModelStore()
-    dyn = DynamicGraph(graph)
+    dyn = DynamicGraph(executable)
     plan = ExecutionList(dyn, cache, registry)
     for out_id in requested_outputs:
         plan.add_node(out_id)
@@ -820,6 +838,9 @@ async def execute(
             events.emit(NodeStarted(t="node.started", run_id=identifier, node_id=visible))
 
             inputs = resolve_inputs(node_id, dyn, schema, results)
+            # `ctx` 에는 **원본** 그래프를 준다 (평탄화 전). PNG `iTXt` 에 심기는
+            # 워크플로가 사용자가 쓴 문서여야 복원했을 때 정의가 살아 돌아온다
+            # — 평탄화 결과를 심으면 템플릿 구조가 사라진 사본이 남는다 (§5.5).
             ctx = NodeContext(
                 visible, identifier, events, cancel_token, asset_store, graph, model_store
             )
@@ -1277,6 +1298,40 @@ def resolve_inputs(
     return resolved
 
 
+def prepare_for_execution(
+    graph: Graph,
+    registry: NodeRegistry,
+    requested_outputs: Sequence[str] = (),
+) -> PreparedGraph:
+    """실행 준비 — **① 평탄화 → ② 검증** (design.md §5.5).
+
+    평탄화가 검증의 첫 걸음인 이유는 §5.5 에 있다. 요약하면: 서브그래프가 펴진
+    뒤라야 노드 타입 · 소켓 타입 · 필수 입력을 볼 수 있고, 평탄화가 만나는 문제
+    (필수 파라미터 누락 등)도 예외가 아니라 같은 `issues` 목록에 실려야 한다.
+    MCP 는 실행을 시작하기 **전에** 무엇이 잘못됐는지 들어야 한다 (§12.3).
+
+    **`flatten` 을 부르는 곳은 여기 하나뿐이다.** `execute` 도 이 함수를 지나며,
+    그래서 실행되는 그래프와 검증된 그래프가 같다는 것이 구조적으로 보장된다.
+
+    Returns:
+        평탄화된 그래프 · 옮겨진 출력 목록 · `GraphIssue` 목록.
+    """
+    from .graph import validate_graph
+    from .subgraph import flatten
+
+    # 문서 자기모순은 평탄화 **전에** 본다. 정의가 자기모순이면 펼 이유가 없고,
+    # 사이클을 편 결과는 무한하다 (§5.5 의 검증 표).
+    document_issues = list(validate_graph(graph))
+
+    result = flatten(graph, tuple(requested_outputs))
+    issues: list[GraphIssue] = document_issues + list(result.issues)
+    flat = result.graph
+    outputs = result.outputs
+
+    issues.extend(_registry_issues(flat, registry, outputs))
+    return PreparedGraph(graph=flat, outputs=outputs, issues=tuple(issues))
+
+
 def validate_for_execution(
     graph: Graph,
     registry: NodeRegistry,
@@ -1284,19 +1339,31 @@ def validate_for_execution(
 ) -> Sequence[Any]:
     """실행 전 전체 검증 — 구조 + 노드 타입 + 소켓 타입 호환성.
 
-    `nodal.graph.validate_graph` 의 구조 검사에 더해, 레지스트리를 알아야만 할
-    수 있는 것들을 본다: 알 수 없는 노드 타입, 없는 입력·출력 소켓, 필수 입력
-    누락, 타입 불일치 (`nodal.types.is_compatible`).
-
-    큐 진입 전에 이것을 통과해야 실행이 시작된다 (design.md §4.3).
-    `POST /api/graph/validate` 가 실행 없이 이것만 돌린다.
+    `prepare_for_execution` 에서 이슈만 꺼낸 얇은 껍데기다. 그래프를 돌려받을
+    필요가 없는 호출자(`POST /api/graph/validate`)를 위해 남아 있다 — 응답
+    형상이 바뀌지 않는 이유가 이것이다.
 
     Returns:
-        `GraphIssue` 목록. 비어 있으면 실행 가능하다.
+        `GraphIssue` 목록. 비어 있으면 실행 가능하다. `list` 로 돌려주는 것은
+        M1 부터의 모양이다 — 호출자가 `== []` 로 비교하는 곳이 있다.
     """
-    from .graph import validate_graph
+    return list(prepare_for_execution(graph, registry, requested_outputs).issues)
 
-    issues: list[GraphIssue] = list(validate_graph(graph))
+
+def _registry_issues(
+    graph: Graph,
+    registry: NodeRegistry,
+    requested_outputs: Sequence[str],
+) -> list[GraphIssue]:
+    """레지스트리를 알아야만 할 수 있는 검사들.
+
+    알 수 없는 노드 타입, 없는 입력·출력 소켓, 필수 입력 누락, 타입 불일치
+    (`nodal.types.is_compatible`), 그리고 `is_changed` 훅의 링크 입력.
+
+    **평탄화된 그래프 위에서 돈다.** 서브그래프 인스턴스는 이미 사라졌으므로
+    여기서 `subgraph.*` 를 만날 일이 없다.
+    """
+    issues: list[GraphIssue] = []
 
     schemas: dict[str, NodeSchema] = {}
     for node_id, node in graph.nodes.items():
@@ -1386,4 +1453,40 @@ def validate_for_execution(
                     )
                 )
 
+        issues.extend(_is_changed_issues(node_id, node, schema))
+
+    return issues
+
+
+def _is_changed_issues(node_id: str, node: Node, schema: NodeSchema) -> list[GraphIssue]:
+    """`is_changed` 훅이 링크로 채워진 입력을 요구하는가 (design.md §5.3).
+
+    훅은 캐시를 **조회하기 전에** 평가되는데 링크 값은 상류를 실행한 뒤에야
+    존재한다. 그래서 훅은 리터럴/위젯 입력만 받는다.
+
+    **평탄화 뒤에 판정해야 한다.** 정의 안에서 `{"$param": "path"}` 였던 입력이
+    인스턴스에서 링크로 채워질 수 있고, 그때 비로소 훅이 링크 입력을 받게 된다
+    — 평탄화 전에는 알 수 없다.
+
+    실행 시점 방어(`ExecutionList._is_changed_token`)는 그대로 둔다. 검증을
+    건너뛰고 `execute` 를 직접 부르는 경로가 있다 (§2 원칙 2 는 큐 진입 전
+    검증을 요구하지만, 라이브러리로 쓰는 호출자까지 강제하지는 못한다).
+    """
+    if schema.is_changed is None:
+        return []
+    issues: list[GraphIssue] = []
+    for name in inspect.signature(schema.is_changed).parameters:
+        if isinstance(node.inputs.get(name), Link):
+            issues.append(
+                GraphIssue(
+                    code=IssueCode.IS_CHANGED_LINKED_INPUT,
+                    message=(
+                        f"{schema.id} 의 `is_changed` 훅이 이 입력을 읽는데 링크로 "
+                        "채워져 있다 — 훅은 캐시 조회 전에 평가되므로 리터럴/위젯 "
+                        "입력만 받을 수 있다"
+                    ),
+                    node_id=node_id,
+                    socket=name,
+                )
+            )
     return issues

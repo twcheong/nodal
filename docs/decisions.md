@@ -42,6 +42,85 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-24 · Claude Code · M5.3 평탄화 구현 — 한계값 · 배치 · 훅 판정 층 이동
+
+`dee03f0`(M5.0)과 `3d38aae`(M5.0b)가 계약으로 적은 평탄화를 구현했다.
+`packages/core/src/nodal/subgraph.py` 가 새로 생겼고, `flatten` 을 부르는 곳은
+`prepare_for_execution` 하나뿐이다.
+
+**완료 증거**: `examples/subgraph.nodal.json` 이 `POST /api/graph/validate` 에서
+`{"valid": true, "issues": []}` 를 받는다. M5.0 이 "절반만 됐다" 고 남긴 부분이다.
+
+#### 한계값 — 깊이 8 · 노드 10,000 (열린 질문 12 해소)
+
+- **둘을 함께 둔다.** 깊이만으로는 부족하다 — 중첩 2단이어도 각 정의가 50노드면
+  결과가 폭발한다
+- **깊이 8**: 사람이 손으로 만드는 중첩은 2~3단이고 MCP 템플릿은 중첩을 거의
+  만들지 않는다. 실수만 잡고 정상 사용을 막지 않는 자리
+- **노드 10,000**: M2 벤치마크(200노드)의 50배. 실사용 상한을 크게 넘는다
+- **어느 한계인지 지목한다** (`subgraph_too_deep` · `subgraph_too_large`).
+  깊이에 걸린 사람은 정의가 서로를 참조하는지 보고, 크기에 걸린 사람은 정의당
+  노드 수를 줄인다 — 할 일이 다르므로 "너무 큽니다" 로는 부족하다
+- 권고값을 그대로 채택했다. 값은 `MAX_DEPTH` · `MAX_NODES` 상수이고
+  테스트가 문서와 같은지 고정한다
+
+#### 배치 — `prepare_for_execution` 신설
+
+- **문제**: `validate_for_execution` 은 이슈만 돌려준다. 그런데 `execute` 는
+  **평탄화된 그래프**가 필요하다. 각자 `flatten` 을 부르면 두 곳이 되고,
+  검증한 그래프와 실행한 그래프가 갈릴 수 있다
+- **결정**: `prepare_for_execution(graph, registry, outputs) -> PreparedGraph`
+  를 만들었다. `PreparedGraph` 는 (평탄화된 그래프 · 옮겨진 출력 · 이슈)다.
+  `validate_for_execution` 은 거기서 이슈만 꺼내는 얇은 껍데기로 남는다 —
+  **`POST /api/graph/validate` 의 응답 형상이 바뀌지 않는 이유**가 이것이다
+- `execute` 도 이 함수를 지나므로 **실행되는 그래프와 검증된 그래프가 같다는 것이
+  구조적으로 보장된다**
+- `validate_for_execution` 은 `list` 를 그대로 돌려준다. `PreparedGraph.issues`
+  는 튜플이지만 호출자 중 `== []` 로 비교하는 곳이 있어 모양을 유지했다
+
+#### 스펙 밖 판단 3건
+
+**① 요청 출력이 인스턴스면 안쪽 노드로 옮긴다.** `outputs: ["thumb"]` 처럼
+인스턴스를 직접 요청하면 평탄화 후 그 노드가 없다. `returns` 가 가리키는 안쪽
+노드들로 옮기고 중복을 지운다. `returns` 가 비어 있으면 실행할 것이 없으므로
+`unknown_output` 이슈를 낸다. §5.5 가 다루지 않는 경우인데, 다루지 않으면 요청이
+조용히 사라진다.
+
+**② 인스턴스가 선언되지 않은 파라미터에 값을 주면 이슈다** (`unknown_input_socket`
+재사용). 보통 노드의 같은 실수와 같은 코드를 쓴다 — 인스턴스는 밖에서 보면
+노드이므로(§5.5 의 `returns` 근거와 같은 논리) 어휘도 같아야 한다. 없으면 오타가
+조용히 무시된다.
+
+**③ `ctx.graph_json()` 은 평탄화 *전* 문서를 준다.** PNG `iTXt` 에 심기는 워크플로가
+사용자가 쓴 문서여야 복원했을 때 정의가 살아 돌아온다. 평탄화 결과를 심으면
+템플릿 구조가 사라진 사본이 남고, "문서 하나가 곧 재현 가능한 레시피"(§1.2 ①)가
+반쪽이 된다. `execute` 안에서 `graph`(원본)와 `executable`(평탄화)이 갈리는 지점에
+주석을 달았다.
+
+#### 훅-링크 판정을 검증 층으로 (M5.2 의 동작 변경)
+
+- **결정**: `is_changed` 훅이 링크로 채워진 입력을 요구하면 **검증**이
+  `is_changed_linked_input` 이슈로 잡는다. 실행 시점 방어는 남긴다
+- **왜 평탄화 뒤인가**: 정의 안에서 `{"$param": "path"}` 였던 입력이 인스턴스에서
+  링크로 채워질 수 있다. **평탄화 전에는 알 수 없다**
+- **테스트 하나를 고쳤다**: `test_is_changed_does_not_receive_a_linked_widget_input`
+  이 `NodeExecutionError` 를 기대했는데 이제 `GraphValidationError` 로 먼저 막힌다.
+  층이 옮겨간 것이 이번 작업의 지시사항이므로 기대값을 옮겼고, **실행 시점 방어가
+  아직 있다는 것을 같은 테스트에서 따로 확인**한다 (`ExecutionList` 를 직접 몰아서)
+
+#### 건드리지 않은 것
+
+- `test_cache_baseline.py` — 초록이다. 평탄화는 서브그래프가 **없는** 그래프를
+  원본 그대로 돌려주므로 기존 노드의 캐시 키가 바뀌지 않는다 (`is` 비교로 확인)
+- `test_expansion.py` 의 xfail 4개 — 봉인 그대로 (M5.4)
+- `roadmap.md` 체크박스 — 완료 기준 ①(조건 분기 로그 증명)은 Switch 노드가
+  필요하므로 M5.4 뒤다
+
+- **영향 범위**: `packages/core/src/nodal/{subgraph.py(신규),executor.py,errors.py,__init__.py}`,
+  `packages/core/tests/{test_flatten.py(신규),test_is_changed.py}`,
+  `docs/design.md` §5.3 · §5.5 · §11
+- **되돌릴 수 있나**: 예. 다만 되돌리면 열린 질문 10·11·12·14 가 함께 다시 열린다
+
 ### 2026-08-23 (6) · Claude Code · M5.1b 구현 — 소켓 단위 블로킹 · 캐시 히트(G1) · 확장 봉인
 
 `b638968`(M5.1a)이 스펙으로 적은 E1·E2 를 구현했다. **맨몸 블로커 경로의 동작은

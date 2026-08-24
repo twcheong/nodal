@@ -50,10 +50,12 @@ from .executor import (
     NeedsLazy,
     NodeExecutionError,
     NodeOutcome,
+    PreparedGraph,
     RunResult,
     Success,
     TopologicalSort,
     execute,
+    prepare_for_execution,
     propagate_blocker,
     resolve_inputs,
     run_node,
@@ -125,6 +127,7 @@ from .schema import (
     reflect_node,
     register_combo_provider,
 )
+from .subgraph import MAX_DEPTH, MAX_NODES, FlattenResult, flatten
 from .types import (
     BOOL,
     CLIP,
@@ -180,7 +183,11 @@ __all__ = [  # noqa: RUF022
     "check_graph",
     "parse_graph",
     "validate_graph",
-    # --- 서브그래프 (M5.0 계약: 표현과 검증만. 평탄화는 M5.3)
+    # --- 서브그래프 (M5.0 표현·검증 / M5.3 평탄화)
+    "MAX_DEPTH",
+    "MAX_NODES",
+    "FlattenResult",
+    "flatten",
     "PARAM_KEY",
     "SUBGRAPH_TYPE_PREFIX",
     "Param",
@@ -275,10 +282,12 @@ __all__ = [  # noqa: RUF022
     "NeedsLazy",
     "NodeExecutionError",
     "NodeOutcome",
+    "PreparedGraph",
     "RunResult",
     "Success",
     "TopologicalSort",
     "execute",
+    "prepare_for_execution",
     "propagate_blocker",
     "resolve_inputs",
     "run_node",
