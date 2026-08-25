@@ -56,6 +56,8 @@ class FlattenResult:
     graph: Graph
     #: 요청된 출력 노드 ID 를 평탄화 후 ID 로 옮긴 것.
     outputs: tuple[str, ...]
+    #: 요청된 서브그래프 출력 → returns 이름 → 실제 (노드 ID, 소켓).
+    output_sockets: Mapping[str, Mapping[str, tuple[str, str]]]
     issues: tuple[GraphIssue, ...]
 
 
@@ -79,7 +81,7 @@ def flatten(
         `FlattenResult`. 예외는 던지지 않는다.
     """
     if not graph.definitions:
-        return FlattenResult(graph, tuple(requested_outputs), ())
+        return FlattenResult(graph, tuple(requested_outputs), {}, ())
 
     state = _Flattener(graph, max_depth=max_depth, max_nodes=max_nodes)
     state.run()
@@ -91,7 +93,12 @@ def flatten(
         outputs=list(state.map_outputs(graph.outputs)),
         ui=graph.ui,
     )
-    return FlattenResult(flat, state.map_outputs(requested_outputs), tuple(state.issues))
+    return FlattenResult(
+        flat,
+        state.map_outputs(requested_outputs),
+        state.map_output_sockets(requested_outputs),
+        tuple(state.issues),
+    )
 
 
 class _Flattener:
@@ -150,6 +157,24 @@ class _Flattener:
                 )
             mapped.extend(targets)
         return tuple(dict.fromkeys(mapped))
+
+    def map_output_sockets(
+        self, outputs: tuple[str, ...] | list[str]
+    ) -> dict[str, dict[str, tuple[str, str]]]:
+        """요청된 인스턴스의 공개 소켓을 평탄화된 실제 소켓으로 옮긴다.
+
+        `map_outputs` 는 실행할 노드 목록이라 같은 노드를 중복 제거하지만, 이
+        매핑은 결과 조립 계약이라 소켓을 보존한다 (design.md §12.3). 내부
+        딕셔너리는 정의의 `returns` 선언 순서대로 만든다.
+        """
+        mapped: dict[str, dict[str, tuple[str, str]]] = {}
+        for out_id in outputs:
+            node = self._graph.nodes.get(out_id)
+            returns = self._returns_of(node) if node is not None else None
+            if node is None or node.subgraph() is None or returns is None:
+                continue
+            mapped[out_id] = {name: self._follow(out_id, name) for name in returns}
+        return mapped
 
     # ------------------------------------------------------------------ ① 펴기
 

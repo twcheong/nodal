@@ -6,18 +6,35 @@
 
 from __future__ import annotations
 
+import io
 import json
+import logging
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 import pytest
+from PIL import Image as PILImage
 
+import nodal_nodes_image
+from nodal import (
+    CancelToken,
+    LRUCache,
+    NullEventSink,
+    RunResult,
+    execute,
+    register_preview_encoder,
+)
+from nodal.preview import _ENCODERS
 from nodal.subgraph import flatten
+from nodal_server.assets import AssetStore
+from nodal_server.queue import RunRecord
 from nodal_server.templates import (
     CALL_NODE_ID,
     AssetReferenceNotSupportedError,
     Template,
     build_call_graph,
+    collect_results,
     default_templates_dir,
     load_catalog,
 )
@@ -218,6 +235,20 @@ def thumbnail() -> Template:
     return template
 
 
+@pytest.fixture
+def image_preview_encoder() -> Iterator[None]:
+    """core 테스트가 비운 전역 등록을 복구하되 이 테스트가 남기지는 않는다."""
+    encoder = nodal_nodes_image.encode_ndarray_preview
+    was_registered = encoder in _ENCODERS
+    if not was_registered:
+        register_preview_encoder(encoder)
+    try:
+        yield
+    finally:
+        if not was_registered and encoder in _ENCODERS:
+            _ENCODERS.remove(encoder)
+
+
 def test_example_template_loads(thumbnail: Template) -> None:
     assert load_catalog(EXAMPLES).rejections == ()
     assert thumbnail.tool_name == "run_template_thumbnail"
@@ -263,6 +294,68 @@ def test_call_graph_flattens(thumbnail: Template) -> None:
     assert sorted(result.graph.nodes) == ["call:load", "call:save", "call:shrink:fit"]
     # 요청된 출력은 정의의 `returns` 가 가리키는 안쪽 노드로 옮겨진다.
     assert result.outputs == ("call:save",)
+
+
+async def test_example_template_executes_and_collects_a_128_png(
+    thumbnail: Template, image_preview_encoder: None
+) -> None:
+    """예제를 실제 1st-party 이미지 노드로 끝까지 실행하는 M6.1a 증거."""
+    graph = build_call_graph(thumbnail, {"source": "examples/sample.png", "size": 128})
+    assets = AssetStore()
+    result = await execute(
+        graph,
+        graph.outputs,
+        registry=nodal_nodes_image.registry(),
+        cache=LRUCache(64),
+        events=NullEventSink(),
+        cancel_token=CancelToken(),
+        assets=assets,
+    )
+    record = RunRecord(
+        run_id=result.run_id,
+        graph=graph,
+        outputs=tuple(graph.outputs),
+        use_cache=True,
+        priority=0,
+        node_count=len(graph.nodes),
+    )
+    record.result = result
+
+    results = collect_results(thumbnail, record)
+
+    assert list(results) == ["image"]
+    assert results["image"].asset is not None
+    digest = results["image"].asset.hash
+    data = assets.get(digest)
+    assert data is not None
+    with PILImage.open(io.BytesIO(data)) as image:
+        assert image.format == "PNG"
+        assert image.size == (128, 128)
+
+
+def test_collect_results_omits_and_logs_a_missing_reference(
+    thumbnail: Template, caplog: pytest.LogCaptureFixture
+) -> None:
+    graph = build_call_graph(thumbnail, {"source": "examples/sample.png"})
+    record = RunRecord(
+        run_id="missing-ref",
+        graph=graph,
+        outputs=tuple(graph.outputs),
+        use_cache=False,
+        priority=0,
+        node_count=len(graph.nodes),
+    )
+    record.result = RunResult(
+        run_id=record.run_id,
+        outputs={},
+        output_sockets={"call": {"image": ("call:save", "asset")}},
+    )
+
+    with caplog.at_level(logging.WARNING):
+        results = collect_results(thumbnail, record)
+
+    assert results == {}
+    assert "call:save.asset 참조가 없어 생략했다" in caplog.text
 
 
 def test_missing_argument_points_at_the_parameter(thumbnail: Template) -> None:

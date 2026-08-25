@@ -32,7 +32,7 @@ from nodal import (
     parse_graph,
     validate_for_execution,
 )
-from nodal.subgraph import MAX_DEPTH, MAX_NODES
+from nodal.subgraph import MAX_DEPTH, MAX_NODES, _Flattener
 
 CALLS: list[str] = []
 
@@ -307,6 +307,76 @@ def test_nested_prefixes_stack() -> None:
     assert flat.nodes["sink"].inputs["value"].ref == ("o:inner:fit", "product")
 
 
+def test_output_socket_mapping_follows_nested_returns_to_the_leaf() -> None:
+    """중첩 returns 도 서버가 다시 해석할 필요 없이 실제 소켓까지 풀린다."""
+    graph = parse_graph(
+        {
+            "definitions": {
+                "outer": {
+                    "nodes": {"inner": {"type": "subgraph.leaf"}},
+                    "returns": {"image": {"$link": ["inner", "asset"]}},
+                },
+                "leaf": {
+                    "nodes": {"save": {"type": "test.Const"}},
+                    "returns": {"asset": {"$link": ["save", "asset"]}},
+                },
+            },
+            "nodes": {"call": {"type": "subgraph.outer"}},
+            "outputs": ["call"],
+        }
+    )
+
+    result = flatten(graph, ("call",))
+
+    assert result.output_sockets == {"call": {"image": ("call:inner:save", "asset")}}
+
+
+def test_output_socket_mapping_keeps_two_sockets_on_the_same_node() -> None:
+    """`map_outputs` 의 노드 중복 제거가 공개 소켓 둘을 합치면 안 된다."""
+    graph = parse_graph(
+        {
+            "definitions": {
+                "pair": {
+                    "nodes": {"n": {"type": "test.Const"}},
+                    "returns": {
+                        "a": {"$link": ["n", "x"]},
+                        "b": {"$link": ["n", "y"]},
+                    },
+                }
+            },
+            "nodes": {"inst": {"type": "subgraph.pair"}},
+            "outputs": ["inst"],
+        }
+    )
+
+    result = flatten(graph, ("inst",))
+
+    assert result.outputs == ("inst:n",)
+    assert list(result.output_sockets["inst"]) == ["a", "b"]
+    assert result.output_sockets["inst"] == {
+        "a": ("inst:n", "x"),
+        "b": ("inst:n", "y"),
+    }
+
+
+def test_plain_requested_output_has_no_output_socket_mapping_entry() -> None:
+    graph = parse_graph(
+        {
+            "definitions": {"scale": SCALE_DEF},
+            "nodes": {
+                "plain": {"type": "test.Const"},
+                "inst": {"type": "subgraph.scale", "inputs": {"value": 1}},
+            },
+            "outputs": ["plain"],
+        }
+    )
+
+    result = flatten(graph, ("plain",))
+
+    assert "plain" not in result.output_sockets
+    assert result.output_sockets == {}
+
+
 # ------------------------------------------------------------------ 이슈들
 
 
@@ -454,6 +524,23 @@ def test_cyclic_definitions_terminate_and_are_reported() -> None:
 
     issues = validate_for_execution(graph, registry())
     assert any(i.code is IssueCode.SUBGRAPH_CYCLE for i in issues)
+
+
+def test_follow_safety_cap_returns_the_position_after_the_breaking_hop() -> None:
+    """검증을 우회해 별칭 사이클이 생겨도 `_follow` 의 실제 반환을 고정한다.
+
+    max_depth=1 이면 여유 상한은 2이고, 세 번째 별칭을 따라간 직후 멈춘다.
+    """
+    state = _Flattener(parse_graph({"nodes": {}}), max_depth=1, max_nodes=MAX_NODES)
+    state._alias.update(
+        {
+            ("a", "out"): ("b", "out"),
+            ("b", "out"): ("c", "out"),
+            ("c", "out"): ("a", "out"),
+        }
+    )
+
+    assert state._follow("a", "out") == ("a", "out")
 
 
 # ------------------------------------------------------------------ 검증 배치
