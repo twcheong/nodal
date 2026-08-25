@@ -1,0 +1,234 @@
+{
+  "nodal_version": "1",
+  "id": "018f2c00-0000-7000-8000-0000000e0004",
+
+  "definitions": {
+    "sdxl_background": {
+      "doc": "텍스트 설명에서 배경 장면을 생성한다. product_ad_scene 안에서만 쓰는 조각이라 노출되지 않는다.",
+      "params": {
+        "ckpt": {
+          "type": "STRING",
+          "doc": "사용할 체크포인트 — models/checkpoints 스캔 결과의 파일명이거나 HF 모델 ID.",
+          "widget": { "provider": "checkpoints" }
+        },
+        "prompt": { "type": "STRING", "doc": "생성할 배경 장면 설명." },
+        "negative_prompt": { "type": "STRING", "default": "" },
+        "width": { "type": "INT", "default": 1024, "widget": { "min": 512, "max": 2048, "step": 8 } },
+        "height": { "type": "INT", "default": 1024, "widget": { "min": 512, "max": 2048, "step": 8 } },
+        "steps": { "type": "INT", "default": 30, "widget": { "min": 1, "max": 150 } },
+        "cfg": { "type": "FLOAT", "default": 7.0, "widget": { "min": 0.0, "max": 20.0, "step": 0.1 } },
+        "sampler_name": {
+          "type": "STRING",
+          "default": "euler",
+          "widget": {
+            "options": ["euler", "euler_ancestral", "heun", "dpmpp_2m", "dpmpp_2m_sde", "ddim"]
+          }
+        },
+        "scheduler": {
+          "type": "STRING",
+          "default": "normal",
+          "widget": { "options": ["normal", "karras", "exponential", "simple"] }
+        },
+        "seed": { "type": "INT", "default": 0 }
+      },
+      "nodes": {
+        "load": {
+          "type": "diffusion.LoadCheckpoint",
+          "inputs": { "ckpt": { "$param": "ckpt" } },
+          "meta": { "title": "체크포인트" }
+        },
+        "positive": {
+          "type": "diffusion.CLIPTextEncode",
+          "inputs": {
+            "clip": { "$link": ["load", "clip"] },
+            "text": { "$param": "prompt" }
+          },
+          "meta": { "title": "긍정 프롬프트" }
+        },
+        "negative": {
+          "type": "diffusion.CLIPTextEncode",
+          "inputs": {
+            "clip": { "$link": ["load", "clip"] },
+            "text": { "$param": "negative_prompt" }
+          },
+          "meta": { "title": "부정 프롬프트" }
+        },
+        "canvas": {
+          "type": "diffusion.EmptyLatent",
+          "inputs": {
+            "width": { "$param": "width" },
+            "height": { "$param": "height" },
+            "batch_size": 1
+          },
+          "meta": { "title": "빈 잠재" }
+        },
+        "sample": {
+          "type": "diffusion.KSampler",
+          "inputs": {
+            "model": { "$link": ["load", "model"] },
+            "positive": { "$link": ["positive", "conditioning"] },
+            "negative": { "$link": ["negative", "conditioning"] },
+            "latent": { "$link": ["canvas", "latent"] },
+            "seed": { "$param": "seed" },
+            "steps": { "$param": "steps" },
+            "cfg": { "$param": "cfg" },
+            "sampler_name": { "$param": "sampler_name" },
+            "scheduler": { "$param": "scheduler" },
+            "denoise": 1.0
+          },
+          "meta": { "title": "샘플러" }
+        },
+        "decode": {
+          "type": "diffusion.VAEDecode",
+          "inputs": {
+            "vae": { "$link": ["load", "vae"] },
+            "latent": { "$link": ["sample", "latent"] }
+          },
+          "meta": { "title": "이미지로 디코드" }
+        }
+      },
+      "returns": {
+        "image": { "$link": ["decode", "image"] }
+      }
+    },
+
+    "product_ad_scene": {
+      "doc": "제품 사진(투명 배경 PNG)을 AI 로 생성한 배경 위에 합성해 인스타그램용 광고 이미지를 만든다.",
+      "params": {
+        "product": {
+          "type": "Image",
+          "doc": "합성할 제품 사진. 알파 채널이 있는 PNG (배경이 이미 제거된 컷아웃)."
+        },
+        "prompt": { "type": "STRING", "doc": "생성할 배경 장면 설명 (예: 대리석 테이블 위 스튜디오 조명)." },
+        "negative_prompt": { "type": "STRING", "default": "", "doc": "배경에서 피할 요소." },
+        "width": {
+          "type": "INT",
+          "default": 1024,
+          "doc": "캔버스 가로 픽셀. 8의 배수.",
+          "widget": { "min": 512, "max": 2048, "step": 8 }
+        },
+        "height": {
+          "type": "INT",
+          "default": 1024,
+          "doc": "캔버스 세로 픽셀. 8의 배수.",
+          "widget": { "min": 512, "max": 2048, "step": 8 }
+        },
+        "ckpt": {
+          "type": "STRING",
+          "doc": "사용할 체크포인트 — models/checkpoints 스캔 결과의 파일명이거나 HF 모델 ID.",
+          "widget": { "provider": "checkpoints" }
+        },
+        "steps": { "type": "INT", "default": 30, "doc": "디노이즈 스텝 수.", "widget": { "min": 1, "max": 150 } },
+        "cfg": {
+          "type": "FLOAT",
+          "default": 7.0,
+          "doc": "조건 강도 (CFG).",
+          "widget": { "min": 0.0, "max": 20.0, "step": 0.1 }
+        },
+        "seed": {
+          "type": "INT",
+          "default": 0,
+          "doc": "같은 시드·같은 입력이면 같은 배경과 같은 합성 결과가 나온다."
+        },
+        "method": {
+          "type": "STRING",
+          "default": "lanczos",
+          "doc": "제품 사진을 캔버스 크기로 맞출 때 쓰는 리샘플 방법.",
+          "widget": { "options": ["nearest", "bilinear", "bicubic", "lanczos"] }
+        }
+      },
+      "nodes": {
+        "backdrop": {
+          "type": "subgraph.sdxl_background",
+          "inputs": {
+            "ckpt": { "$param": "ckpt" },
+            "prompt": { "$param": "prompt" },
+            "negative_prompt": { "$param": "negative_prompt" },
+            "width": { "$param": "width" },
+            "height": { "$param": "height" },
+            "steps": { "$param": "steps" },
+            "cfg": { "$param": "cfg" },
+            "sampler_name": "euler",
+            "scheduler": "normal",
+            "seed": { "$param": "seed" }
+          },
+          "meta": {
+            "title": "배경 생성",
+            "notes": "중첩 서브그래프 하나. thumbnail 의 square 와 달리 diffusion 파이프라인 전체(로더부터 디코드까지)를 감싼다"
+          }
+        },
+        "load_product": {
+          "type": "image.Load",
+          "inputs": { "path": { "$param": "product" } },
+          "meta": { "title": "제품 사진 읽기" }
+        },
+        "fit_product": {
+          "type": "image.Resize",
+          "inputs": {
+            "image": { "$link": ["load_product", "image"] },
+            "width": { "$param": "width" },
+            "height": { "$param": "height" },
+            "method": { "$param": "method" }
+          },
+          "meta": {
+            "title": "캔버스 크기로 맞추기",
+            "notes": "product 의 알파 채널이 이미 최종 배치를 담고 있다고 가정한다 — 캔버스 전체로 리사이즈한 뒤 알파로 마스킹하면 투명한 부분에서 배경이 그대로 비친다"
+          }
+        },
+        "product_mask": {
+          "type": "image.Mask",
+          "inputs": {
+            "image": { "$link": ["fit_product", "image"] },
+            "channel": "alpha",
+            "invert": false
+          },
+          "meta": { "title": "제품 알파를 마스크로" }
+        },
+        "composite": {
+          "type": "image.Composite",
+          "inputs": {
+            "background": { "$link": ["backdrop", "image"] },
+            "foreground": { "$link": ["fit_product", "image"] },
+            "mask": { "$link": ["product_mask", "mask"] }
+          },
+          "meta": { "title": "제품을 배경에 합성" }
+        },
+        "save": {
+          "type": "image.Save",
+          "inputs": {
+            "image": { "$link": ["composite", "image"] },
+            "embed_workflow": true
+          },
+          "meta": { "title": "에셋으로 저장" }
+        }
+      },
+      "returns": {
+        "image": { "$link": ["save", "asset"] }
+      }
+    }
+  },
+
+  "nodes": {
+    "call": {
+      "type": "subgraph.product_ad_scene",
+      "inputs": {
+        "product": "examples/sample_cutout.png",
+        "prompt": "warm marble tabletop under soft studio light, shallow depth of field",
+        "ckpt": "hf-internal-testing/tiny-sd-pipe",
+        "width": 512,
+        "height": 512,
+        "steps": 4
+      },
+      "meta": {
+        "title": "저작용 하네스",
+        "notes": "MCP 표면은 최상위 nodes 를 읽지 않는다. `hf-internal-testing/tiny-sd-pipe` 는 CPU 에서 도는 tiny 픽스처라 그림은 노이즈다 — 배선이 도는지만 확인하는 용도다. 실제 광고 판정은 M6.2b(원격 GPU · 실제 SDXL)의 몫이다"
+      }
+    }
+  },
+
+  "outputs": ["call"],
+
+  "ui": {
+    "$comment": "M6.2a 템플릿 3/3 (플래그십). 축: 이미지 입력 있음 · diffusion 있음 · 중첩 있음(단일 인스턴스). roadmap.md M6 완료 기준의 예시 문장('이 제품 사진으로 인스타그램용 광고 이미지')을 그대로 구현한다."
+  }
+}

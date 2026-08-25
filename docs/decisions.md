@@ -42,6 +42,34 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-26 · Claude Code · Mask 출력에 전용 프리뷰 인코더 추가
+
+- **결정**: `nodal_nodes_image`에 `encode_mask_preview`를 추가했다. `(B, H, W)`
+  (채널 축 없음) 모양만 처리하고, 진짜 `(H, W, C)` 이미지는 `None`을 돌려줘
+  기존 `encode_ndarray_preview`에 넘긴다
+- **이유**: M6.2 템플릿(`product_card` · `product_ad_scene`)이 `image.Mask` →
+  `image.Composite` 조합을 실행 엔진(`execute()`)에 처음 태웠다. 텐서 타입
+  출력은 `_output_refs`가 프리뷰를 **필수**로 요구하는데(design.md §4.6),
+  `encode_ndarray_preview`는 마지막 축을 채널로 해석해 마스크의 폭(W)을
+  채널 수로 오인하고 거부한다 — 그러면 처리할 인코더가 하나도 남지 않아
+  `PreviewEncoderNotFoundError`로 그래프 실행 자체가 실패한다. 기존 테스트는
+  `MaskFromImage.run()`을 직접 불러 이 경로를 지나간 적이 없어 드러나지
+  않았던 잠재 결함이다
+- **영향 범위**: `packages/nodes-image/src/nodal_nodes_image/__init__.py`
+- **되돌릴 수 있나**: 예 — 다만 되돌리면 `image.Mask`를 쓰는 그래프가 다시
+  실행 엔진을 통과하지 못한다
+
+### 2026-08-26 · Claude Code · `mcp-types`를 서버의 직접 의존성으로 선언
+
+- **결정**: `packages/server/pyproject.toml`에 `mcp-types>=2.0`을 추가했다.
+  지금까지는 `mcp`의 전이 의존으로만 설치돼 있었다
+- **이유**: `mcp_server.py`가 `mcp_types`(`Tool` · `ListToolsResult` 등)를
+  직접 import한다. 선언되지 않은 전이 의존을 직접 import하는 배포판은
+  `mcp`가 그 의존을 내리거나 버전을 바꾸는 순간 아무 경고 없이 깨진다
+  (claude/nodal-m6-2-kickoff.md의 "잔여 3건" 중 하나)
+- **영향 범위**: `packages/server/pyproject.toml`, `uv.lock`
+- **되돌릴 수 있나**: 예
+
 ### 2026-08-25 · Codex · M6.1c 호출 그래프는 템플릿 문서 ID를 보존
 
 - **결정**: `build_call_graph`가 새 UUID를 만들지 않고 템플릿 파일의 `id`와

@@ -17,7 +17,7 @@ import numpy as np
 
 from nodal import EncodedPreview, NodeRegistry, register_preview_encoder
 
-from .image import ImageArray, MaskArray, to_float32
+from .image import CHANNELS, ImageArray, MaskArray, to_float32
 from .nodes import (
     NODES,
     BlendImages,
@@ -43,6 +43,7 @@ __all__ = [
     "MaskFromImage",
     "ResizeImage",
     "SaveImage",
+    "encode_mask_preview",
     "encode_ndarray_preview",
     "encode_png",
     "registry",
@@ -69,6 +70,49 @@ def encode_ndarray_preview(value: Any) -> EncodedPreview | None:
     except ValueError:
         return None
 
+    height, width = int(array.shape[1]), int(array.shape[2])
+    longest = max(height, width)
+    if longest > PREVIEW_MAX_EDGE:
+        scale = PREVIEW_MAX_EDGE / longest
+        target = (max(1, round(width * scale)), max(1, round(height * scale)))
+        from PIL import Image as PILImage
+
+        from .image import to_pil
+
+        thumb = to_pil(array).resize(target, PILImage.Resampling.BILINEAR)
+        array = to_float32(np.asarray(thumb))
+        height, width = int(array.shape[1]), int(array.shape[2])
+
+    return EncodedPreview(
+        data=encode_png(array),
+        media_type="image/png",
+        width=width,
+        height=height,
+    )
+
+
+@register_preview_encoder
+def encode_mask_preview(value: Any) -> EncodedPreview | None:
+    """`(B, H, W)` 마스크(채널 축 없음) → 그레이스케일 PNG 프리뷰.
+
+    `encode_ndarray_preview` 는 마지막 축을 채널로 본다. 마스크는 채널 축이
+    없어 그 자리에 폭(W)이 오고, 폭이 1·3·4 가 아니면 `to_float32` 가 "채널 수가
+    이상하다" 며 거부해 `None` 을 돌려준다 — 그러면 처리할 인코더가 하나도
+    남지 않는다. `image.Mask` 의 출력 소켓 타입은 텐서라 실행 엔진을 지날 때
+    프리뷰가 **필수**이므로(`_output_refs`, design.md §4.6), 그 실패가 곧
+    "Mask 를 쓰는 그래프는 실행 자체가 안 된다" 였다.
+
+    진짜 `(H, W, C)` 단일 이미지(채널이 1·3·4)는 여기서 `None` 을 돌려줘
+    `encode_ndarray_preview` 에 넘긴다 — 배치 하나뿐인 마스크와 채널 없는
+    단일 이미지가 shape 만으로 갈리는 유일한 경계가 그 채널 수다.
+    """
+    if not isinstance(value, np.ndarray):
+        return None
+    if value.ndim != 3 or value.shape[-1] in CHANNELS:
+        return None
+
+    frame = np.clip(value[0], 0.0, 1.0).astype(np.float32, copy=False)
+    array = frame[np.newaxis, ..., np.newaxis]  # (1, H, W, 1) — 흑백 프리뷰
     height, width = int(array.shape[1]), int(array.shape[2])
     longest = max(height, width)
     if longest > PREVIEW_MAX_EDGE:

@@ -1,0 +1,150 @@
+{
+  "nodal_version": "1",
+  "id": "018f2c00-0000-7000-8000-0000000e0003",
+
+  "definitions": {
+    "fit_layer": {
+      "doc": "이미지 하나를 지정한 캔버스 크기로 리샘플한다. product_card 가 배경·제품 두 레이어에 같은 정의를 두 번 인스턴스화해 재사용한다.",
+      "params": {
+        "source": {
+          "type": "Image",
+          "doc": "레이어로 쓸 이미지. 밖에서 오지 않고 위쪽에서 온다."
+        },
+        "width": { "type": "INT", "default": 1024 },
+        "height": { "type": "INT", "default": 1024 },
+        "method": {
+          "type": "STRING",
+          "default": "lanczos",
+          "widget": { "options": ["nearest", "bilinear", "bicubic", "lanczos"] }
+        }
+      },
+      "nodes": {
+        "load": {
+          "type": "image.Load",
+          "inputs": { "path": { "$param": "source" } },
+          "meta": { "title": "레이어 읽기" }
+        },
+        "fit": {
+          "type": "image.Resize",
+          "inputs": {
+            "image": { "$link": ["load", "image"] },
+            "width": { "$param": "width" },
+            "height": { "$param": "height" },
+            "method": { "$param": "method" }
+          },
+          "meta": { "title": "캔버스 크기로 맞추기" }
+        }
+      },
+      "returns": {
+        "image": { "$link": ["fit", "image"] }
+      }
+    },
+
+    "product_card": {
+      "doc": "제품 사진을 배경 이미지 위에 합성해 광고 카드를 만든다. AI 생성 없이 이미지 파이프라인만으로 작동한다 — 알파 채널이 있는 컷아웃 PNG 가 필요하다.",
+      "params": {
+        "product": {
+          "type": "Image",
+          "doc": "합성할 제품 사진. 알파 채널 필요 (배경이 이미 제거된 컷아웃)."
+        },
+        "background": {
+          "type": "Image",
+          "doc": "배경으로 쓸 이미지."
+        },
+        "width": {
+          "type": "INT",
+          "default": 1080,
+          "doc": "결과 캔버스 가로 픽셀 (기본값은 인스타그램 정사각형).",
+          "widget": { "min": 256, "max": 4096, "step": 8 }
+        },
+        "height": {
+          "type": "INT",
+          "default": 1080,
+          "doc": "결과 캔버스 세로 픽셀.",
+          "widget": { "min": 256, "max": 4096, "step": 8 }
+        },
+        "method": {
+          "type": "STRING",
+          "default": "lanczos",
+          "widget": { "options": ["nearest", "bilinear", "bicubic", "lanczos"] }
+        }
+      },
+      "nodes": {
+        "bg": {
+          "type": "subgraph.fit_layer",
+          "inputs": {
+            "source": { "$param": "background" },
+            "width": { "$param": "width" },
+            "height": { "$param": "height" },
+            "method": { "$param": "method" }
+          },
+          "meta": {
+            "title": "배경 레이어",
+            "notes": "같은 fit_layer 정의를 아래 fg 와 다른 인자로 두 번 인스턴스화한다 — 평탄화가 재사용된 서브그래프를 서로 다른 ID(call:bg:*, call:fg:*)로 갈라내는지 이것으로 증명한다"
+          }
+        },
+        "fg": {
+          "type": "subgraph.fit_layer",
+          "inputs": {
+            "source": { "$param": "product" },
+            "width": { "$param": "width" },
+            "height": { "$param": "height" },
+            "method": { "$param": "method" }
+          },
+          "meta": { "title": "제품 레이어" }
+        },
+        "mask": {
+          "type": "image.Mask",
+          "inputs": {
+            "image": { "$link": ["fg", "image"] },
+            "channel": "alpha",
+            "invert": false
+          },
+          "meta": { "title": "제품 알파를 마스크로" }
+        },
+        "composite": {
+          "type": "image.Composite",
+          "inputs": {
+            "background": { "$link": ["bg", "image"] },
+            "foreground": { "$link": ["fg", "image"] },
+            "mask": { "$link": ["mask", "mask"] }
+          },
+          "meta": { "title": "합성" }
+        },
+        "save": {
+          "type": "image.Save",
+          "inputs": {
+            "image": { "$link": ["composite", "image"] },
+            "embed_workflow": true
+          },
+          "meta": { "title": "에셋으로 저장" }
+        }
+      },
+      "returns": {
+        "image": { "$link": ["save", "asset"] }
+      }
+    }
+  },
+
+  "nodes": {
+    "call": {
+      "type": "subgraph.product_card",
+      "inputs": {
+        "product": "examples/sample_cutout.png",
+        "background": "examples/sample.png",
+        "width": 512,
+        "height": 512
+      },
+      "meta": {
+        "title": "저작용 하네스",
+        "notes": "MCP 표면은 최상위 nodes 를 읽지 않는다. `nodal run examples/templates/product_card.nodal.json` 으로 손으로 돌려볼 수 있다 — GPU·모델 없이 CPU 로 끝까지 실행된다"
+      }
+    }
+  },
+
+  "outputs": ["call"],
+
+  "ui": {
+    "$comment": "M6.2a 템플릿 2/3. 축: 이미지 입력 있음(2개) · diffusion 없음 · 중첩 있음(같은 정의를 두 번 인스턴스화). thumbnail 과 달리 nested 정의가 재사용된다."
+  }
+}
