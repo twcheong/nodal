@@ -350,6 +350,7 @@ def _serve(args: argparse.Namespace) -> int:
         import uvicorn
 
         from nodal_server.app import create_app
+        from nodal_server.templates import format_rejections, load_catalog
     except ImportError as exc:  # pragma: no cover — 설치 안내 경로
         raise SystemExit(
             "서버 의존성이 없다. `uv sync --extra serve` 또는 "
@@ -358,16 +359,36 @@ def _serve(args: argparse.Namespace) -> int:
 
     registry = _build_registry(args.pack, optional_packs=DEFAULT_OPTIONAL_PACKS)
     models = _build_model_store(args.models)
-    app = create_app(registry, assets_root=args.assets, models=models)
+    catalog = load_catalog(args.templates)
+    app = create_app(
+        registry,
+        assets_root=args.assets,
+        models=models,
+        template_catalog=catalog,
+        mcp_host=args.host,
+        mcp_port=args.port,
+        mcp_allowed_origins=args.mcp_allow_origin,
+    )
 
     # flush=True — uvicorn 은 stderr 로 로그를 내보내고, 파이프로 받으면 stdout 은
     # 블록 버퍼링된다. 그대로 두면 이 두 줄이 uvicorn 출력보다 **뒤에** 찍혀서
     # 로그를 파일로 받은 사람에게는 순서가 뒤집힌 것처럼 보인다.
     print(f"노드 {len(registry)}개 등록. http://{args.host}:{args.port}/docs", flush=True)
+    print(
+        f"MCP 템플릿: 로드 {len(catalog.templates)}개 · "
+        f"거부 {len(catalog.rejections)}개 ({catalog.root})",
+        flush=True,
+    )
+    if catalog.rejections:
+        print("템플릿 거부 사유:\n" + format_rejections(catalog.rejections), flush=True)
     if args.assets is None:
         # 에셋이 메모리에만 있으면 서버를 끄는 순간 Save 결과가 사라진다.
         # 조용히 사라지는 것보다 시작할 때 말해 주는 편이 낫다.
-        print("에셋 저장소: 메모리 (재시작하면 사라진다 — 남기려면 --assets DIR)", flush=True)
+        print(
+            "경고: 에셋 저장소가 메모리다 — 재시작하면 MCP 결과도 사라진다. "
+            "남기려면 --assets DIR을 지정하라",
+            flush=True,
+        )
     else:
         print(f"에셋 저장소: {args.assets}", flush=True)
     _print_models_line(models)
@@ -461,7 +482,7 @@ def _parser() -> argparse.ArgumentParser:
     validate.add_argument("graph", type=Path)
     validate.set_defaults(handler=_validate)
 
-    serve = sub.add_parser("serve", help="개발 서버를 띄운다 (REST + WebSocket)")
+    serve = sub.add_parser("serve", help="개발 서버를 띄운다 (REST + WebSocket + MCP)")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8188)
     serve.add_argument("--log-level", default="info")
@@ -489,6 +510,19 @@ def _parser() -> argparse.ArgumentParser:
             "모델 루트 (checkpoints/ · loras/ · vae/ · controlnet/). "
             "주지 않으면 NODAL_MODELS_DIR 환경변수를 본다"
         ),
+    )
+    serve.add_argument(
+        "--templates",
+        type=Path,
+        metavar="DIR",
+        help="MCP 템플릿 디렉토리. 기본: ~/.nodal/templates",
+    )
+    serve.add_argument(
+        "--mcp-allow-origin",
+        action="append",
+        default=[],
+        metavar="ORIGIN",
+        help="/mcp에서 추가로 허용할 Origin. 여러 번 지정할 수 있다",
     )
     serve.set_defaults(handler=_serve)
 

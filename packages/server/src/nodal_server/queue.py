@@ -37,16 +37,24 @@ from nodal import (
     GraphValidationError,
     LRUCache,
     ModelStore,
+    NodeCached,
+    NodeDone,
     NodeExecutionError,
+    NodeProgress,
     NodeRegistry,
+    NodeStarted,
     NullAssetStore,
     NullCache,
     NullModelStore,
     QueueStatus,
     RunCancelled,
+    RunDone,
+    RunFailed,
     RunResult,
+    RunStarted,
     execute,
 )
+from nodal.events import Event
 
 from .hub import EventHub
 from .schemas import ErrorBody, RunStatus
@@ -74,6 +82,8 @@ class RunRecord:
     use_cache: bool
     priority: int
     node_count: int
+    #: MCP 템플릿 실행이면 카탈로그 ID. REST 그래프 실행은 `None`.
+    template_id: str | None = None
 
     #: 큐에 넣는 순간 만들어진다. 대기 중 취소가 가능해야 하기 때문이다.
     cancel_token: CancelToken = field(default_factory=CancelToken)
@@ -84,6 +94,14 @@ class RunRecord:
     finished_at: datetime | None = None
     result: RunResult | None = None
     error: ErrorBody | None = None
+
+    #: 실행 중 폴링을 위한 진행 상태. REST 응답 계약에는 넣지 않고 MCP `get_run`
+    #: 이 같은 RunRecord에서 읽는다 (design.md §12.6).
+    progress_completed: int = 0
+    progress_total: int | None = None
+    progress_node_id: str | None = None
+    progress_step: int | None = None
+    progress_steps: int | None = None
 
     @property
     def elapsed_ms(self) -> int | None:
@@ -96,6 +114,45 @@ class RunRecord:
     @property
     def is_terminal(self) -> bool:
         return self.status in {RunStatus.SUCCEEDED, RunStatus.FAILED, RunStatus.CANCELLED}
+
+    def observe(self, event: Event) -> None:
+        """core 이벤트를 폴링 가능한 최소 진행 상태로 접는다."""
+        match event:
+            case RunStarted(node_count=count):
+                self.progress_total = count
+            case NodeStarted(node_id=node_id):
+                self.progress_node_id = node_id
+                self.progress_step = None
+                self.progress_steps = None
+            case NodeProgress(node_id=node_id, step=step, total=total):
+                self.progress_node_id = node_id
+                self.progress_step = step
+                self.progress_steps = total
+            case NodeDone() | NodeCached():
+                self.progress_completed += 1
+                self.progress_step = None
+                self.progress_steps = None
+            case RunDone():
+                if self.progress_total is not None:
+                    self.progress_completed = self.progress_total
+                self.progress_node_id = None
+                self.progress_step = None
+                self.progress_steps = None
+            case RunFailed() | RunCancelled():
+                self.progress_step = None
+                self.progress_steps = None
+
+
+class _RunEvents:
+    """한 실행의 기록을 갱신한 뒤 공유 EventHub로 그대로 전달한다."""
+
+    def __init__(self, record: RunRecord, hub: EventHub) -> None:
+        self._record = record
+        self._hub = hub
+
+    def emit(self, event: Event) -> None:
+        self._record.observe(event)
+        self._hub.emit(event)
 
 
 class RunQueue:
@@ -161,6 +218,7 @@ class RunQueue:
         use_cache: bool = True,
         priority: int = 0,
         run_id: str | None = None,
+        template_id: str | None = None,
     ) -> RunRecord:
         """큐에 넣고 즉시 돌아온다. 검증은 호출자(라우트)가 이미 마쳤다."""
         record = RunRecord(
@@ -170,6 +228,7 @@ class RunQueue:
             use_cache=use_cache,
             priority=priority,
             node_count=len(graph.nodes),
+            template_id=template_id,
         )
         self._records[record.run_id] = record
         # 우선순위가 크면 먼저. 같으면 등록 순서 (heapq 는 최소 힙이다).
@@ -267,7 +326,7 @@ class RunQueue:
                 record.outputs,
                 registry=self._registry,
                 cache=cache,
-                events=self._hub,
+                events=_RunEvents(record, self._hub),
                 cancel_token=record.cancel_token,
                 run_id=record.run_id,
                 assets=self._assets,

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from pathlib import Path as FsPath
 from typing import Annotated
 
@@ -35,6 +35,7 @@ from nodal import (
 
 from .assets import AssetStore, FileAssetStore
 from .hub import EventHub
+from .mcp_server import MCPService
 from .png import PngFormatError, read_text_chunks
 from .queue import RunQueue, RunRecord
 from .schemas import (
@@ -53,7 +54,9 @@ from .schemas import (
     ValidateRequest,
     ValidateResponse,
 )
-from .wire import error_body, issue_models, node_schema_model, refs_from_values
+from .templates import TemplateCatalog
+from .templates import load_catalog as load_template_catalog
+from .wire import error_body, issue_models, node_schema_model, output_refs
 
 __all__ = ["create_app"]
 
@@ -108,6 +111,10 @@ def create_app(
     history_limit: int = 100,
     assets_root: FsPath | str | None = None,
     models: ModelStore | None = None,
+    template_catalog: TemplateCatalog | None = None,
+    mcp_host: str = "127.0.0.1",
+    mcp_port: int = 8188,
+    mcp_allowed_origins: Sequence[str] = (),
 ) -> FastAPI:
     """앱을 만든다. 테스트가 자기 인스턴스를 갖도록 팩토리로 둔다.
 
@@ -120,6 +127,8 @@ def create_app(
         models: 모델 저장소 (M4). 서버는 diffusion 노드 팩을 import 하지 않으므로
             (의존성은 server → core 한 방향) 호출자가 만들어 넘긴다. 없으면
             diffusion 노드의 `load` 가 "저장소가 없다" 로 명시적으로 실패한다.
+        template_catalog: REST와 MCP가 공유할 템플릿 카탈로그. 없으면 기본
+            `~/.nodal/templates`에서 한 번 읽는다.
     """
     node_registry = registry if registry is not None else NodeRegistry()
     hub = EventHub()
@@ -136,14 +145,23 @@ def create_app(
         models=models,
         history_limit=history_limit,
     )
+    templates = template_catalog if template_catalog is not None else load_template_catalog()
+    mcp = MCPService(templates, node_registry, runs, hub)
+    mcp_app = mcp.streamable_http_app(
+        host=mcp_host,
+        port=mcp_port,
+        allowed_origins=mcp_allowed_origins,
+    )
 
     @contextlib.asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        runs.start()
-        try:
-            yield
-        finally:
-            await runs.aclose()
+        async with mcp.server.session_manager.run():
+            runs.start()
+            try:
+                yield
+            finally:
+                await runs.aclose()
+                await mcp.aclose()
 
     app = FastAPI(
         lifespan=lifespan,
@@ -157,6 +175,13 @@ def create_app(
             "해당 소켓을 지목한다."
         ),
     )
+    # 테스트와 같은 프로세스 안의 합성 여부를 확인할 관찰점. 새 저장소가 아니라
+    # 위에서 만든 단일 인스턴스들을 그대로 건다 (§12.9).
+    app.state.assets = assets
+    app.state.catalog = templates
+    app.state.hub = hub
+    app.state.runs = runs
+    app.state.mcp = mcp
 
     @app.exception_handler(_ApiError)
     async def api_error_handler(_: object, exc: _ApiError) -> JSONResponse:
@@ -453,14 +478,14 @@ def create_app(
         result = record.result
         outputs = {}
         if result is not None:
-            for node_id, values in result.outputs.items():
-                node = record.graph.nodes.get(node_id)
-                schema = node_registry.schemas().get(node.type) if node is not None else None
-                outputs[node_id] = refs_from_values(
-                    values,
-                    schema,
-                    result.references.get(node_id),
-                )
+            for node_id in result.outputs:
+                references = result.references.get(node_id)
+                if references is None:
+                    # execute()는 캐시 히트를 포함한 요청 출력의 references를 항상
+                    # 채운다. 이 보장이 깨지면 평탄화 전 record.graph에서 스키마를
+                    # 찾아 조용히 Any로 내리지 않고 즉시 드러낸다 (M6.1a 부수 발견).
+                    raise RuntimeError(f"요청 출력 {node_id!r}의 전송 참조가 없다")
+                outputs[node_id] = output_refs(references)
 
         return RunDetail(
             run_id=record.run_id,
@@ -476,4 +501,8 @@ def create_app(
             error=record.error,
         )
 
+    # SDK가 만든 정확한 `/mcp` Starlette Route를 같은 라우터에 붙인다. 앱 전체를
+    # SDK 아래에 mount하면 알 수 없는 다른 경로까지 Origin 검사를 받으므로 §12.9의
+    # “검증은 /mcp에만”을 어긴다. Starlette Route는 FastAPI OpenAPI 대상이 아니다.
+    app.router.routes.extend(mcp_app.routes)
     return app
