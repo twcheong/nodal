@@ -303,7 +303,9 @@ def build_call_graph(template: Template, arguments: Mapping[str, Any]) -> Graph:
 
     모양은 언제나 같다 — 인스턴스 하나와 그것을 요청하는 `outputs` 하나다::
 
-        {"definitions": <파일의 정의 전부>,
+        {"nodal_version": <파일의 버전>,
+         "id": <파일의 ID>,
+         "definitions": <파일의 정의 전부>,
          "nodes": {"call": {"type": "subgraph.<id>", "inputs": <인자>}},
          "outputs": ["call"]}
 
@@ -325,6 +327,8 @@ def build_call_graph(template: Template, arguments: Mapping[str, Any]) -> Graph:
     """
     _reject_asset_values(arguments)
     return Graph(
+        nodal_version=template.graph.nodal_version,
+        id=template.graph.id,
         definitions=dict(template.graph.definitions),
         nodes={
             CALL_NODE_ID: Node(

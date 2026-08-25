@@ -296,6 +296,19 @@ def test_call_graph_flattens(thumbnail: Template) -> None:
     assert result.outputs == ("call:save",)
 
 
+def test_call_graph_preserves_template_document_identity(thumbnail: Template) -> None:
+    arguments = {"source": "examples/sample.png", "size": 128}
+
+    first = build_call_graph(thumbnail, arguments)
+    second = build_call_graph(thumbnail, arguments)
+
+    assert first.id == thumbnail.graph.id
+    assert second.id == thumbnail.graph.id
+    assert first.id == second.id
+    assert first.nodal_version == thumbnail.graph.nodal_version
+    assert second.nodal_version == thumbnail.graph.nodal_version
+
+
 async def test_example_template_executes_and_collects_a_128_png(
     thumbnail: Template, image_preview_encoder: None
 ) -> None:
@@ -331,6 +344,86 @@ async def test_example_template_executes_and_collects_a_128_png(
     with PILImage.open(io.BytesIO(data)) as image:
         assert image.format == "PNG"
         assert image.size == (128, 128)
+
+
+async def _execute_thumbnail(
+    thumbnail: Template,
+    *,
+    size: int,
+    assets: AssetStore,
+    cache: LRUCache,
+) -> tuple[str, bytes]:
+    graph = build_call_graph(thumbnail, {"source": "examples/sample.png", "size": size})
+    result = await execute(
+        graph,
+        graph.outputs,
+        registry=nodal_nodes_image.registry(),
+        cache=cache,
+        events=NullEventSink(),
+        cancel_token=CancelToken(),
+        assets=assets,
+    )
+    record = RunRecord(
+        run_id=result.run_id,
+        graph=graph,
+        outputs=tuple(graph.outputs),
+        use_cache=True,
+        priority=0,
+        node_count=len(graph.nodes),
+    )
+    record.result = result
+    reference = collect_results(thumbnail, record)["image"]
+    assert reference.asset is not None
+    data = assets.get(reference.asset.hash)
+    assert data is not None
+    return reference.asset.hash, data
+
+
+async def test_same_template_arguments_produce_identical_png_bytes_and_hash(
+    thumbnail: Template,
+    image_preview_encoder: None,
+) -> None:
+    assets = AssetStore()
+    cache = LRUCache(64)
+
+    first_hash, first_png = await _execute_thumbnail(
+        thumbnail,
+        size=128,
+        assets=assets,
+        cache=cache,
+    )
+    second_hash, second_png = await _execute_thumbnail(
+        thumbnail,
+        size=128,
+        assets=assets,
+        cache=cache,
+    )
+
+    assert second_hash == first_hash
+    assert second_png == first_png
+
+
+async def test_different_template_arguments_produce_different_asset_hashes(
+    thumbnail: Template,
+    image_preview_encoder: None,
+) -> None:
+    assets = AssetStore()
+    cache = LRUCache(64)
+
+    small_hash, _ = await _execute_thumbnail(
+        thumbnail,
+        size=128,
+        assets=assets,
+        cache=cache,
+    )
+    large_hash, _ = await _execute_thumbnail(
+        thumbnail,
+        size=256,
+        assets=assets,
+        cache=cache,
+    )
+
+    assert large_hash != small_hash
 
 
 def test_collect_results_omits_and_logs_a_missing_reference(
