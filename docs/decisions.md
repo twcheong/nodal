@@ -42,6 +42,19 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-25 · Codex · M6.0b 생성물 drift 재검증
+
+- **결정**: `72015ab`에서 보고된 web의 Prettier·API 타입 drift 2건은 깨끗한
+  `pnpm install --frozen-lockfile` 뒤 재현되지 않았다. `gen:api` 직후 diff는 비었고
+  `pnpm format`도 전 파일 unchanged였다. 따라서 규칙 8 위반이나 손편집으로 기록하지
+  않고, 동일 커밋을 재검증하는 문서 커밋으로 원격 CI를 다시 실행한다
+- **이유**: Python OpenAPI drift는 서버 코드 → `schemas/openapi.json`을 검사하고,
+  web API drift는 `schemas/openapi.json` → `apps/web/src/api/generated.ts`를 검사한다.
+  증상이 Python 초록·web 빨강이면 뒤쪽 생성물을 먼저 보되, 이번에는 고정된
+  `openapi-typescript 7.13.0` 산출물과 `72015ab`의 15줄이 정확히 일치했다
+- **영향 범위**: `docs/decisions.md`만. 생성물·코드·검사 설정은 변경하지 않는다
+- **되돌릴 수 있나**: 예 — 진단 기록뿐이다
+
 ### 2026-08-24 · Claude Code · M6.0b — `doc` 필드 · 이미지 입력 형식 · Origin 검증
 
 M6.0 계약의 마무리. 열린 질문 15·16·17 을 전부 닫는다. **사용자 결정 3건.**
