@@ -42,6 +42,33 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-25 · Codex · M6.1b MCP 전송 보안과 실행 결과 상세
+
+`/mcp`의 Origin 규칙은 다음 여섯 줄로 고정한다.
+
+1. **Origin 헤더가 없으면 통과시킨다.** 비브라우저 MCP 클라이언트는 Origin을 보내지 않고, 브라우저 공격 페이지는 Origin을 숨길 수 없다.
+2. **Origin 헤더가 있으면 허용 목록에 있을 때만 통과시킨다.** 기본은 `http://127.0.0.1:<port>`·`http://localhost:<port>`이고 `--mcp-allow-origin`으로 추가한다.
+3. **검증은 `/mcp`에만 건다.** 앱 전역에 걸어 Vite가 프록시하는 `/api`·`/ws`를 막지 않는다.
+4. **`/mcp`에 관대한 CORS 헤더를 붙이지 않는다.** 특히 `Access-Control-Allow-Origin: *`는 허용하지 않는다.
+5. **거부는 403과 이유가 담긴 본문으로 답한다.** 연결을 조용히 끊지 않는다.
+6. **Host 헤더도 함께 검사한다.** 기본은 `127.0.0.1:<port>`·`localhost:<port>`이고, 서버가 구체적인 다른 host에 바인딩되면 그 host를 추가한다.
+
+- **결정**: MCP SDK의 streamable HTTP 앱만 FastAPI에 마운트하고, 부모 앱이 SDK
+  session manager 수명주기를 연다. 카탈로그·`AssetStore`·`RunQueue`·`EventHub`는
+  REST와 MCP가 같은 인스턴스를 받는다. 템플릿의 동적 스키마는 low-level MCP
+  `Tool`에 `Template.input_schema`를 그대로 넣는다
+- **이유**: high-level 툴 등록기는 Python 함수 시그니처에서 두 번째 스키마를
+  만들기 때문에 이미 확정된 템플릿 스키마와 조용히 어긋날 수 있다. 실행도 MCP가
+  직접 하지 않고 공유 `RunQueue`에만 넣어 REST와 다른 생명주기를 만들지 않는다
+- **`app._detail` 판단**: 평탄화 전 `record.graph`로 평탄화 후 출력 ID의 스키마를
+  찾는 fallback을 제거했다. `executor.execute`가 요청 출력마다 `OutputRef`를
+  채운다는 계약을 응답 조립 코드의 명시적 검사와 서브그래프 REST 회귀 테스트로
+  고정한다. 참조가 사라지면 `Any`를 지어내지 않고 서버 결함으로 즉시 실패한다
+- **영향 범위**: `nodal_server.{app,mcp_server,queue}`, `nodal_nodes_core.cli`와 테스트
+- **되돌릴 수 있나**: 예 — MCP 마운트를 제거할 수 있다. 단 Origin 검증이나
+  `OutputRef` 필수 검사를 느슨하게 되돌리면 각각 DNS rebinding 또는 조용한 타입
+  손실을 다시 허용한다
+
 ### 2026-08-25 · Codex · M6.1a 툴 결과 소켓 매핑의 소유권
 
 - **결정**: 서브그래프 `returns` 이름에서 평탄화된 `(노드 ID, 소켓)`으로 가는

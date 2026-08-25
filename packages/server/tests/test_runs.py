@@ -155,6 +155,40 @@ def test_run_executes_and_returns_named_outputs(client: TestClient) -> None:
     assert detail["started_at"] and detail["finished_at"]
 
 
+def test_subgraph_run_detail_uses_flattened_output_references(client: TestClient) -> None:
+    """평탄화 뒤 ID의 타입을 평탄화 전 그래프에서 찾다가 Any로 잃지 않는다."""
+    graph = {
+        "nodal_version": "1",
+        "definitions": {
+            "identity": {
+                "params": {"value": {"type": "INT"}},
+                "nodes": {
+                    "inside": {
+                        "type": "test.Const",
+                        "inputs": {"value": {"$param": "value"}},
+                    }
+                },
+                "returns": {"result": {"$link": ["inside", "value"]}},
+            }
+        },
+        "nodes": {
+            "call": {
+                "type": "subgraph.identity",
+                "inputs": {"value": 9},
+            }
+        },
+        "outputs": ["call"],
+    }
+
+    created = client.post("/api/runs", json={"graph": graph})
+    detail = wait_for(client, created.json()["run_id"])
+
+    assert detail["status"] == "succeeded"
+    assert detail["outputs"] == {
+        "call:inside": [{"socket": "value", "type": "INT", "inline": 9, "asset": None}]
+    }
+
+
 def test_second_run_hits_the_cache(client: TestClient) -> None:
     """캐시가 실행 경계를 넘어 산다. design.md §6 의 node.cached 근거."""
     first = client.post("/api/runs", json={"graph": simple_graph(4, 5)}).json()["run_id"]
