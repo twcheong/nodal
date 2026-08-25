@@ -179,6 +179,8 @@ class PreparedGraph:
     graph: Graph
     #: 요청된 출력을 평탄화 후 ID 로 옮긴 것. 인스턴스는 안쪽 노드로 바뀐다.
     outputs: tuple[str, ...]
+    #: 요청된 서브그래프 출력의 공개 이름을 실제 노드 소켓으로 옮긴 매핑.
+    output_sockets: Mapping[str, Mapping[str, tuple[str, str]]]
     issues: tuple[GraphIssue, ...]
 
 
@@ -246,6 +248,7 @@ class RunResult:
         blocked: 블로커 때문에 실행되지 않은 노드 ID.
         elapsed_ms: 총 소요 시간.
         references: 노드 출력의 WS/REST 전송 참조. 원시 `outputs`와 분리한다.
+        output_sockets: 요청된 서브그래프 출력 이름을 실제 노드 소켓으로 옮긴 매핑.
 
     `executed` 와 `cached` 를 나눠 두는 것이 M1 완료 기준의 증거다 — "입력 하나를
     바꿨더니 그 아래만 재실행됐다"를 로그가 아니라 값으로 증명할 수 있다.
@@ -253,6 +256,7 @@ class RunResult:
 
     run_id: str
     outputs: Mapping[str, Mapping[str, Any]]
+    output_sockets: Mapping[str, Mapping[str, tuple[str, str]]] = field(default_factory=dict)
     executed: tuple[str, ...] = ()
     cached: tuple[str, ...] = ()
     blocked: tuple[str, ...] = ()
@@ -986,6 +990,7 @@ async def execute(
         outputs={
             out_id: results.get(out_id, {}) for out_id in requested_outputs if out_id in results
         },
+        output_sockets=prepared.output_sockets,
         executed=tuple(executed),
         cached=tuple(cached),
         blocked=tuple(dict.fromkeys(blocked)),
@@ -1314,7 +1319,7 @@ def prepare_for_execution(
     그래서 실행되는 그래프와 검증된 그래프가 같다는 것이 구조적으로 보장된다.
 
     Returns:
-        평탄화된 그래프 · 옮겨진 출력 목록 · `GraphIssue` 목록.
+        평탄화된 그래프 · 옮겨진 출력 목록과 소켓 매핑 · `GraphIssue` 목록.
     """
     from .graph import validate_graph
     from .subgraph import flatten
@@ -1329,7 +1334,12 @@ def prepare_for_execution(
     outputs = result.outputs
 
     issues.extend(_registry_issues(flat, registry, outputs))
-    return PreparedGraph(graph=flat, outputs=outputs, issues=tuple(issues))
+    return PreparedGraph(
+        graph=flat,
+        outputs=outputs,
+        output_sockets=result.output_sockets,
+        issues=tuple(issues),
+    )
 
 
 def validate_for_execution(

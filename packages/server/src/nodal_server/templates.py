@@ -23,7 +23,7 @@ import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from nodal import (
     Graph,
@@ -35,7 +35,12 @@ from nodal import (
     validate_graph,
 )
 
+from .schemas import OutputRefModel
 from .toolschema import ASSET_PREFIX, InputSchema, SchemaNote, build_input_schema
+from .wire import output_refs
+
+if TYPE_CHECKING:
+    from .queue import RunRecord
 
 __all__ = [
     "CALL_NODE_ID",
@@ -47,6 +52,7 @@ __all__ = [
     "Template",
     "TemplateCatalog",
     "build_call_graph",
+    "collect_results",
     "default_templates_dir",
     "format_rejections",
     "load_catalog",
@@ -328,6 +334,52 @@ def build_call_graph(template: Template, arguments: Mapping[str, Any]) -> Graph:
         },
         outputs=[CALL_NODE_ID],
     )
+
+
+def collect_results(template: Template, record: RunRecord) -> dict[str, OutputRefModel]:
+    """완료된 툴 실행의 공개 `returns` 이름으로 출력 참조를 조립한다 (§12.3).
+
+    실행기가 만든 평탄화 매핑과 `OutputRef` 를 그대로 잇는다. 중첩 별칭을 여기서
+    다시 해석하거나, MCP 전용 응답 표현을 만들지 않는다.
+    """
+    result = record.result
+    if result is None:
+        log.warning(
+            "템플릿 %s 실행 %s 에 결과가 없어 returns 를 조립하지 않았다",
+            template.id,
+            record.run_id,
+        )
+        return {}
+
+    socket_map = result.output_sockets.get(CALL_NODE_ID, {})
+    collected: dict[str, OutputRefModel] = {}
+    for name in template.definition.returns:
+        target = socket_map.get(name)
+        if target is None:
+            log.warning(
+                "템플릿 %s 실행 %s 의 return %s 에 평탄화 소켓 매핑이 없어 생략했다",
+                template.id,
+                record.run_id,
+                name,
+            )
+            continue
+        node_id, socket = target
+        reference = next(
+            (ref for ref in result.references.get(node_id, ()) if ref.socket == socket),
+            None,
+        )
+        if reference is None:
+            log.warning(
+                "템플릿 %s 실행 %s 의 return %s 가 가리키는 %s.%s 참조가 없어 생략했다",
+                template.id,
+                record.run_id,
+                name,
+                node_id,
+                socket,
+            )
+            continue
+        collected[name] = output_refs((reference,))[0]
+    return collected
 
 
 def _reject_asset_values(arguments: Mapping[str, Any]) -> None:

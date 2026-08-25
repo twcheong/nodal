@@ -42,6 +42,25 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-25 · Codex · M6.1a 툴 결과 소켓 매핑의 소유권
+
+- **결정**: 서브그래프 `returns` 이름에서 평탄화된 `(노드 ID, 소켓)`으로 가는
+  매핑은 core의 `FlattenResult.output_sockets`가 만들고 `PreparedGraph`와
+  `RunResult`가 실행 기록까지 운반한다. 서버의 `collect_results`는 그 매핑과
+  실행기가 만든 `OutputRef`를 연결할 뿐이다
+- **이유**: `_follow`가 중첩 별칭을 끝까지 푸는 유일한 구현이다. 서버가 중첩
+  `returns`를 다시 따라가면 §12.1이 거부한 두 번째 그래프 표현과 두 번째 평탄화
+  경로가 생긴다. `prepare_for_execution`만 `flatten`을 부른다는 계약도 유지해야 한다
+- **부수 발견(M6.1b에서 판단)**: `app.py`의 `_detail`은 평탄화 전
+  `record.graph`에서 스키마를 찾지만 `RunResult.outputs` 키는 평탄화 후 ID다.
+  따라서 서브그래프 결과의 스키마 조회는 언제나 `None`이다. 현재는
+  `executor.py`가 요청된 출력의 `references`를 항상 채워 `refs_from_values`가
+  스키마를 쓰지 않으므로 무해하다. 그 보장이 사라지면 조용히 `type: "Any"`로
+  떨어진다. 이번에는 고치지 않고 M6.1b에서 응답 조립 경로와 함께 판단한다
+- **영향 범위**: `nodal.subgraph`, `nodal.executor`, `nodal_server.templates`와 해당 테스트
+- **되돌릴 수 있나**: 예 — 필드는 추가형이다. 다만 제거하면 다중 출력 소켓의
+  구분을 잃고 서버가 평탄화 로직을 중복해야 한다
+
 ### 2026-08-25 · Codex · M6.0b 생성물 drift 재검증
 
 - **결정**: `72015ab`에서 보고된 web의 Prettier·API 타입 drift 2건은 깨끗한

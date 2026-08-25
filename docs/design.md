@@ -1695,7 +1695,9 @@ missing_param | nodes.call.inputs.source_path | 필수 파라미터가 비어 �
 
 **결과의 이름은 `returns` 가 정한다.** `get_run` 의 `results` 키가 정의의 `returns`
 소켓 이름이고, 값은 **에셋 참조**다 (§4.5). `returns` 가 비어 있는 정의는 노출하지
-않는다 — 내보내는 것이 없으면 툴이 돌려줄 것도 없다.
+않는다 — 내보내는 것이 없으면 툴이 돌려줄 것도 없다. 구현은
+`nodal.subgraph.FlattenResult.output_sockets`가 중첩 별칭을 실제 소켓까지 풀어
+보존하고, `nodal_server.templates.collect_results`가 그 매핑으로 참조를 조립한다.
 
 전송 형태는 **서버가 이미 소유한 것을 그대로 쓴다** — `AssetRefModel` ·
 `OutputRefModel` · `IssueModel` (§6). MCP 를 위해 두 번째 표현을 만들지 않는다.
