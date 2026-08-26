@@ -96,6 +96,7 @@ __all__ = [
     "DynamicGraph",
     "ExecutionBlocker",
     "ExecutionList",
+    "ExecutionTrace",
     "Expanded",
     "Failure",
     "NeedsLazy",
@@ -235,6 +236,25 @@ class Failure(NodeOutcome):
 
     error: BaseException
     socket: str | None = None
+
+
+@dataclass(slots=True)
+class ExecutionTrace:
+    """성공 결과가 만들어지기 전에도 남는 실행 이력.
+
+    서버처럼 실패한 실행의 중간 이력을 보존해야 하는 호출자가 넘긴다. 성공하면
+    같은 목록이 `RunResult`의 불변 tuple로 굳어진다.
+    """
+
+    executed: list[str] = field(default_factory=list)
+    cached: list[str] = field(default_factory=list)
+    blocked: list[str] = field(default_factory=list)
+
+    def clear(self) -> None:
+        """한 trace를 실수로 재사용해도 이전 실행을 섞지 않는다."""
+        self.executed.clear()
+        self.cached.clear()
+        self.blocked.clear()
 
 
 @dataclass(frozen=True, slots=True)
@@ -730,6 +750,7 @@ async def execute(
     run_id: str | None = None,
     assets: AssetStore | None = None,
     models: ModelStore | None = None,
+    trace: ExecutionTrace | None = None,
 ) -> RunResult:
     """그래프를 실행한다 (design.md §5.1).
 
@@ -748,6 +769,7 @@ async def execute(
         cancel_token: 협조적 취소 토큰.
         run_id: 이벤트에 붙는 실행 ID. 없으면 새로 만든다.
         assets: 실행 중인 노드와 출력 직렬화가 공유할 에셋 저장소.
+        trace: 실패해 `RunResult`가 만들어지지 않아도 보존할 실행 이력.
 
     Returns:
         실행 요약. `executed` 와 `cached` 로 무엇이 재실행됐는지 알 수 있다.
@@ -759,6 +781,9 @@ async def execute(
         NodeExecutionError: 노드가 실패했을 때. 어느 노드인지 지목한다.
         Cancelled: 실행 중 취소됐을 때.
     """
+    history = trace if trace is not None else ExecutionTrace()
+    history.clear()
+
     prepared = prepare_for_execution(graph, registry, requested_outputs)
     if prepared.issues:
         raise GraphValidationError(list(prepared.issues))
@@ -778,9 +803,9 @@ async def execute(
         plan.add_node(out_id)
 
     results: dict[str, Mapping[str, Any]] = {}
-    executed: list[str] = []
-    cached: list[str] = []
-    blocked: list[str] = []
+    executed = history.executed
+    cached = history.cached
+    blocked = history.blocked
     references: dict[str, tuple[OutputRef, ...]] = {}
 
     events.emit(RunStarted(t="run.started", run_id=identifier, node_count=len(plan.pending())))

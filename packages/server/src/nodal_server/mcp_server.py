@@ -149,7 +149,10 @@ class MCPService:
             ),
             Tool(
                 name="cancel_run",
-                description="협조적 취소를 요청한다. 종단 상태면 그 상태를 그대로 돌려준다.",
+                description=(
+                    "협조적 취소를 요청한다. 실행 중이면 응답 상태는 노드가 요청을 "
+                    "확인할 때까지 running일 수 있고, 종단 상태면 그 상태를 그대로 돌려준다."
+                ),
                 input_schema=_RUN_ID_SCHEMA,
             ),
         ]

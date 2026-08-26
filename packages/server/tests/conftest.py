@@ -52,6 +52,18 @@ class Boom:
         raise RuntimeError("의도적 실패")
 
 
+@node(id="test.BoomAfter", title="Boom After", category="test")
+class BoomAfter:
+    """상류가 끝난 뒤 실패한다. 실패 run의 실행 이력을 시험한다."""
+
+    value: Int
+
+    returns = {"never": Int}
+
+    def run(self, value: int) -> NodeResult:
+        raise RuntimeError(f"{value} 뒤 의도적 실패")
+
+
 @node(id="test.Slow", title="Slow", category="test")
 class Slow:
     """오래 걸리고 매 스텝 취소를 확인하는 노드.
@@ -84,7 +96,7 @@ class Choice:
         return NodeResult(len(mode))
 
 
-TEST_NODES: tuple[type, ...] = (Const, Add, Boom, Slow, Choice)
+TEST_NODES: tuple[type, ...] = (Const, Add, Boom, BoomAfter, Slow, Choice)
 
 
 @pytest.fixture
