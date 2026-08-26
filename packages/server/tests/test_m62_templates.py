@@ -326,23 +326,20 @@ def test_product_ad_scene_backdrop_and_product_share_the_same_canvas_size(
 
 # --------------------------------------------------- diffusion 축 (ad_backdrop)
 
-pytest.importorskip("torch")
-pytest.importorskip("diffusers")
-
 
 @pytest.fixture(scope="module")
 def tiny_sd() -> object:
     """픽스처를 미리 받아 둔다. 못 받으면 이 축을 건너뛴다 (오프라인에서 빨갛게 하지 않는다).
 
     `import torch` 를 쓰지 않는다 — `packages/server` 는 torch import 가 금지다
-    (`pyproject.toml` 의 banned-api, `packages/nodes-diffusion` 만 면제). 모듈 자체는
-    `pytest.importorskip("torch")` 로 얻는다.
+    (`pyproject.toml` 의 banned-api, `packages/nodes-diffusion` 만 면제). torch 객체는
+    fixture 안에서 `pytest.importorskip("torch")` 로 얻는다.
     """
     torch = pytest.importorskip("torch")
-    from diffusers import DiffusionPipeline
+    diffusers = pytest.importorskip("diffusers")
 
     try:
-        pipe = DiffusionPipeline.from_pretrained(TINY_SD, torch_dtype=torch.float32)
+        pipe = diffusers.DiffusionPipeline.from_pretrained(TINY_SD, torch_dtype=torch.float32)
     except Exception as exc:
         pytest.skip(f"{TINY_SD} 를 받을 수 없다 (네트워크?): {exc}")
     pipe.set_progress_bar_config(disable=True)
@@ -400,6 +397,7 @@ async def _execute_ad_backdrop(
     return reference.asset.hash, set(result.executed)
 
 
+@pytest.mark.diffusion
 async def test_ad_backdrop_executes_end_to_end(ad_backdrop: Template, tiny_sd: object) -> None:
     """M6.2a 증거 — MCP 표면(카탈로그 → 호출 그래프 → 실행)을 diffusion 으로 통과한다.
     가중치는 랜덤이라 그림의 의미는 검증하지 못한다 — 잡히는 것은 배선이다
@@ -421,6 +419,7 @@ async def test_ad_backdrop_executes_end_to_end(ad_backdrop: Template, tiny_sd: o
     } == executed
 
 
+@pytest.mark.diffusion
 async def test_ad_backdrop_same_seed_reproduces(ad_backdrop: Template, tiny_sd: object) -> None:
     """완료 기준 ① — diffusion 축에서도 같은 시드·같은 입력이면 같은 에셋 해시."""
     assets = AssetStore()
@@ -440,6 +439,7 @@ async def test_ad_backdrop_same_seed_reproduces(ad_backdrop: Template, tiny_sd: 
     assert second_hash == first_hash
 
 
+@pytest.mark.diffusion
 async def test_ad_backdrop_changing_seed_reruns_only_downstream(
     ad_backdrop: Template, tiny_sd: object
 ) -> None:

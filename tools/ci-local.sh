@@ -24,6 +24,28 @@ cd "$root" || exit 1
 workflow=".github/workflows/ci.yml"
 [ -f "$workflow" ] || { echo "❌ $workflow 이 없다."; exit 1; }
 
+# GitHub 의 잡은 각각 새 러너에서 시작한다. 로컬에서도 uv 환경을 잡별로 나누지
+# 않으면 다른 잡이나 이전 실행이 설치한 torch가 현재 잡의 실제 조건을 가린다.
+ci_env_root=$(mktemp -d "${TMPDIR:-/tmp}/nodal-ci-local.XXXXXX") || exit 1
+cleanup() {
+  rm -rf -- "$ci_env_root"
+}
+trap cleanup EXIT
+
+report_optional_dependencies() {
+  local python="$UV_PROJECT_ENVIRONMENT/bin/python"
+  [ -x "$python" ] || return
+  "$python" - <<'PY'
+import importlib.util
+
+state = []
+for package in ("torch", "diffusers"):
+    installed = importlib.util.find_spec(package) is not None
+    state.append(f"{package}={'설치됨' if installed else '없음'}")
+print("      선택적 의존성: " + " · ".join(state))
+PY
+}
+
 # ci.yml 을 읽어 (job, step, 실행가능여부, 사유, 스크립트) 레코드를 뱉는다.
 # 필드 구분 US(\x1f), 레코드 구분 RS(\x1e) — run 블록이 여러 줄이라 개행은 못 쓴다.
 plan=$(uv run python - "$workflow" "$@" <<'PY'
@@ -92,6 +114,8 @@ while IFS= read -r -d "$RS" record || [ -n "$record" ]; do
 
   if [ "$job" != "$current_job" ]; then
     printf '\n== job: %s ==\n' "$job"
+    export UV_PROJECT_ENVIRONMENT="$ci_env_root/$job"
+    printf '      uv 환경: %s\n' "$UV_PROJECT_ENVIRONMENT"
     current_job="$job"
   fi
 
@@ -105,6 +129,9 @@ while IFS= read -r -d "$RS" record || [ -n "$record" ]; do
   # GitHub 의 리눅스 러너 기본 셸과 같은 조건으로 돌린다.
   if output=$(bash --noprofile --norc -eo pipefail -c "$script" 2>&1); then
     printf '  ✅  %s\n' "$name"
+    if [[ "$script" == *"uv sync"* ]]; then
+      report_optional_dependencies
+    fi
     passed=$((passed + 1))
   else
     printf '  ❌  %s\n' "$name"

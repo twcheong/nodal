@@ -33,7 +33,7 @@ jobs:
         run: uv run mypy
 
       - name: pytest
-        run: uv run pytest
+        run: uv run pytest -m "not diffusion"
 
       - name: JSON Schema drift 검사
         run: uv run python tools/export_schema.py --check
@@ -95,6 +95,21 @@ jobs:
           else
             echo "아직 테스트가 없다 (M4 계약 단계). 구현 커밋에서 채운다."
           fi
+
+      # M6 완료 기준을 증명하는 서버 템플릿 테스트도 diffusion 런타임이 필요하다.
+      # 선택식이 어긋나 0건이 되어도 pytest 는 성공할 수 있으므로 수집 수를 먼저 고정한다.
+      - name: pytest (M6 diffusion 템플릿 · 0건 수집 금지)
+        run: |
+          collected=$(NODAL_DEVICE=cpu uv run pytest --collect-only -q -o addopts= -m diffusion \
+            packages/server/tests/test_m62_templates.py | \
+            awk '/::/ { count += 1 } END { print count + 0 }')
+          if [ "$collected" -eq 0 ]; then
+            echo "::error::M6 diffusion 템플릿 테스트가 0건 수집됐다."
+            exit 1
+          fi
+          echo "M6 diffusion 템플릿 테스트 ${collected}건 수집."
+          NODAL_DEVICE=cpu uv run pytest -m diffusion \
+            packages/server/tests/test_m62_templates.py
 
   web:
     name: web (lint · typecheck · test · build)

@@ -42,6 +42,22 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-26 · Codex · M6 diffusion 템플릿 검증을 diffusion 잡에 격리
+
+- **결정**: `packages/server/tests/test_m62_templates.py`의 diffusion 실행 테스트에
+  `diffusion` 마커를 붙이고, 기존 `diffusion` 잡이 그 마커를 1건 이상 수집했는지
+  확인한 뒤 실행한다. 기본 `python` 잡은 `not diffusion`만 실행한다. 로컬 CI의 uv
+  환경도 잡별 임시 디렉토리로 격리한다
+- **이유**: 선택지 (나)를 택했다. `python` 잡에 약 192 MB의 torch와 diffusion
+  런타임을 더하지 않고 기존 무거운 잡을 재사용할 수 있다. 이전에는 모듈 수준
+  `importorskip`과 공유 `.venv` 때문에 원격은 파일 전체를 건너뛰고 로컬은 다른 잡이나
+  이전 실행의 의존성을 물려받아 통과했으며, 양쪽 결과가 모두 초록이었다. 0건 수집
+  가드는 마커나 파일 위치가 바뀌어 테스트가 다시 사라지는 경우를 실패로 바꾼다
+- **영향 범위**: `packages/server/tests/test_m62_templates.py`, `.github/workflows/ci.yml`,
+  `tools/ci-local.sh`, `pyproject.toml`
+- **되돌릴 수 있나**: 예 — 다만 되돌리면 M6 diffusion 완료 기준이 CI에서 다시
+  실행되지 않아도 성공으로 보고될 수 있다
+
 ### 2026-08-26 · Codex · M6.2c 대형 Mask 프리뷰와 실패 실행 이력 보존
 
 - **결정**: 이미지·마스크 프리뷰의 512 초과 축소를 `_resize_preview` 한 곳으로
