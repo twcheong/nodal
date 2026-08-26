@@ -17,7 +17,7 @@ import numpy as np
 
 from nodal import EncodedPreview, NodeRegistry, register_preview_encoder
 
-from .image import CHANNELS, ImageArray, MaskArray, to_float32
+from .image import CHANNELS, ImageArray, MaskArray, from_pil, to_float32, to_pil
 from .nodes import (
     NODES,
     BlendImages,
@@ -54,6 +54,21 @@ __all__ = [
 PREVIEW_MAX_EDGE = 512
 
 
+def _resize_preview(array: ImageArray) -> ImageArray:
+    """첫 프레임을 프리뷰 크기로 줄이고 `(B,H,W,C)` 계약을 복원한다."""
+    height, width = int(array.shape[1]), int(array.shape[2])
+    longest = max(height, width)
+    if longest <= PREVIEW_MAX_EDGE:
+        return array
+
+    scale = PREVIEW_MAX_EDGE / longest
+    target = (max(1, round(width * scale)), max(1, round(height * scale)))
+    from PIL import Image as PILImage
+
+    thumb = to_pil(array).resize(target, PILImage.Resampling.BILINEAR)
+    return from_pil(thumb)
+
+
 @register_preview_encoder
 def encode_ndarray_preview(value: Any) -> EncodedPreview | None:
     """`ndarray` → PNG 프리뷰. 처리할 수 없는 값이면 `None` 을 돌려준다.
@@ -70,18 +85,8 @@ def encode_ndarray_preview(value: Any) -> EncodedPreview | None:
     except ValueError:
         return None
 
+    array = _resize_preview(array)
     height, width = int(array.shape[1]), int(array.shape[2])
-    longest = max(height, width)
-    if longest > PREVIEW_MAX_EDGE:
-        scale = PREVIEW_MAX_EDGE / longest
-        target = (max(1, round(width * scale)), max(1, round(height * scale)))
-        from PIL import Image as PILImage
-
-        from .image import to_pil
-
-        thumb = to_pil(array).resize(target, PILImage.Resampling.BILINEAR)
-        array = to_float32(np.asarray(thumb))
-        height, width = int(array.shape[1]), int(array.shape[2])
 
     return EncodedPreview(
         data=encode_png(array),
@@ -113,18 +118,8 @@ def encode_mask_preview(value: Any) -> EncodedPreview | None:
 
     frame = np.clip(value[0], 0.0, 1.0).astype(np.float32, copy=False)
     array = frame[np.newaxis, ..., np.newaxis]  # (1, H, W, 1) — 흑백 프리뷰
+    array = _resize_preview(array)
     height, width = int(array.shape[1]), int(array.shape[2])
-    longest = max(height, width)
-    if longest > PREVIEW_MAX_EDGE:
-        scale = PREVIEW_MAX_EDGE / longest
-        target = (max(1, round(width * scale)), max(1, round(height * scale)))
-        from PIL import Image as PILImage
-
-        from .image import to_pil
-
-        thumb = to_pil(array).resize(target, PILImage.Resampling.BILINEAR)
-        array = to_float32(np.asarray(thumb))
-        height, width = int(array.shape[1]), int(array.shape[2])
 
     return EncodedPreview(
         data=encode_png(array),

@@ -27,6 +27,10 @@ __all__ = ["ensure_preview_encoder_registered"]
 
 @pytest.fixture(autouse=True)
 def ensure_preview_encoder_registered() -> None:
-    """이 패키지의 ndarray 인코더가 등록된 상태를 보장한다."""
-    if nodal_nodes_image.encode_ndarray_preview not in _ENCODERS:
-        register_preview_encoder(nodal_nodes_image.encode_ndarray_preview)
+    """이 패키지의 이미지·마스크 인코더가 등록된 상태를 보장한다."""
+    for encoder in (
+        nodal_nodes_image.encode_ndarray_preview,
+        nodal_nodes_image.encode_mask_preview,
+    ):
+        if encoder not in _ENCODERS:
+            register_preview_encoder(encoder)

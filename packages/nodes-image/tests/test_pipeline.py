@@ -258,3 +258,64 @@ def test_output_reference_reuses_the_saved_asset(tmp_path, registry, source_png)
     assert transported.asset.hash == ref.hash
     # 워크플로가 심긴 그 PNG 여야 한다.
     assert WORKFLOW_KEY in read_text_chunks(assets.get(transported.asset.hash))
+
+
+def test_product_ad_scene_composite_half_executes_at_1024_on_cpu(tmp_path, registry) -> None:
+    """VAE와 무관한 Load → Resize → Mask → Composite → Save 절반을 실행한다."""
+    background = tmp_path / "background.png"
+    product = tmp_path / "product.png"
+    PILImage.new("RGB", (1024, 1024), (20, 40, 80)).save(background)
+    PILImage.new("RGBA", (1024, 1024), (220, 120, 40, 192)).save(product)
+    graph = {
+        "nodal_version": "1",
+        "id": GRAPH_ID,
+        "nodes": {
+            "load_background": {"type": "image.Load", "inputs": {"path": str(background)}},
+            "load_product": {"type": "image.Load", "inputs": {"path": str(product)}},
+            "fit_product": {
+                "type": "image.Resize",
+                "inputs": {
+                    "image": {"$link": ["load_product", "image"]},
+                    "width": 1024,
+                    "height": 1024,
+                    "method": "lanczos",
+                },
+            },
+            "product_mask": {
+                "type": "image.Mask",
+                "inputs": {
+                    "image": {"$link": ["fit_product", "image"]},
+                    "channel": "alpha",
+                    "invert": False,
+                },
+            },
+            "composite": {
+                "type": "image.Composite",
+                "inputs": {
+                    "background": {"$link": ["load_background", "image"]},
+                    "foreground": {"$link": ["fit_product", "image"]},
+                    "mask": {"$link": ["product_mask", "mask"]},
+                },
+            },
+            "save": {
+                "type": "image.Save",
+                "inputs": {"image": {"$link": ["composite", "image"]}, "embed_workflow": True},
+            },
+        },
+    }
+    assets = FileAssetStore(tmp_path / "assets")
+
+    result, _ = run_graph(graph, registry, assets)
+
+    assert set(result.executed) == {
+        "load_background",
+        "load_product",
+        "fit_product",
+        "product_mask",
+        "composite",
+        "save",
+    }
+    data = assets.get(result.outputs["save"]["asset"].hash)
+    assert data is not None
+    with PILImage.open(__import__("io").BytesIO(data)) as saved:
+        assert saved.size == (1024, 1024)

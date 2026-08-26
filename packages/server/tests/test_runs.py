@@ -252,6 +252,29 @@ def test_node_failure_marks_the_run_failed(client: TestClient) -> None:
     assert "boom" in detail["error"]["message"], "어느 노드인지 지목해야 한다"
 
 
+def test_failed_run_detail_preserves_execution_history(client: TestClient) -> None:
+    """실패해 result가 없어도 완료·캐시 이력은 GET에서 복구할 수 있어야 한다."""
+    wait_for(client, client.post("/api/runs", json={"graph": simple_graph()}).json()["run_id"])
+    graph = simple_graph()
+    graph["nodes"]["after"] = {
+        "type": "test.Add",
+        "inputs": {"a": {"$link": ["add", "sum"]}, "b": 1},
+    }
+    graph["nodes"]["boom"] = {
+        "type": "test.BoomAfter",
+        "inputs": {"value": {"$link": ["after", "sum"]}},
+    }
+    graph["outputs"] = ["boom"]
+
+    run_id = client.post("/api/runs", json={"graph": graph}).json()["run_id"]
+    detail = wait_for(client, run_id)
+
+    assert detail["status"] == "failed"
+    assert detail["executed"] == ["after"]
+    assert set(detail["cached"]) == {"c1", "c2", "add"}
+    assert detail["blocked"] == []
+
+
 def test_unknown_run_is_404_with_the_shared_error_shape(client: TestClient) -> None:
     response = client.get("/api/runs/nope")
     assert response.status_code == 404

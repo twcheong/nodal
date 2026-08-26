@@ -33,6 +33,7 @@ from nodal import (
     Cache,
     Cancelled,
     CancelToken,
+    ExecutionTrace,
     Graph,
     GraphValidationError,
     LRUCache,
@@ -93,6 +94,7 @@ class RunRecord:
     started_at: datetime | None = None
     finished_at: datetime | None = None
     result: RunResult | None = None
+    trace: ExecutionTrace = field(default_factory=ExecutionTrace)
     error: ErrorBody | None = None
 
     #: 실행 중 폴링을 위한 진행 상태. REST 응답 계약에는 넣지 않고 MCP `get_run`
@@ -331,6 +333,7 @@ class RunQueue:
                 run_id=record.run_id,
                 assets=self._assets,
                 models=self._models,
+                trace=record.trace,
             )
             record.status = RunStatus.SUCCEEDED
 

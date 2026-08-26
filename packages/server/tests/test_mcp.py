@@ -169,6 +169,7 @@ async def test_dynamic_tools_and_run_lifecycle(
             }
             assert "execute_graph" not in tools
             assert tools[template.tool_name].input_schema == template.input_schema
+            assert "running일 수" in tools["cancel_run"].description
             assert tools[template.tool_name].description == template.describe()
 
             catalog_result = await client.call_tool("list_templates", {})

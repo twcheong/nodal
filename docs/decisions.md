@@ -42,6 +42,22 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-26 · Codex · M6.2c 대형 Mask 프리뷰와 실패 실행 이력 보존
+
+- **결정**: 이미지·마스크 프리뷰의 512 초과 축소를 `_resize_preview` 한 곳으로
+  합치고, PIL 왕복은 `from_pil`로 `(B,H,W,C)` 계약을 복원한다. 실패 run의
+  `executed`·`cached`·`blocked`는 문서에서 빼지 않고, core의 mutable
+  `ExecutionTrace`를 `RunRecord`가 소유해 `RunResult`가 만들어지기 전부터 보존한다
+- **이유**: PIL `L` 모드의 `np.asarray`는 채널 축 없는 `(H,W)`를 만들어 Mask와
+  1채널 Image가 같은 분기에서 실패했다. 실패 이력도 WS 유실을 REST로 복구한다는
+  `hub.py`·design.md §6 계약의 일부이며, 실패 시점이야말로 실행·캐시·블로킹 경계를
+  알아야 재현할 수 있다. 이벤트만 접으면 `blocked`를 알 수 없으므로 실행 루프가
+  성공 결과에 쓰는 세 목록 자체를 공유한다
+- **영향 범위**: `packages/nodes-image` 프리뷰 인코더·테스트,
+  `nodal.executor.ExecutionTrace`, 서버 실행 기록·REST 테스트, MCP `cancel_run` 설명
+- **되돌릴 수 있나**: 예 — 다만 되돌리면 512 초과 L 모드 프리뷰가 다시 실패하고,
+  실패 run의 REST 이력이 빈 배열로 돌아간다
+
 ### 2026-08-26 · Claude Code · Mask 출력에 전용 프리뷰 인코더 추가
 
 - **결정**: `nodal_nodes_image`에 `encode_mask_preview`를 추가했다. `(B, H, W)`
