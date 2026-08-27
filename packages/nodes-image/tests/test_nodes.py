@@ -1,4 +1,4 @@
-"""노드 7종의 단위 테스트.
+"""이미지 노드의 단위 테스트.
 
 `run` 은 평범한 함수라 엔진 없이 그냥 부른다 (AGENTS.md 코딩 컨벤션).
 `SaveImage` 만 `ctx` 를 받으므로 가짜 컨텍스트를 넘긴다.
@@ -11,14 +11,17 @@ import pytest
 from PIL import Image as PILImage
 from preview_encoder_fixture import ensure_preview_encoder_registered  # noqa: F401
 
+from nodal import Failure
 from nodal_nodes_image import (
     BlendImages,
     CompositeImages,
     CropImage,
+    LoadAssetImage,
     LoadImage,
     MaskFromImage,
     ResizeImage,
 )
+from nodal_server.assets import AssetStore
 
 
 def solid(value: float, size: tuple[int, int] = (4, 4), channels: int = 3) -> np.ndarray:
@@ -54,6 +57,29 @@ def test_load_reads_jpeg(tmp_path) -> None:
 def test_load_rejects_empty_path() -> None:
     with pytest.raises(ValueError, match="경로"):
         LoadImage().run("")
+
+
+def test_load_asset_reads_from_the_context_store() -> None:
+    data = __import__("io").BytesIO()
+    PILImage.new("RGB", (3, 2), (255, 0, 0)).save(data, format="PNG")
+    assets = AssetStore()
+    ref = assets.put(data.getvalue(), media_type="image/png")
+    ctx = type("Context", (), {"assets": assets})()
+
+    result = LoadAssetImage().run(ref.hash, ctx)
+
+    assert not isinstance(result, Failure)
+    assert result.values[0].shape == (1, 2, 3, 3)
+
+
+def test_load_asset_missing_hash_names_the_socket_and_value() -> None:
+    ctx = type("Context", (), {"assets": AssetStore()})()
+
+    result = LoadAssetImage().run("deadbeef", ctx)
+
+    assert isinstance(result, Failure)
+    assert result.socket == "asset_hash"
+    assert "deadbeef" in str(result.error)
 
 
 # ---------------------------------------------------------------- Resize

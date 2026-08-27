@@ -59,20 +59,10 @@
         }
       },
       "nodes": {
-        "load": {
-          "type": "image.Load",
-          "inputs": {
-            "path": { "$param": "source" }
-          },
-          "meta": {
-            "title": "원본 읽기",
-            "notes": "기본값이 없으므로 source 는 필수 파라미터다 — inputSchema 의 required 에 나온다. Image 파라미터의 값은 지금 파일 경로다 (design.md §12.3 의 현재/목표)"
-          }
-        },
         "shrink": {
           "type": "subgraph.square",
           "inputs": {
-            "source": { "$link": ["load", "image"] },
+            "source": { "$param": "source" },
             "size": { "$param": "size" },
             "method": { "$param": "method" }
           },
@@ -100,10 +90,18 @@
   },
 
   "nodes": {
+    "source": {
+      "type": "image.Load",
+      "inputs": { "path": "examples/sample.png" },
+      "meta": {
+        "title": "저작용 입력",
+        "notes": "MCP 호출에서는 래퍼가 Image 문자열을 image.Load 또는 image.LoadAsset 링크로 바꾼다. 이 노드는 파일 자체를 nodal run 으로 실행하기 위한 하네스다"
+      }
+    },
     "call": {
       "type": "subgraph.thumbnail",
       "inputs": {
-        "source": "examples/sample.png",
+        "source": { "$link": ["source", "image"] },
         "size": 128
       },
       "meta": {

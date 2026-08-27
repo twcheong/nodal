@@ -10,6 +10,7 @@ import io
 import json
 import logging
 from collections.abc import Iterator
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,7 @@ import nodal_nodes_image
 from nodal import (
     CancelToken,
     LRUCache,
+    NodeExecutionError,
     NullEventSink,
     RunResult,
     execute,
@@ -31,7 +33,7 @@ from nodal_server.assets import AssetStore
 from nodal_server.queue import RunRecord
 from nodal_server.templates import (
     CALL_NODE_ID,
-    AssetReferenceNotSupportedError,
+    AssetReferenceParameterError,
     Template,
     build_call_graph,
     collect_results,
@@ -291,7 +293,8 @@ def test_call_graph_flattens(thumbnail: Template) -> None:
     assert result.issues == ()
     # 평탄화가 끝난 그래프에 `subgraph.*` 는 남지 않는다 (§5.5 ⑤).
     assert all(not node.type.startswith("subgraph.") for node in result.graph.nodes.values())
-    assert sorted(result.graph.nodes) == ["call:load", "call:save", "call:shrink:fit"]
+    assert sorted(result.graph.nodes) == ["call:save", "call:shrink:fit", "input:source"]
+    assert result.graph.nodes["input:source"].type == "image.Load"
     # 요청된 출력은 정의의 `returns` 가 가리키는 안쪽 노드로 옮겨진다.
     assert result.outputs == ("call:save",)
 
@@ -353,7 +356,25 @@ async def _execute_thumbnail(
     assets: AssetStore,
     cache: LRUCache,
 ) -> tuple[str, bytes]:
-    graph = build_call_graph(thumbnail, {"source": "examples/sample.png", "size": size})
+    digest, data, _ = await _execute_thumbnail_input(
+        thumbnail,
+        source="examples/sample.png",
+        size=size,
+        assets=assets,
+        cache=cache,
+    )
+    return digest, data
+
+
+async def _execute_thumbnail_input(
+    thumbnail: Template,
+    *,
+    source: str,
+    size: int,
+    assets: AssetStore,
+    cache: LRUCache,
+) -> tuple[str, bytes, RunResult]:
+    graph = build_call_graph(thumbnail, {"source": source, "size": size})
     result = await execute(
         graph,
         graph.outputs,
@@ -376,7 +397,15 @@ async def _execute_thumbnail(
     assert reference.asset is not None
     data = assets.get(reference.asset.hash)
     assert data is not None
-    return reference.asset.hash, data
+    return reference.asset.hash, data, result
+
+
+def _without_workflow_embedding(template: Template) -> Template:
+    """입력 표현만 다른 두 그래프의 픽셀 PNG를 content hash로 비교한다."""
+    graph = template.graph.model_copy(deep=True)
+    definition = graph.definitions[template.id]
+    definition.nodes["save"].inputs["embed_workflow"] = False
+    return replace(template, graph=graph, definition=definition)
 
 
 async def test_same_template_arguments_produce_identical_png_bytes_and_hash(
@@ -401,6 +430,96 @@ async def test_same_template_arguments_produce_identical_png_bytes_and_hash(
 
     assert second_hash == first_hash
     assert second_png == first_png
+
+
+async def test_same_image_by_path_and_asset_produces_the_same_hash(
+    thumbnail: Template,
+    image_preview_encoder: None,
+) -> None:
+    """M7.1 (a) — 같은 그림의 두 입력 표현은 같은 출력 에셋이다."""
+    template = _without_workflow_embedding(thumbnail)
+    assets = AssetStore()
+    source_path = REPO_ROOT / "examples" / "sample.png"
+    uploaded = assets.put(
+        source_path.read_bytes(),
+        media_type="image/png",
+        filename=source_path.name,
+    )
+
+    path_hash, path_png, _ = await _execute_thumbnail_input(
+        template,
+        source=str(source_path),
+        size=128,
+        assets=assets,
+        cache=LRUCache(64),
+    )
+    asset_hash, asset_png, _ = await _execute_thumbnail_input(
+        template,
+        source=f"asset:{uploaded.hash}",
+        size=128,
+        assets=assets,
+        cache=LRUCache(64),
+    )
+
+    print(f"path_hash={path_hash}  asset_hash={asset_hash}")
+    assert asset_hash == path_hash
+    assert asset_png == path_png
+
+
+async def test_missing_asset_hash_points_at_the_image_parameter_and_value(
+    thumbnail: Template,
+    image_preview_encoder: None,
+) -> None:
+    """M7.1 (b) — 외부 저장소 조회 실패는 실행 노드의 입력 소켓 에러다."""
+    missing = "0" * 32
+    graph = build_call_graph(thumbnail, {"source": f"asset:{missing}", "size": 128})
+
+    with pytest.raises(NodeExecutionError) as excinfo:
+        await execute(
+            graph,
+            graph.outputs,
+            registry=nodal_nodes_image.registry(),
+            cache=LRUCache(64),
+            events=NullEventSink(),
+            cancel_token=CancelToken(),
+            assets=AssetStore(),
+        )
+
+    error = excinfo.value
+    assert error.node_id == "input:source", "어느 MCP 파라미터인지 노드 ID로 지목한다"
+    assert error.socket == "asset_hash", "실패한 로더 입력 소켓을 지목한다"
+    assert missing in str(error), "어느 값인지 지목한다"
+
+
+async def test_same_asset_reference_hits_the_loader_cache_on_second_run(
+    thumbnail: Template,
+    image_preview_encoder: None,
+) -> None:
+    """M7.1 (d) — digest가 캐시 키에 직접 남고 임시 경로가 끼지 않는다."""
+    assets = AssetStore()
+    source_path = REPO_ROOT / "examples" / "sample.png"
+    uploaded = assets.put(source_path.read_bytes(), media_type="image/png")
+    source = f"asset:{uploaded.hash}"
+    cache = LRUCache(64)
+
+    _, _, first = await _execute_thumbnail_input(
+        thumbnail,
+        source=source,
+        size=128,
+        assets=assets,
+        cache=cache,
+    )
+    _, _, second = await _execute_thumbnail_input(
+        thumbnail,
+        source=source,
+        size=128,
+        assets=assets,
+        cache=cache,
+    )
+
+    assert "input:source" in first.executed
+    assert "input:source" in second.cached
+    assert "input:source" not in second.executed
 
 
 async def test_different_template_arguments_produce_different_asset_hashes(
@@ -469,26 +588,32 @@ def test_defaults_come_from_the_definition(thumbnail: Template) -> None:
     assert result.graph.nodes["call:shrink:fit"].inputs["width"] == 256
 
 
-def test_asset_reference_is_an_explicit_not_implemented_error(thumbnail: Template) -> None:
-    """§12.3 H2 — 조용히 경로로 취급하지 않는다."""
-    with pytest.raises(AssetReferenceNotSupportedError) as excinfo:
-        build_call_graph(thumbnail, {"source": "asset:ab12cd34"})
-    message = str(excinfo.value)
-    assert "source" in message, "어느 파라미터인지 지목한다"
-    assert "asset:ab12cd34" in message
+def test_asset_reference_routes_through_asset_loader(thumbnail: Template) -> None:
+    graph = build_call_graph(thumbnail, {"source": "asset:ab12cd34"})
+
+    loader = graph.nodes["input:source"]
+    assert loader.type == "image.LoadAsset"
+    assert loader.inputs == {"asset_hash": "ab12cd34"}
+    source = graph.nodes[CALL_NODE_ID].inputs["source"]
+    assert source.source_node == "input:source"
+    assert source.source_socket == "image"
 
 
 def test_asset_prefix_is_reserved_on_every_parameter(thumbnail: Template) -> None:
     """예약 접두는 타입과 무관하다 — STRING 파라미터에 들어와도 걸린다."""
-    with pytest.raises(AssetReferenceNotSupportedError):
+    with pytest.raises(AssetReferenceParameterError):
         build_call_graph(thumbnail, {"source": "a.png", "method": "asset:ab12"})
 
 
 def test_asset_reference_inside_a_list_is_caught(thumbnail: Template) -> None:
-    with pytest.raises(AssetReferenceNotSupportedError):
-        build_call_graph(thumbnail, {"source": ["a.png", "asset:ab12"]})
+    with pytest.raises(AssetReferenceParameterError):
+        build_call_graph(thumbnail, {"source": "a.png", "method": ["ok", "asset:ab12"]})
 
 
 def test_ordinary_paths_are_untouched(thumbnail: Template) -> None:
     graph = build_call_graph(thumbnail, {"source": "assets/cat.png"})
-    assert graph.nodes[CALL_NODE_ID].inputs["source"] == "assets/cat.png"
+    assert graph.nodes["input:source"].type == "image.Load"
+    assert graph.nodes["input:source"].inputs["path"] == "assets/cat.png"
+    source = graph.nodes[CALL_NODE_ID].inputs["source"]
+    assert source.source_node == "input:source"
+    assert source.source_socket == "image"

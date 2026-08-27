@@ -1,7 +1,7 @@
 [project]
 name = "nodal-nodes-image"
 version = "0.0.0"
-description = "nodal — 이미지 노드 팩 (Load · Save · Resize · Crop · Blend · Mask · Composite)"
+description = "nodal — 이미지 노드 팩 (Load · LoadAsset · Save · Resize · Crop · Blend · Mask · Composite)"
 license = "Apache-2.0"
 # 휠의 `.dist-info/licenses/` 에 실제 파일을 넣는다 — 근거는 packages/core/pyproject.toml.
 license-files = ["LICENSE", "NOTICE"]

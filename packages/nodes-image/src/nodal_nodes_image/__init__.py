@@ -5,8 +5,8 @@
 그래서 노드 팩이 인코더를 넣고 core 는 부르기만 한다 (design.md §4.6) —
 `register_combo_provider()` 와 같은 패턴이다.
 
-    import nodal_nodes_image          # 인코더 등록됨
-    reg = nodal_nodes_image.registry()  # 노드 7종이 든 레지스트리
+    import nodal_nodes_image            # 인코더 등록됨
+    reg = nodal_nodes_image.registry()  # 노드 8종이 든 레지스트리
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ from .nodes import (
     BlendImages,
     CompositeImages,
     CropImage,
+    LoadAssetImage,
     LoadImage,
     MaskFromImage,
     ResizeImage,
@@ -38,6 +39,7 @@ __all__ = [
     "CompositeImages",
     "CropImage",
     "ImageArray",
+    "LoadAssetImage",
     "LoadImage",
     "MaskArray",
     "MaskFromImage",

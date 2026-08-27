@@ -157,15 +157,10 @@
             "notes": "중첩 서브그래프 하나. thumbnail 의 square 와 달리 diffusion 파이프라인 전체(로더부터 디코드까지)를 감싼다"
           }
         },
-        "load_product": {
-          "type": "image.Load",
-          "inputs": { "path": { "$param": "product" } },
-          "meta": { "title": "제품 사진 읽기" }
-        },
         "fit_product": {
           "type": "image.Resize",
           "inputs": {
-            "image": { "$link": ["load_product", "image"] },
+            "image": { "$param": "product" },
             "width": { "$param": "width" },
             "height": { "$param": "height" },
             "method": { "$param": "method" }
@@ -209,10 +204,15 @@
   },
 
   "nodes": {
+    "product_input": {
+      "type": "image.Load",
+      "inputs": { "path": "examples/sample_cutout.png" },
+      "meta": { "title": "저작용 제품 입력" }
+    },
     "call": {
       "type": "subgraph.product_ad_scene",
       "inputs": {
-        "product": "examples/sample_cutout.png",
+        "product": { "$link": ["product_input", "image"] },
         "prompt": "warm marble tabletop under soft studio light, shallow depth of field",
         "ckpt": "hf-internal-testing/tiny-sd-pipe",
         "width": 512,
