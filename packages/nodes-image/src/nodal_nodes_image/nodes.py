@@ -1,10 +1,11 @@
-"""이미지 노드 7종 (roadmap M3).
+"""이미지 노드 8종 (roadmap M3 · M7.1).
 
 모든 노드가 `design.md` §4.4 의 계약을 지킨다 — 입출력은 `float32` 0..1,
 `(B, H, W, C)`. 범위 밖 값은 소켓으로 내보내기 전에 클립한다.
 
 `run` 은 전부 평범한 함수다. 엔진 객체 없이 호출할 수 있어야 단위 테스트가 된다
-(AGENTS.md 코딩 컨벤션). `ctx` 를 받는 것은 저장소가 필요한 `SaveImage` 뿐이다.
+(AGENTS.md 코딩 컨벤션). `ctx` 를 받는 것은 저장소가 필요한 `LoadAssetImage` 와
+`SaveImage` 뿐이다.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ from typing import Any
 import numpy as np
 from PIL import Image as PILImage
 
-from nodal import Bool, Combo, Float, Image, Int, Mask, NodeContext, NodeResult, Str, node
+from nodal import Bool, Combo, Failure, Float, Image, Int, Mask, NodeContext, NodeResult, Str, node
 
 from .image import clip01, from_pil, to_float32
 from .png import encode_png
@@ -26,6 +27,7 @@ __all__ = [
     "BlendImages",
     "CompositeImages",
     "CropImage",
+    "LoadAssetImage",
     "LoadImage",
     "MaskFromImage",
     "ResizeImage",
@@ -99,6 +101,45 @@ class LoadImage:
         with PILImage.open(path) as handle:
             handle.load()
             array = from_pil(handle)
+        return NodeResult(array, preview=array)
+
+
+@node(
+    id="image.LoadAsset",
+    title="Load Asset Image",
+    category="image/io",
+    aliases=["에셋", "해시", "asset"],
+    cacheable=True,
+)
+class LoadAssetImage:
+    """`ctx.assets`의 content hash에서 이미지를 읽는다 (design.md §4.5 · §12.3).
+
+    `image.Load`와 합치지 않는다. 파일 경로와 content hash는 발견 규칙이 다르고,
+    `asset:` 예약 접두 판별은 MCP 호출 래퍼가 맡는다. 이 노드는 접두를 떼어 낸
+    순수 해시만 받으므로 캐시 키에 임시 경로가 들어갈 자리가 없다.
+    """
+
+    asset_hash: Str = Str("")
+
+    returns = Image
+
+    def run(self, asset_hash: str, ctx: NodeContext) -> NodeResult | Failure:
+        if not asset_hash:
+            return Failure(ValueError("에셋 해시 값이 비어 있다"), socket="asset_hash")
+
+        data = ctx.assets.get(asset_hash)
+        if data is None:
+            return Failure(
+                ValueError(f"에셋 해시 값 {asset_hash!r}을 저장소에서 찾을 수 없다"),
+                socket="asset_hash",
+            )
+        try:
+            array = _decode_bytes(data)
+        except Exception as exc:
+            return Failure(
+                ValueError(f"에셋 해시 값 {asset_hash!r}을 이미지로 읽을 수 없다: {exc}"),
+                socket="asset_hash",
+            )
         return NodeResult(array, preview=array)
 
 
@@ -308,6 +349,7 @@ def _decode_bytes(data: bytes) -> np.ndarray:
 #: 이 팩이 제공하는 노드 전부. 레지스트리에 넣는 쪽이 이 목록을 쓴다.
 NODES = (
     LoadImage,
+    LoadAssetImage,
     SaveImage,
     ResizeImage,
     CropImage,

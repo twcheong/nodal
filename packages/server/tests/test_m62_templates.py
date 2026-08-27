@@ -146,10 +146,10 @@ def test_product_card_flattens_with_reused_subgraph_instances(product_card: Temp
     assert result.issues == ()
     assert all(not n.type.startswith("subgraph.") for n in result.graph.nodes.values())
     nodes = set(result.graph.nodes)
-    assert {"call:bg:load", "call:bg:fit", "call:fg:load", "call:fg:fit"} <= nodes
+    assert {"input:background", "call:bg:fit", "input:product", "call:fg:fit"} <= nodes
     # 같은 정의에서 나왔어도 인자는 각자 것이다.
-    assert result.graph.nodes["call:bg:load"].inputs["path"] == BACKGROUND
-    assert result.graph.nodes["call:fg:load"].inputs["path"] == PRODUCT_CUTOUT
+    assert result.graph.nodes["input:background"].inputs["path"] == BACKGROUND
+    assert result.graph.nodes["input:product"].inputs["path"] == PRODUCT_CUTOUT
 
 
 async def _execute_product_card(
@@ -235,8 +235,8 @@ async def test_product_card_changing_background_reruns_only_that_branch(
 
     캐시 키는 노드 ID 가 아니라 **입력 시그니처** 기반이다(AGENTS.md 핵심 설계
     결정 5) — 그래서 새 배경은 그래프 어디에도 없던 값이어야 한다. 이미
-    `product` 로 쓰인 `PRODUCT_CUTOUT` 을 배경으로도 쓰면 `image.Load{path:
-    같은 값}` 시그니처가 이미 캐시에 있어 `bg` 쪽도 조용히 캐시 히트가 되고,
+    `product` 로 쓰인 `PRODUCT_CUTOUT` 을 배경으로도 쓰면 입력 래퍼의
+    `image.Load{path: 같은 값}` 시그니처가 이미 캐시에 있어 `bg` 쪽도 조용히 캐시 히트가 되고,
     그것은 이 테스트가 증명하려는 것과 다른 이야기다.
     """
     new_background = tmp_path / "other_background.png"
@@ -255,10 +255,10 @@ async def test_product_card_changing_background_reruns_only_that_branch(
     )
 
     cached = {e.node_id for e in events.events if isinstance(e, NodeCached)}
-    assert {"call:fg:load", "call:fg:fit"} <= cached
-    assert "call:bg:load" in executed
+    assert {"input:product", "call:fg:fit"} <= cached
+    assert "input:background" in executed
     assert "call:bg:fit" in executed
-    assert "call:fg:load" not in executed
+    assert "input:product" not in executed
     assert "call:fg:fit" not in executed
 
 
@@ -295,7 +295,7 @@ def test_product_ad_scene_flattens_with_nested_diffusion_pipeline(
         "call:backdrop:canvas",
         "call:backdrop:sample",
         "call:backdrop:decode",
-        "call:load_product",
+        "input:product",
         "call:fit_product",
         "call:product_mask",
         "call:composite",

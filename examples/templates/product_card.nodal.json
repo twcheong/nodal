@@ -19,15 +19,10 @@
         }
       },
       "nodes": {
-        "load": {
-          "type": "image.Load",
-          "inputs": { "path": { "$param": "source" } },
-          "meta": { "title": "레이어 읽기" }
-        },
         "fit": {
           "type": "image.Resize",
           "inputs": {
-            "image": { "$link": ["load", "image"] },
+            "image": { "$param": "source" },
             "width": { "$param": "width" },
             "height": { "$param": "height" },
             "method": { "$param": "method" }
@@ -127,11 +122,21 @@
   },
 
   "nodes": {
+    "product_input": {
+      "type": "image.Load",
+      "inputs": { "path": "examples/sample_cutout.png" },
+      "meta": { "title": "저작용 제품 입력" }
+    },
+    "background_input": {
+      "type": "image.Load",
+      "inputs": { "path": "examples/sample.png" },
+      "meta": { "title": "저작용 배경 입력" }
+    },
     "call": {
       "type": "subgraph.product_card",
       "inputs": {
-        "product": "examples/sample_cutout.png",
-        "background": "examples/sample.png",
+        "product": { "$link": ["product_input", "image"] },
+        "background": { "$link": ["background_input", "image"] },
         "width": 512,
         "height": 512
       },

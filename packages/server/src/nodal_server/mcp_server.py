@@ -35,7 +35,7 @@ from nodal import NodeRegistry, prepare_for_execution
 from .hub import EventHub
 from .queue import RunQueue, RunRecord
 from .templates import (
-    AssetReferenceNotSupportedError,
+    AssetReferenceParameterError,
     Template,
     TemplateCatalog,
     build_call_graph,
@@ -193,8 +193,8 @@ class MCPService:
     ) -> CallToolResult:
         try:
             graph = build_call_graph(template, arguments)
-        except AssetReferenceNotSupportedError as exc:
-            return _error("asset_reference_not_supported", str(exc))
+        except AssetReferenceParameterError as exc:
+            return _error("invalid_asset_reference", str(exc))
 
         prepared = prepare_for_execution(graph, self._registry, graph.outputs)
         if prepared.issues:

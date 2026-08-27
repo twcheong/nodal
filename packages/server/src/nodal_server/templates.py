@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 from collections.abc import Iterable, Mapping
@@ -29,9 +30,12 @@ from nodal import (
     Graph,
     GraphIssue,
     GraphValidationError,
+    Link,
     Node,
     SubgraphDef,
+    TensorType,
     parse_graph,
+    parse_type_expr,
     validate_graph,
 )
 
@@ -47,7 +51,7 @@ __all__ = [
     "TEMPLATE_ID_RE",
     "TEMPLATE_SUFFIX",
     "TOOL_PREFIX",
-    "AssetReferenceNotSupportedError",
+    "AssetReferenceParameterError",
     "Rejection",
     "Template",
     "TemplateCatalog",
@@ -82,13 +86,8 @@ TEMPLATE_ID_RE: Final = re.compile(r"^[a-z][a-z0-9_]{0,47}$")
 CALL_NODE_ID: Final = "call"
 
 
-class AssetReferenceNotSupportedError(NotImplementedError):
-    """툴 인자가 `asset:<hash>` 인데 그 경로가 아직 없다 (§12.3 H2).
-
-    **조용히 경로로 취급하지 않는다.** 그러면 `asset:ab12...` 라는 이름의 파일을
-    찾다가 "그런 파일이 없다" 로 죽고, 클라이언트는 자기가 해시를 잘못 줬다고
-    생각한다. 실제로는 서버가 아직 못 하는 일이다 — 둘은 다른 문제이고 답도 다르다.
-    """
+class AssetReferenceParameterError(ValueError):
+    """`asset:` 예약 접두가 `Image`가 아닌 파라미터에 쓰였다 (§12.3)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -301,7 +300,8 @@ def _load_one(path: Path) -> Template | Rejection:
 def build_call_graph(template: Template, arguments: Mapping[str, Any]) -> Graph:
     """툴 호출 하나를 실행 가능한 캐논 그래프로 감싼다 (§12.6).
 
-    모양은 언제나 같다 — 인스턴스 하나와 그것을 요청하는 `outputs` 하나다::
+    일반 파라미터만 있으면 인스턴스 하나와 `outputs` 하나다. `Image` 파라미터는
+    그 앞에 `input:<파라미터>` 로드 노드가 붙고 `call`은 그 출력 링크를 받는다::
 
         {"nodal_version": <파일의 버전>,
          "id": <파일의 ID>,
@@ -317,25 +317,26 @@ def build_call_graph(template: Template, arguments: Mapping[str, Any]) -> Graph:
     `node_id` 는 `CALL_NODE_ID` 이고 `socket` 이 곧 파라미터 이름이라, MCP 에러는
     **어느 인자인지** 그대로 지목할 수 있다 (§12.3).
 
-    예외가 하나 있다 — `asset:` 로 시작하는 값이다. 그 경로는 아직 구현되지
-    않았고 (§12.3 H2), 그대로 흘려보내면 파일을 찾다가 죽어 **클라이언트가 자기
-    해시를 의심한다.** 미구현은 검증 실패가 아니라 서버가 못 하는 일이므로
-    `GraphIssue` 가 아니라 예외로 답한다.
+    예외가 하나 있다 — `Image` 파라미터의 문자열 표현이다. 파일 경로는
+    `image.Load`, `asset:<hash>`는 `image.LoadAsset` 노드로 바꾸고, 서브그래프에는
+    둘 다 실제 `Image` 링크를 전달한다. `asset:`는 예약 접두이므로 다른 타입의
+    파라미터에서 발견하면 명확히 거부한다.
 
     Raises:
-        AssetReferenceNotSupportedError: 인자에 `asset:` 값이 있을 때.
+        AssetReferenceParameterError: `Image`가 아닌 인자에 `asset:` 값이 있을 때.
     """
-    _reject_asset_values(arguments)
+    inputs = dict(arguments)
+    nodes: dict[str, Node] = {}
+    _route_image_values(template, inputs, nodes)
+    nodes[CALL_NODE_ID] = Node(
+        type=f"subgraph.{template.id}",
+        inputs=inputs,
+    )
     return Graph(
         nodal_version=template.graph.nodal_version,
         id=template.graph.id,
         definitions=dict(template.graph.definitions),
-        nodes={
-            CALL_NODE_ID: Node(
-                type=f"subgraph.{template.id}",
-                inputs=dict(arguments),
-            )
-        },
+        nodes=nodes,
         outputs=[CALL_NODE_ID],
     )
 
@@ -386,22 +387,80 @@ def collect_results(template: Template, record: RunRecord) -> dict[str, OutputRe
     return collected
 
 
-def _reject_asset_values(arguments: Mapping[str, Any]) -> None:
-    """`asset:` 예약 접두를 쓴 인자를 찾아 미구현으로 답한다 (§12.3 H2).
+def _route_image_values(
+    template: Template,
+    arguments: dict[str, Any],
+    nodes: dict[str, Node],
+) -> None:
+    """MCP의 `Image` 문자열을 실제 이미지 출력 링크로 바꾼다 (§12.3).
 
-    **타입이 아니라 값을 본다.** `asset:` 는 예약 접두라 어떤 파라미터에서도
-    다른 뜻을 가질 수 없고, 그래서 `Image` 로 선언되지 않은 파라미터에 들어온
-    에셋 참조도 여기서 걸린다. 타입만 보면 `List[Image]` 나 `STRING` 경로
-    파라미터에 들어온 것이 조용히 지나간다.
+    예약 접두 검사는 **타입이 아니라 값을 먼저** 본다. 그래야 `STRING`이나
+    `List[...]` 안의 `asset:`가 다른 뜻으로 조용히 살아남지 않는다.
     """
-    for name, value in arguments.items():
-        for item in value if isinstance(value, list) else [value]:
-            if isinstance(item, str) and item.startswith(ASSET_PREFIX):
-                raise AssetReferenceNotSupportedError(
-                    f"파라미터 {name!r} 의 값 {item!r} 는 에셋 참조다. "
-                    "형식은 계약에 있지만 (design.md §12.3) 서버가 아직 에셋으로 "
-                    "이미지를 읽지 못한다 — 지금은 파일 경로를 넘겨라"
-                )
+    effective = {
+        name: param.default
+        for name, param in template.definition.params.items()
+        if name not in arguments and param.default is not None
+    }
+    effective.update(arguments)
+    for name, value in effective.items():
+        refs = tuple(_asset_references(value))
+        param = template.definition.params.get(name)
+        is_image = param is not None and _is_image_param(param.type)
+
+        if refs and not is_image:
+            raise AssetReferenceParameterError(
+                f"파라미터 {name!r} 의 값 {refs[0]!r} 는 예약된 에셋 참조지만 "
+                "이 파라미터는 Image 로 선언되지 않았다 (design.md §12.3)"
+            )
+        if refs and is_image and not isinstance(value, str):
+            raise AssetReferenceParameterError(
+                f"Image 파라미터 {name!r} 는 경로 또는 asset:<hash> 문자열 하나를 받는다; "
+                f"받은 에셋 참조: {refs[0]!r}"
+            )
+    for name, param in template.definition.params.items():
+        if not _is_image_param(param.type):
+            continue
+
+        image_value: Any = arguments.get(name, param.default)
+        if not isinstance(image_value, str):
+            continue
+
+        node_id = _image_input_node_id(name)
+        if image_value.startswith(ASSET_PREFIX):
+            nodes[node_id] = Node(
+                type="image.LoadAsset",
+                inputs={"asset_hash": image_value.removeprefix(ASSET_PREFIX)},
+            )
+        else:
+            nodes[node_id] = Node(type="image.Load", inputs={"path": image_value})
+        arguments[name] = Link.to(node_id, "image")
+
+
+def _asset_references(value: Any) -> Iterable[str]:
+    if isinstance(value, str):
+        if value.startswith(ASSET_PREFIX):
+            yield value
+        return
+    if isinstance(value, list):
+        for item in value:
+            yield from _asset_references(item)
+
+
+def _is_image_param(type_expr: Any) -> bool:
+    parsed = parse_type_expr(type_expr)
+    return isinstance(parsed, TensorType) and parsed.name == "Image"
+
+
+def _image_input_node_id(name: str) -> str:
+    """파라미터 귀속이 보이는 안정적인 노드 ID. 긴 이름은 그래프 상한에 맞춘다."""
+    prefix = "input:"
+    candidate = f"{prefix}{name}"
+    if len(candidate) <= 64:
+        return candidate
+    suffix = hashlib.blake2b(name.encode("utf-8"), digest_size=6).hexdigest()
+    stem_size = 64 - len(prefix) - len(suffix) - 1
+    return f"{prefix}{name[:stem_size]}:{suffix}"
 
 
 def _details(issues: Iterable[GraphIssue]) -> tuple[SchemaNote, ...]:

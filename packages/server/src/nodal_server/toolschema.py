@@ -62,9 +62,6 @@ _PRESENTATION_HINTS: Final = frozenset({"seed", "control", "multiline", "placeho
 #: 예약 키인 것과 같은 방식이다 — 한 문자열 안에 두 형식(경로 · 에셋 참조)을
 #: 섞을 때 생기는 판별 모호성을 접두 하나로 없앤다.
 #:
-#: **아직 동작하지 않는다.** 계약만 박아 둔 것이고, 지금 이 접두로 시작하는 값을
-#: 넘기면 명확한 미구현 에러다 (`templates.build_call_graph`). 조용히 경로로
-#: 취급하지 않는다.
 ASSET_PREFIX: Final = "asset:"
 
 #: `Image` 파라미터의 값 형식 설명. 스키마의 `description` 으로 나간다.
@@ -73,8 +70,8 @@ ASSET_PREFIX: Final = "asset:"
 #: 문자열인지** 말해 주지 않으면 클라이언트가 알 방법이 없다.
 IMAGE_VALUE_DOC: Final = (
     f"이미지 값: 파일 경로이거나 에셋 참조 `{ASSET_PREFIX}<hash>` 다. "
-    f"`{ASSET_PREFIX}` 형식은 계약에만 있고 아직 동작하지 않는다 — "
-    "지금 넘기면 미구현 에러로 답한다 (docs/design.md §12.3)."
+    "클라이언트 파일은 같은 서버의 `POST /api/assets`에 multipart 필드 `file`로 "
+    f"올리고, 응답의 `hash`를 `{ASSET_PREFIX}<hash>`로 넘긴다 (docs/design.md §12.3)."
 )
 
 
