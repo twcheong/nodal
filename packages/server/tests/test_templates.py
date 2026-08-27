@@ -199,6 +199,70 @@ def test_other_files_are_not_scanned(tmp_path: Path) -> None:
     assert catalog.rejections == (), "확장자가 다른 파일은 템플릿 후보가 아니다"
 
 
+# ------------------------------------------------- 확장 카탈로그 합류 (§12.8, M7.2)
+
+
+def test_extension_templates_join_the_same_catalog(tmp_path: Path) -> None:
+    user_root = tmp_path / "user"
+    ext_root = tmp_path / "ext"
+    ext_root.mkdir(parents=True)
+    write(ext_root, "from_ext.nodal.json", minimal("from_ext"))
+
+    catalog = load_catalog(user_root, extension_sources=[("com.example.pack", ext_root)])
+    assert [t.id for t in catalog.templates] == ["from_ext"]
+    assert catalog.rejections == ()
+
+
+def test_user_directory_always_wins_over_extension(tmp_path: Path) -> None:
+    user_root = tmp_path / "user"
+    ext_root = tmp_path / "ext"
+    user_root.mkdir(parents=True)
+    ext_root.mkdir(parents=True)
+    write(user_root, "demo.nodal.json", minimal("demo"))
+    write(ext_root, "demo.nodal.json", minimal("demo"))
+
+    catalog = load_catalog(user_root, extension_sources=[("com.example.pack", ext_root)])
+    assert len(catalog.templates) == 1
+    assert catalog.templates[0].path == user_root / "demo.nodal.json"
+    assert len(catalog.rejections) == 1
+    assert "user" in catalog.rejections[0].reason
+
+
+def test_extension_collision_is_resolved_by_source_order_not_silently(tmp_path: Path) -> None:
+    """소스 순서에서 먼저 온 확장이 이긴다. 진 쪽은 이유와 함께 남는다."""
+    user_root = tmp_path / "user"  # 비어 있다 — 사용자 우선 규칙은 여기서 안 걸린다
+    ext_a = tmp_path / "ext_a"
+    ext_b = tmp_path / "ext_b"
+    ext_a.mkdir(parents=True)
+    ext_b.mkdir(parents=True)
+    write(ext_a, "demo.nodal.json", minimal("demo"))
+    write(ext_b, "demo.nodal.json", minimal("demo"))
+
+    catalog = load_catalog(
+        user_root,
+        extension_sources=[("com.example.a", ext_a), ("com.example.b", ext_b)],
+    )
+    assert len(catalog.templates) == 1
+    assert catalog.templates[0].path == ext_a / "demo.nodal.json", (
+        "extension_sources 순서에서 먼저 온 쪽(a)이 이겨야 한다"
+    )
+    assert len(catalog.rejections) == 1
+    assert "com.example.a" in catalog.rejections[0].reason, "누가 이겼는지 사유에 남아야 한다"
+
+
+def test_missing_extension_directory_is_silently_skipped(tmp_path: Path) -> None:
+    """확장이 templates/ 를 안 만들었으면 그냥 없는 것이다 — 카탈로그 전체 오류가 아니다."""
+    user_root = tmp_path / "user"
+    user_root.mkdir(parents=True)
+    write(user_root, "demo.nodal.json", minimal("demo"))
+
+    catalog = load_catalog(
+        user_root, extension_sources=[("com.example.empty", tmp_path / "no-such-dir")]
+    )
+    assert [t.id for t in catalog.templates] == ["demo"]
+    assert catalog.rejections == ()
+
+
 # ------------------------------------------------------------------ 시드 (§12.3)
 
 

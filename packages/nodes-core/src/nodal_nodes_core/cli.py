@@ -13,6 +13,13 @@ M1 은 UI 도 GPU 도 없이 완성한다. 이 CLI 가 M1 의 유일한 사용�
 설치된 1st-party 노드 팩은 모든 명령에서 자동으로 올라간다
 (`DEFAULT_OPTIONAL_PACKS`). 서드파티 팩은 `--pack` 으로 이름을 댄다.
 
+`~/.nodal/extensions` 의 서드파티 확장(design.md §8, M7.2)은 팩과 달리 이름을
+대지 않아도 **모든 명령에서** 자동으로 발견된다 — `--extensions DIR` 은 그
+기본 경로를 바꿀 뿐이다. `run`·`serve`·`nodes` 가 같은 확장을 보는 것이 요점
+이다: 하나에만 붙이면 "여기선 되는데 저기선 등록되지 않은 노드 타입" 버그가
+다시 생긴다 (`DEFAULT_OPTIONAL_PACKS` 를 그렇게 정한 이유와 같다,
+decisions.md 2026-08-16).
+
 이 CLI 가 `packages/core` 가 아니라 노드 팩에 있는 이유: core 는 노드를 하나도
 모른다. 실행하려면 레지스트리에 무언가 들어 있어야 하고, 그 "무언가"를 아는
 것은 노드 패키지다 (AGENTS.md 아키텍처 절).
@@ -34,6 +41,7 @@ from nodal import (
     Cancelled,
     CancelToken,
     Event,
+    ExtensionsResult,
     Graph,
     GraphValidationError,
     LRUCache,
@@ -48,6 +56,8 @@ from nodal import (
     RunResult,
     RunStarted,
     execute,
+    format_extension_failures,
+    load_extensions,
     parse_graph,
     validate_for_execution,
 )
@@ -157,21 +167,29 @@ def _load_pack(registry: NodeRegistry, name: str) -> None:
     factory(into=registry)
 
 
-def _build_registry(
+def _build_registry_with_extensions(
     packs: Sequence[str] = (),
     *,
     optional_packs: Sequence[str] = (),
-) -> NodeRegistry:
-    """기본 노드 팩 + `--pack` 으로 지정한 팩들.
+    extensions_dir: Path | None = None,
+) -> tuple[NodeRegistry, ExtensionsResult]:
+    """기본 노드 팩 + `--pack` 으로 지정한 팩들 + `~/.nodal/extensions` 확장.
 
     팩은 **모듈 이름으로 늦게** import 한다. 그래야 `nodal-nodes-core` 가
     `nodal-nodes-image` 를 정적으로 의존하지 않는다 — 노드 팩끼리는 서로를 몰라야
-    한다 (AGENTS.md 아키텍처 절). 팩 자동 발견은 M6 확장 시스템의 몫이고, 여기서는
-    사용자가 이름을 대는 것까지만 한다.
+    한다 (AGENTS.md 아키텍처 절). 팩은 사용자가 이름을 대는 것까지만 한다.
 
     `optional_packs` 는 없으면 조용히 넘어간다 — 설치되지 않았을 수 있는 팩이다.
     `packs`(사용자가 명시한 것)는 반대로 없으면 실패해야 한다. 사용자가 이름을
     댔는데 조용히 무시하면 왜 노드가 없는지 알 수 없다.
+
+    확장(M7.2, design.md §8)은 팩과 다르다 — **이름을 대지 않아도** 기본 경로
+    (`~/.nodal/extensions`)에서 자동으로 찾는다. 이것이 §8 이 말하는 "팩 자동
+    발견"이다: `DEFAULT_OPTIONAL_PACKS` 는 이 저장소에 박힌 이름을 모든 명령이
+    똑같이 올리는 것이었고(2026-08-16, decisions.md), 확장은 그 원칙을 서드파티
+    까지 넓힌다 — `nodal nodes` 에는 보이는데 `nodal run` 에서는 "등록되지 않은
+    노드 타입"이 나는 상태를 다시 만들지 않는다. 확장 실패는 이 함수가 삼키지
+    않는다 — 호출자가 `ExtensionsResult.failed` 를 보고 사람에게 보여준다.
     """
     registry = NodeRegistry()
     register_all(registry)
@@ -187,6 +205,29 @@ def _build_registry(
             _load_pack(registry, name)
         except ImportError as exc:
             raise SystemExit(f"노드 팩을 import 할 수 없다: {name} ({exc})") from exc
+    ext_result = load_extensions(registry, extensions_dir)
+    return registry, ext_result
+
+
+def _report_extension_failures(result: ExtensionsResult) -> None:
+    """확장 로드 실패를 조용히 넘기지 않는다 — 어느 명령에서든 stderr 에 찍는다."""
+    if not result.failed:
+        return
+    print(f"확장 로드 실패 {len(result.failed)}개:", file=sys.stderr)
+    print(format_extension_failures(result.failed), file=sys.stderr)
+
+
+def _build_registry(
+    packs: Sequence[str] = (),
+    *,
+    optional_packs: Sequence[str] = (),
+    extensions_dir: Path | None = None,
+) -> NodeRegistry:
+    """`_build_registry_with_extensions` 의 얇은 래퍼 — 레지스트리만 필요한 명령용."""
+    registry, ext_result = _build_registry_with_extensions(
+        packs, optional_packs=optional_packs, extensions_dir=extensions_dir
+    )
+    _report_extension_failures(ext_result)
     return registry
 
 
@@ -283,7 +324,9 @@ def _print_result(result: RunResult, *, color: bool) -> None:
 
 async def _run(args: argparse.Namespace) -> int:
     color = _supports_color() and not args.no_color
-    registry = _build_registry(args.pack, optional_packs=DEFAULT_OPTIONAL_PACKS)
+    registry = _build_registry(
+        args.pack, optional_packs=DEFAULT_OPTIONAL_PACKS, extensions_dir=args.extensions
+    )
     graph = _load_graph(args.graph)
     overridden = _apply_overrides(graph, args.set or [])
 
@@ -357,14 +400,17 @@ def _serve(args: argparse.Namespace) -> int:
             "`pip install nodal-nodes-core[serve]` 를 실행하라."
         ) from exc
 
-    registry = _build_registry(args.pack, optional_packs=DEFAULT_OPTIONAL_PACKS)
+    registry, ext_result = _build_registry_with_extensions(
+        args.pack, optional_packs=DEFAULT_OPTIONAL_PACKS, extensions_dir=args.extensions
+    )
     models = _build_model_store(args.models)
-    catalog = load_catalog(args.templates)
+    catalog = load_catalog(args.templates, extension_sources=ext_result.template_sources)
     app = create_app(
         registry,
         assets_root=args.assets,
         models=models,
         template_catalog=catalog,
+        extensions=ext_result,
         mcp_host=args.host,
         mcp_port=args.port,
         mcp_allowed_origins=args.mcp_allow_origin,
@@ -374,6 +420,13 @@ def _serve(args: argparse.Namespace) -> int:
     # 블록 버퍼링된다. 그대로 두면 이 두 줄이 uvicorn 출력보다 **뒤에** 찍혀서
     # 로그를 파일로 받은 사람에게는 순서가 뒤집힌 것처럼 보인다.
     print(f"노드 {len(registry)}개 등록. http://{args.host}:{args.port}/docs", flush=True)
+    print(
+        f"확장: 로드 {len(ext_result.loaded)}개 · 실패 {len(ext_result.failed)}개 "
+        f"({ext_result.root})",
+        flush=True,
+    )
+    if ext_result.failed:
+        print("확장 실패 사유:\n" + format_extension_failures(ext_result.failed), flush=True)
     print(
         f"MCP 템플릿: 로드 {len(catalog.templates)}개 · "
         f"거부 {len(catalog.rejections)}개 ({catalog.root})",
@@ -397,7 +450,9 @@ def _serve(args: argparse.Namespace) -> int:
 
 
 def _nodes(args: argparse.Namespace) -> int:
-    registry = _build_registry(args.pack, optional_packs=DEFAULT_OPTIONAL_PACKS)
+    registry = _build_registry(
+        args.pack, optional_packs=DEFAULT_OPTIONAL_PACKS, extensions_dir=args.extensions
+    )
     schemas = sorted(registry.search(args.query or "", limit=1000), key=lambda s: s.id)
     if not schemas:
         print(f"일치하는 노드가 없다: {args.query!r}")
@@ -472,6 +527,12 @@ def _parser() -> argparse.ArgumentParser:
             "주지 않으면 NODAL_MODELS_DIR 환경변수를 본다"
         ),
     )
+    run.add_argument(
+        "--extensions",
+        type=Path,
+        metavar="DIR",
+        help="서드파티 확장 디렉토리. 기본: ~/.nodal/extensions (design.md §8)",
+    )
     run.add_argument("--no-cache", action="store_true", help="캐시를 끈다")
     run.add_argument("--cache-size", type=int, default=128, help="LRU 캐시 크기")
     run.add_argument("-v", "--verbose", action="store_true", help="진행률과 출력값까지")
@@ -518,6 +579,12 @@ def _parser() -> argparse.ArgumentParser:
         help="MCP 템플릿 디렉토리. 기본: ~/.nodal/templates",
     )
     serve.add_argument(
+        "--extensions",
+        type=Path,
+        metavar="DIR",
+        help="서드파티 확장 디렉토리. 기본: ~/.nodal/extensions (design.md §8)",
+    )
+    serve.add_argument(
         "--mcp-allow-origin",
         action="append",
         default=[],
@@ -534,6 +601,12 @@ def _parser() -> argparse.ArgumentParser:
         default=[],
         metavar="MODULE",
         help="추가 노드 팩 모듈. 목록에 함께 보여준다",
+    )
+    nodes.add_argument(
+        "--extensions",
+        type=Path,
+        metavar="DIR",
+        help="서드파티 확장 디렉토리. 기본: ~/.nodal/extensions (design.md §8)",
     )
     nodes.set_defaults(handler=_nodes)
 
