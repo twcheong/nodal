@@ -161,6 +161,19 @@ def test_providers_are_registered_in_core():
 #: 2026-08-18) 여기가 비면 그 소켓의 콤보는 화면에서 "모델 없음" 이 된다.
 _PROVIDER_SOCKETS = [
     ("diffusion.LoadCheckpoint", "ckpt", "checkpoints", "my-model.safetensors"),
+    (
+        "diffusion.ZImageLoader",
+        "transformer",
+        "diffusion_models",
+        "z-image.safetensors",
+    ),
+    (
+        "diffusion.ZImageLoader",
+        "text_encoder",
+        "text_encoders",
+        "qwen3.safetensors",
+    ),
+    ("diffusion.ZImageLoader", "vae", "vae", "z-image-vae.safetensors"),
     ("diffusion.LoraLoader", "lora_name", "loras", "my-lora.safetensors"),
     ("diffusion.ControlNetLoader", "control_net_name", "controlnet", "my-cnet.safetensors"),
 ]

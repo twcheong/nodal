@@ -1,0 +1,143 @@
+{
+  "nodal_version": "1",
+  "id": "018f2c00-0000-7000-8000-0000000e0005",
+
+  "definitions": {
+    "zimage_i2i": {
+      "doc": "로컬 Z-Image 모델로 입력 이미지를 프롬프트에 맞게 변환한다. 제품 사진의 분위기·재질·조명을 바꾸는 i2i 작업에 쓴다.",
+      "params": {
+        "source": {
+          "type": "Image",
+          "doc": "변환할 원본 이미지. 파일 경로 또는 asset:<hash>."
+        },
+        "prompt": {
+          "type": "STRING",
+          "doc": "원본을 어떻게 바꿀지 설명하는 프롬프트."
+        },
+        "negative_prompt": {
+          "type": "STRING",
+          "default": "",
+          "doc": "피할 요소. guidance_scale이 1 이하이면 모델이 무시할 수 있다."
+        },
+        "transformer": {
+          "type": "STRING",
+          "doc": "models/diffusion_models의 Z-Image transformer 파일명."
+        },
+        "text_encoder": {
+          "type": "STRING",
+          "doc": "models/text_encoders의 Qwen3 encoder 파일명."
+        },
+        "vae": {
+          "type": "STRING",
+          "doc": "models/vae의 Z-Image VAE 파일명."
+        },
+        "config_repo": {
+          "type": "STRING",
+          "default": "Tongyi-MAI/Z-Image",
+          "doc": "config/tokenizer/scheduler 메타데이터 출처."
+        },
+        "width": {
+          "type": "INT",
+          "default": 512,
+          "widget": { "min": 256, "max": 2048, "step": 16 }
+        },
+        "height": {
+          "type": "INT",
+          "default": 512,
+          "widget": { "min": 256, "max": 2048, "step": 16 }
+        },
+        "strength": {
+          "type": "FLOAT",
+          "default": 0.6,
+          "widget": { "min": 0.0, "max": 1.0, "step": 0.05 }
+        },
+        "steps": {
+          "type": "INT",
+          "default": 30,
+          "widget": { "min": 1, "max": 150, "step": 1 }
+        },
+        "guidance_scale": {
+          "type": "FLOAT",
+          "default": 5.0,
+          "widget": { "min": 0.0, "max": 20.0, "step": 0.1 }
+        },
+        "seed": {
+          "type": "INT",
+          "default": 0,
+          "doc": "같은 시드·같은 입력이면 같은 결과가 나온다.",
+          "widget": { "seed": true, "control": "randomize", "min": 0, "max": 9007199254740991, "step": 1 }
+        }
+      },
+      "nodes": {
+        "fit": {
+          "type": "image.Resize",
+          "inputs": {
+            "image": { "$param": "source" },
+            "width": { "$param": "width" },
+            "height": { "$param": "height" },
+            "method": "lanczos"
+          }
+        },
+        "load": {
+          "type": "diffusion.ZImageLoader",
+          "inputs": {
+            "transformer": { "$param": "transformer" },
+            "text_encoder": { "$param": "text_encoder" },
+            "vae": { "$param": "vae" },
+            "config_repo": { "$param": "config_repo" }
+          }
+        },
+        "generate": {
+          "type": "diffusion.ZImageImg2Img",
+          "inputs": {
+            "model": { "$link": ["load", "model"] },
+            "image": { "$link": ["fit", "image"] },
+            "prompt": { "$param": "prompt" },
+            "negative_prompt": { "$param": "negative_prompt" },
+            "strength": { "$param": "strength" },
+            "steps": { "$param": "steps" },
+            "guidance_scale": { "$param": "guidance_scale" },
+            "seed": { "$param": "seed" }
+          }
+        },
+        "save": {
+          "type": "image.Save",
+          "inputs": {
+            "image": { "$link": ["generate", "image"] },
+            "embed_workflow": true
+          }
+        }
+      },
+      "returns": {
+        "image": { "$link": ["save", "asset"] }
+      }
+    }
+  },
+
+  "nodes": {
+    "source": {
+      "type": "image.Load",
+      "inputs": { "path": "examples/sample.png" }
+    },
+    "call": {
+      "type": "subgraph.zimage_i2i",
+      "inputs": {
+        "source": { "$link": ["source", "image"] },
+        "prompt": "premium product photograph on warm ivory stone, soft golden studio light",
+        "transformer": "z_image_bf16.safetensors",
+        "text_encoder": "qwen_3_4b.safetensors",
+        "vae": "ae.safetensors",
+        "width": 512,
+        "height": 512,
+        "strength": 0.55,
+        "steps": 12,
+        "guidance_scale": 4.0,
+        "seed": 8272026
+      }
+    }
+  },
+  "outputs": ["call"],
+  "ui": {
+    "$comment": "Z-Image split weights -> official Diffusers img2img pipeline. MCP Image inputs use asset:<hash>."
+  }
+}

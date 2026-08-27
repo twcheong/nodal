@@ -42,6 +42,22 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-27 · Codex · Z-Image img2img는 공식 Diffusers 전용 파이프라인 노드로 시작
+
+- **결정**: ComfyUI 스타일 split 파일(transformer · Qwen3 text encoder · VAE)을
+  `ZImageImg2ImgPipeline`으로 조립하는 `diffusion.ZImageLoader`와, 이미지·프롬프트를
+  그 파이프라인에 전달하는 `diffusion.ZImageImg2Img`를 `nodes-diffusion`에 둔다.
+  첫 구현에서 Z-Image latent를 기존 `KSampler`·`VAEDecode`에 억지로 맞추지 않는다
+- **이유**: 현재 `KSampler`는 SD 계열의 사전 인코딩된 Conditioning과 latent 계약을
+  전제로 한다. Z-Image는 Qwen3 인코더와 전용 img2img 준비 단계가 필요하다. 공식
+  Diffusers가 이미 이미지 VAE 인코딩·노이즈 주입·FlowMatch 스케줄을 소유하므로,
+  이를 다시 구현하면 핵심 결정 6("모델 계층은 diffusers에 위임")을 약하게 만든다.
+  전용 노드는 기존 `Model`·`Image`·`Seed` 소켓만 써 `types.json`과 API 계약을
+  넓히지 않는다
+- **영향 범위**: `packages/nodes-diffusion`, `examples/templates/zimage_i2i.nodal.json`
+- **되돌릴 수 있나**: 예 — 나중에 공통 sampler 계약이 Z-Image까지 표현할 수 있게
+  넓어지면 두 노드 내부를 더 작은 노드로 분해할 수 있다
+
 ### 2026-08-27 · Claude Code + Codex · M7.2 확장 API 버전과 범위 문법 (사용자 승인)
 
 - **결정**: 공개 계약을 사용자 확인 후 다음으로 확정했다:
