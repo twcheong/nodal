@@ -37,21 +37,16 @@ def test_serve_parser_accepts_templates_and_repeated_origins(tmp_path: Path) -> 
     assert args.mcp_allow_origin == ["https://one.example", "https://two.example"]
 
 
-def test_extensions_flag_is_available_on_run_serve_and_nodes(tmp_path: Path) -> None:
-    """확장은 팩처럼 모든 명령이 같은 기본 경로를 본다 (decisions.md 2026-08-27).
-
-    `validate` 에는 `--pack` 도 없어 대칭을 유지한다 — 새로 만들지 않는다.
-    """
+def test_extensions_flag_is_available_on_all_registry_commands(tmp_path: Path) -> None:
+    """실행·검증·목록·서버가 같은 확장 경로를 재현한다."""
     for command, extra in (
         ("run", ["graph.json"]),
+        ("validate", ["graph.json"]),
         ("serve", []),
         ("nodes", []),
     ):
         args = cli._parser().parse_args([command, *extra, "--extensions", str(tmp_path)])
         assert args.extensions == tmp_path
-
-    validate_args = cli._parser().parse_args(["validate", "graph.json"])
-    assert not hasattr(validate_args, "extensions")
 
 
 def test_serve_logs_catalog_rejections_and_memory_asset_warning(
@@ -73,7 +68,7 @@ def test_serve_logs_catalog_rejections_and_memory_asset_warning(
                 id="com.example.good",
                 name="Good",
                 version="0.1.0",
-                nodal_api="^1.0",
+                nodal_api="^0.1",
                 root=tmp_path / "good-pack",
                 node_count=2,
             ),

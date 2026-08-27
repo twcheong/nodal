@@ -7,12 +7,14 @@
 
 from __future__ import annotations
 
+import re
 import textwrap
 from pathlib import Path
 
 import pytest
 
 from nodal import (
+    NODAL_API_VERSION,
     ExtensionsResult,
     NodeRegistry,
     is_api_compatible,
@@ -38,6 +40,8 @@ def test_parse_caret_range_zero_major_minor():
 def test_parse_caret_range_missing_components_default_to_zero():
     assert parse_caret_range("^1") == ((1, 0, 0), (2, 0, 0))
     assert parse_caret_range("^1.2") == ((1, 2, 0), (2, 0, 0))
+    assert parse_caret_range("^0") == ((0, 0, 0), (1, 0, 0))
+    assert parse_caret_range("^0.0") == ((0, 0, 0), (0, 1, 0))
 
 
 def test_parse_caret_range_rejects_non_caret_syntax():
@@ -64,6 +68,18 @@ def test_is_api_compatible_at_and_above_upper_bound():
     """상한(제외)과 그 너머는 거부한다 — 다른 쪽도 함께 고정한다."""
     assert is_api_compatible("^1.0", (2, 0, 0)) is False
     assert is_api_compatible("^1.0", (3, 0, 0)) is False
+
+
+def test_design_manifest_example_is_compatible_with_current_api():
+    """§8 의 유일한 매니페스트 예시와 실제 판정이 따로 변하지 않는다."""
+    design = (Path(__file__).parents[3] / "docs" / "design.md").read_text(encoding="utf-8")
+    extension_section = design.split("## 8. 확장 시스템", 1)[1].split("## 9.", 1)[0]
+    match = re.search(r'^nodal_api = "([^"]+)"', extension_section, re.MULTILINE)
+
+    assert match is not None
+    example_range = match.group(1)
+    assert example_range == "^0.1"
+    assert is_api_compatible(example_range, NODAL_API_VERSION)
 
 
 # ------------------------------------------------------------------- 로더
@@ -110,7 +126,7 @@ def test_load_extensions_missing_directory_returns_empty(tmp_path: Path):
 def test_load_extensions_registers_nodes_from_valid_extension(tmp_path: Path):
     ext_root = tmp_path / "extensions"
     good = ext_root / "good-pack"
-    _write_manifest(good, ext_id="com.example.good", nodal_api="^1.0")
+    _write_manifest(good, ext_id="com.example.good", nodal_api="^0.1")
     (good / "nodes").mkdir()
     (good / "nodes" / "echo.py").write_text(_GOOD_NODE_SOURCE, encoding="utf-8")
 
@@ -153,12 +169,12 @@ def test_load_extensions_one_broken_extension_does_not_block_others(tmp_path: Pa
     ext_root = tmp_path / "extensions"
 
     good = ext_root / "a-good-pack"
-    _write_manifest(good, ext_id="com.example.a_good", nodal_api="^1.0")
+    _write_manifest(good, ext_id="com.example.a_good", nodal_api="^0.1")
     (good / "nodes").mkdir()
     (good / "nodes" / "echo.py").write_text(_GOOD_NODE_SOURCE, encoding="utf-8")
 
     broken = ext_root / "b-broken-pack"
-    _write_manifest(broken, ext_id="com.example.b_broken", nodal_api="^1.0")
+    _write_manifest(broken, ext_id="com.example.b_broken", nodal_api="^0.1")
     (broken / "nodes").mkdir()
     (broken / "nodes" / "boom.py").write_text(_BROKEN_NODE_SOURCE, encoding="utf-8")
 
@@ -169,6 +185,24 @@ def test_load_extensions_one_broken_extension_does_not_block_others(tmp_path: Pa
     assert [r.id for r in result.failed] == ["com.example.b_broken"]
     assert "RuntimeError" in (result.failed[0].error or "")
     assert "ext_test.Echo" in registry
+
+
+def test_failed_extension_does_not_leave_partially_registered_nodes(tmp_path: Path):
+    """한 확장은 전부 등록되거나 전부 실패한다."""
+    ext_root = tmp_path / "extensions"
+    broken = ext_root / "partially-broken-pack"
+    _write_manifest(broken, ext_id="com.example.partial", nodal_api="^0.1")
+    (broken / "nodes").mkdir()
+    (broken / "nodes" / "a_echo.py").write_text(_GOOD_NODE_SOURCE, encoding="utf-8")
+    (broken / "nodes" / "z_boom.py").write_text(_BROKEN_NODE_SOURCE, encoding="utf-8")
+
+    registry = NodeRegistry()
+    result = load_extensions(registry, ext_root)
+
+    assert result.loaded == ()
+    assert [r.id for r in result.failed] == ["com.example.partial"]
+    assert "RuntimeError" in (result.failed[0].error or "")
+    assert "ext_test.Echo" not in registry
 
 
 def test_load_extensions_missing_nodal_api_is_rejected(tmp_path: Path):
@@ -196,7 +230,7 @@ def test_extensions_result_template_sources_sorted_by_id(tmp_path: Path):
     ext_root = tmp_path / "extensions"
     for ext_id, dirname in (("zzz.pack", "z-pack"), ("aaa.pack", "a-pack")):
         ext_dir = ext_root / dirname
-        _write_manifest(ext_dir, ext_id=ext_id, nodal_api="^1.0")
+        _write_manifest(ext_dir, ext_id=ext_id, nodal_api="^0.1")
         (ext_dir / "templates").mkdir()
 
     registry = NodeRegistry()

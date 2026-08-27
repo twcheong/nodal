@@ -30,7 +30,7 @@ def test_loaded_and_failed_extensions_are_both_reported(tmp_path: Path) -> None:
                 id="com.example.good",
                 name="Good Pack",
                 version="0.1.0",
-                nodal_api="^1.0",
+                nodal_api="^0.1",
                 root=tmp_path / "good-pack",
                 node_count=3,
             ),
@@ -110,13 +110,13 @@ def test_one_good_one_broken_extension_end_to_end(tmp_path: Path) -> None:
     _write_extension(
         ext_root / "good-pack",
         ext_id="com.example.good",
-        nodal_api="^1.0",
+        nodal_api="^0.1",
         node_source=_GOOD_NODE_SOURCE,
     )
     _write_extension(
         ext_root / "broken-pack",
         ext_id="com.example.broken",
-        nodal_api="^0.1",  # 이 서버의 NODAL_API_VERSION (1.0.0) 을 포함하지 않는다
+        nodal_api="^1.0",  # 이 서버의 NODAL_API_VERSION (0.1.0) 을 포함하지 않는다
         node_source=None,
     )
 

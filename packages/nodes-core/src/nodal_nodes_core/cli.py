@@ -370,7 +370,9 @@ async def _run(args: argparse.Namespace) -> int:
 
 
 def _validate(args: argparse.Namespace) -> int:
-    registry = _build_registry(optional_packs=DEFAULT_OPTIONAL_PACKS)
+    registry = _build_registry(
+        optional_packs=DEFAULT_OPTIONAL_PACKS, extensions_dir=args.extensions
+    )
     graph = _load_graph(args.graph)
     issues = validate_for_execution(graph, registry, list(graph.outputs))
     if not issues:
@@ -541,6 +543,12 @@ def _parser() -> argparse.ArgumentParser:
 
     validate = sub.add_parser("validate", help="실행 없이 검증만 한다")
     validate.add_argument("graph", type=Path)
+    validate.add_argument(
+        "--extensions",
+        type=Path,
+        metavar="DIR",
+        help="서드파티 확장 디렉토리. 기본: ~/.nodal/extensions (design.md §8)",
+    )
     validate.set_defaults(handler=_validate)
 
     serve = sub.add_parser("serve", help="개발 서버를 띄운다 (REST + WebSocket + MCP)")

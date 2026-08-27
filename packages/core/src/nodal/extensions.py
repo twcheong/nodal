@@ -56,10 +56,9 @@ EXTENSION_ID_RE: Final = re.compile(r"^[a-z][a-z0-9_.-]*$")
 
 #: 이 서버가 구현하는 **확장 API 계약** 버전 — 패키지 릴리스 버전
 #: (`nodal.__version__`, 아직 `0.0.0`)과는 별개다. 확장 호환성 계약은 배포
-#: 버전과 다른 속도로 움직이고, `design.md` §8 의 매니페스트 예시가 이미
-#: `^1.0` 을 전제하므로 프리-1.0 릴리스 버전을 그대로 비교 기준으로 쓸 수
-#: 없다 (2026-08-27, 스펙이 값을 정하지 않은 데 대한 임의 해석 — decisions.md).
-NODAL_API_VERSION: Final[tuple[int, int, int]] = (1, 0, 0)
+#: 버전과 다른 속도로 움직인다. 첫 서드파티 계약은 안정화 전 버전인 0.1.0
+#: 에서 시작한다 (2026-08-27 사용자 승인 — decisions.md).
+NODAL_API_VERSION: Final[tuple[int, int, int]] = (0, 1, 0)
 
 
 @dataclass(frozen=True, slots=True)
@@ -266,22 +265,37 @@ def _load_node_files(registry: NodeRegistry, ext_id: str, nodes_dir: Path) -> in
     를 거쳐 등록하는 것과 최종적으로 같은 경로다. 여기서는 그 팩토리 함수
     대신 `@node` 가 붙인 `__nodal_schema__` 마커로 클래스를 찾을 뿐이다.
     """
-    count = 0
-    for index, path in enumerate(sorted(nodes_dir.glob("*.py"))):
-        if path.stem.startswith("_"):
-            continue
-        module_name = f"_nodal_ext__{_slug(ext_id)}__{index}__{_slug(path.stem)}"
-        spec = importlib.util.spec_from_file_location(module_name, path)
-        if spec is None or spec.loader is None:
-            raise ImportError(f"{path} 를 모듈로 로드할 수 없다")
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module
-        spec.loader.exec_module(module)
-        for obj in vars(module).values():
-            if isinstance(obj, type) and "__nodal_schema__" in obj.__dict__:
-                registry.register(obj)
-                count += 1
-    return count
+    node_classes: list[type] = []
+    module_names: list[str] = []
+    try:
+        for index, path in enumerate(sorted(nodes_dir.glob("*.py"))):
+            if path.stem.startswith("_"):
+                continue
+            module_name = f"_nodal_ext__{_slug(ext_id)}__{index}__{_slug(path.stem)}"
+            spec = importlib.util.spec_from_file_location(module_name, path)
+            if spec is None or spec.loader is None:
+                raise ImportError(f"{path} 를 모듈로 로드할 수 없다")
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            module_names.append(module_name)
+            spec.loader.exec_module(module)
+            node_classes.extend(
+                obj
+                for obj in vars(module).values()
+                if isinstance(obj, type) and "__nodal_schema__" in obj.__dict__
+            )
+
+        # 공유 레지스트리를 건드리기 전에 기존 노드와 확장 내부의 중복을 모두
+        # 검증한다. 실제 반영은 이 검증이 끝난 뒤 한 번만 일어나므로 확장이
+        # failed 로 기록되면서 일부 노드만 남는 상태가 없다.
+        staged = NodeRegistry(tuple(registry.schemas().values()))
+        staged.register_all(node_classes)
+        registry.register_all(node_classes)
+    except Exception:
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        raise
+    return len(node_classes)
 
 
 def _slug(text: str) -> str:
@@ -298,11 +312,13 @@ def parse_caret_range(spec: str) -> tuple[tuple[int, int, int], tuple[int, int, 
     거부한다 (2026-08-27, 스펙이 캐럿 예시만 준 데 대한 임의 해석 —
     decisions.md).
 
-    npm/Cargo 의 캐럿 규칙 — 가장 왼쪽의 0 이 아닌 자리가 고정된다:
+    npm 의 캐럿 규칙을 따르며, 생략한 구성요소는 그 자리 전체를 허용한다:
 
     - ``^1.2.3`` → ``>=1.2.3, <2.0.0``
     - ``^0.2.3`` → ``>=0.2.3, <0.3.0``
     - ``^0.0.3`` → ``>=0.0.3, <0.0.4``
+    - ``^0.0`` → ``>=0.0.0, <0.1.0``
+    - ``^0`` → ``>=0.0.0, <1.0.0``
 
     Returns:
         ``(하한(포함), 상한(제외))``.
@@ -310,11 +326,15 @@ def parse_caret_range(spec: str) -> tuple[tuple[int, int, int], tuple[int, int, 
     text = spec.strip()
     if not text.startswith("^"):
         raise ValueError(f"캐럿(^) 범위만 지원한다: {spec!r}")
-    lower = _parse_version(text[1:])
+    version_text = text[1:]
+    lower = _parse_version(version_text)
+    component_count = version_text.count(".") + 1
     major, minor, patch = lower
     if major > 0:
         upper = (major + 1, 0, 0)
-    elif minor > 0:
+    elif component_count == 1:
+        upper = (1, 0, 0)
+    elif minor > 0 or component_count == 2:
         upper = (0, minor + 1, 0)
     else:
         upper = (0, 0, patch + 1)
