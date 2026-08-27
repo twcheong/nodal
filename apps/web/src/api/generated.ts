@@ -50,7 +50,7 @@ export interface paths {
         };
         /**
          * 로드된 확장 · 실패한 확장
-         * @description M6 까지는 빈 목록이 나간다. 실패한 확장을 숨기지 않는 것이 요점이다.
+         * @description 확장 로더(`nodal.extensions`, design.md §8)가 시작할 때 만든 결과를 그대로 보여준다. 실패한 확장을 숨기지 않는 것이 요점이다.
          */
         get: operations["list_extensions_api_extensions_get"];
         put?: never;

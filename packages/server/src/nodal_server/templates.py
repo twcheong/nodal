@@ -21,7 +21,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
@@ -204,31 +204,76 @@ def default_templates_dir() -> Path:
     return Path.home() / ".nodal" / "templates"
 
 
-def load_catalog(root: Path | None = None) -> TemplateCatalog:
-    """디렉토리 하나를 읽어 카탈로그를 만든다. 예외를 던지지 않는다.
+def load_catalog(
+    root: Path | None = None,
+    *,
+    extension_sources: Sequence[tuple[str, Path]] = (),
+) -> TemplateCatalog:
+    """디렉토리 하나(+ 확장이 등록한 추가 디렉토리들)를 읽어 카탈로그를 만든다.
+    예외를 던지지 않는다.
+
+    발견 메커니즘은 여전히 하나다 (§12.8) — 확장은 두 번째 경로가 아니라 같은
+    카탈로그에 등록하는 **공급자**다. `extension_sources` 는
+    `(확장 id, templates 디렉토리)` 쌍을 **우선순위 순**으로 받는다
+    (`nodal.extensions.ExtensionsResult.template_sources` 가 id 순으로 만들어
+    준다).
+
+    **충돌 규칙 (2026-08-27, decisions.md)**: 같은 템플릿 ID 가 두 곳에 있으면
+    **사용자 디렉토리(`root`)가 언제나 이긴다.** 확장끼리 겹치면 먼저 온 쪽이
+    이긴다. 진 쪽은 조용히 사라지지 않고 `rejections` 에 누가 이겼는지와 함께
+    남는다 — 템플릿 카탈로그가 다른 어떤 실패도 숨기지 않는 것과 같은 규칙이다.
 
     파일 하나가 잘못됐다고 카탈로그 전체가 사라지면 나머지 템플릿을 쓰던 사람이
     이유 없이 툴을 잃는다. 잘못된 파일만 `rejections` 로 간다.
     """
     root = default_templates_dir() if root is None else root
-    if not root.is_dir():
-        log.info("템플릿 디렉토리가 없다: %s (템플릿 0개로 시작한다)", root)
-        return TemplateCatalog(root)
+    sources: list[tuple[str, Path]] = [("user", root)]
+    sources.extend(extension_sources)
 
     templates: list[Template] = []
     rejections: list[Rejection] = []
-    # 정렬한다 — 툴 목록의 순서가 파일시스템 순서에 따라 달라지지 않게.
-    for path in sorted(root.glob(f"*{TEMPLATE_SUFFIX}")):
-        result = _load_one(path)
-        if isinstance(result, Rejection):
-            rejections.append(result)
-            log.warning("템플릿을 로드하지 않았다 — %s", result.describe())
-        else:
+    winners: dict[str, tuple[str, Path]] = {}
+
+    for label, directory in sources:
+        if not directory.is_dir():
+            if label == "user":
+                log.info("템플릿 디렉토리가 없다: %s (템플릿 0개로 시작한다)", directory)
+            continue
+        # 정렬한다 — 툴 목록의 순서가 파일시스템 순서에 따라 달라지지 않게.
+        for path in sorted(directory.glob(f"*{TEMPLATE_SUFFIX}")):
+            template_id = path.name[: -len(TEMPLATE_SUFFIX)]
+            existing = winners.get(template_id)
+            if existing is not None:
+                winner_label, winner_path = existing
+                rejections.append(
+                    Rejection(
+                        path,
+                        f"템플릿 ID {template_id!r} 는 이미 {winner_label}({winner_path})가 "
+                        "쓰고 있다 — 사용자 디렉토리가 언제나 확장보다 우선하고, 확장끼리는 "
+                        "먼저 로드된 쪽이 이긴다. 이 파일은 건너뛴다 (design.md §12.8, "
+                        "decisions.md 2026-08-27)",
+                    )
+                )
+                continue
+
+            result = _load_one(path)
+            if isinstance(result, Rejection):
+                rejections.append(result)
+                log.warning("템플릿을 로드하지 않았다 — %s", result.describe())
+                continue
+
+            winners[template_id] = (label, path)
             templates.append(result)
             for note in result.notes:
                 log.info("템플릿 %s 의 제약 하나를 스키마에 싣지 못했다 — %s", result.id, note)
 
-    log.info("템플릿 %d개 로드, %d개 거부 (%s)", len(templates), len(rejections), root)
+    log.info(
+        "템플릿 %d개 로드, %d개 거부 (사용자: %s, 확장 소스 %d개)",
+        len(templates),
+        len(rejections),
+        root,
+        len(extension_sources),
+    )
     return TemplateCatalog(root, tuple(templates), tuple(rejections))
 
 

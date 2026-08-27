@@ -62,6 +62,18 @@ from .executor import (
     run_node,
     validate_for_execution,
 )
+from .extensions import (
+    EXTENSION_ID_RE,
+    MANIFEST_FILE,
+    NODAL_API_VERSION,
+    ExtensionRecord,
+    ExtensionsResult,
+    default_extensions_dir,
+    format_extension_failures,
+    is_api_compatible,
+    load_extensions,
+    parse_caret_range,
+)
 from .graph import (
     GRAPH_VERSION,
     LINK_KEY,
@@ -248,6 +260,17 @@ __all__ = [  # noqa: RUF022
     "ModelLoadError",
     "ModelStore",
     "NullModelStore",
+    # --- 확장 로더 (M7.2 계약, design.md §8)
+    "EXTENSION_ID_RE",
+    "MANIFEST_FILE",
+    "NODAL_API_VERSION",
+    "ExtensionRecord",
+    "ExtensionsResult",
+    "default_extensions_dir",
+    "format_extension_failures",
+    "is_api_compatible",
+    "load_extensions",
+    "parse_caret_range",
     # --- 노드 스키마 (M1 계약)
     "Bool",
     "Combo",

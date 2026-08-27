@@ -25,9 +25,12 @@ from fastapi.websockets import WebSocketDisconnect
 
 from nodal import (
     Cache,
+    ExtensionRecord,
+    ExtensionsResult,
     GraphValidationError,
     ModelStore,
     NodeRegistry,
+    default_extensions_dir,
     load_catalog,
     parse_graph,
     validate_for_execution,
@@ -44,6 +47,7 @@ from .schemas import (
     CreateRunRequest,
     CreateRunResponse,
     ErrorResponse,
+    ExtensionInfo,
     ExtensionsResponse,
     GraphFromPngResponse,
     NodeSchemaModel,
@@ -112,6 +116,7 @@ def create_app(
     assets_root: FsPath | str | None = None,
     models: ModelStore | None = None,
     template_catalog: TemplateCatalog | None = None,
+    extensions: ExtensionsResult | None = None,
     mcp_host: str = "127.0.0.1",
     mcp_port: int = 8188,
     mcp_allowed_origins: Sequence[str] = (),
@@ -129,6 +134,12 @@ def create_app(
             diffusion 노드의 `load` 가 "저장소가 없다" 로 명시적으로 실패한다.
         template_catalog: REST와 MCP가 공유할 템플릿 카탈로그. 없으면 기본
             `~/.nodal/templates`에서 한 번 읽는다.
+        extensions: `GET /api/extensions` 가 그대로 보여줄 로더 결과 (design.md
+            §8, M7.2). `registry` 와 마찬가지로 서버는 확장을 스스로 찾아
+            로드하지 않는다 — 노드 등록은 이미 끝난 상태로 넘어와야 하므로
+            호출자(`nodal serve`)가 로드하고 결과만 여기 건넨다. 없으면
+            "확장 0개" 로 답한다 — M6 스텁과 같은 응답이지만 이번엔 정말 아무도
+            로드하지 않았다는 뜻이다.
     """
     node_registry = registry if registry is not None else NodeRegistry()
     hub = EventHub()
@@ -146,6 +157,9 @@ def create_app(
         history_limit=history_limit,
     )
     templates = template_catalog if template_catalog is not None else load_template_catalog()
+    ext_result = (
+        extensions if extensions is not None else ExtensionsResult(default_extensions_dir())
+    )
     mcp = MCPService(templates, node_registry, runs, hub)
     mcp_app = mcp.streamable_http_app(
         host=mcp_host,
@@ -179,6 +193,7 @@ def create_app(
     # 위에서 만든 단일 인스턴스들을 그대로 건다 (§12.9).
     app.state.assets = assets
     app.state.catalog = templates
+    app.state.extensions = ext_result
     app.state.hub = hub
     app.state.runs = runs
     app.state.mcp = mcp
@@ -426,13 +441,17 @@ def create_app(
         "/api/extensions",
         response_model=ExtensionsResponse,
         summary="로드된 확장 · 실패한 확장",
-        description="M6 까지는 빈 목록이 나간다. 실패한 확장을 숨기지 않는 것이 요점이다.",
+        description=(
+            "확장 로더(`nodal.extensions`, design.md §8)가 시작할 때 만든 결과를 "
+            "그대로 보여준다. 실패한 확장을 숨기지 않는 것이 요점이다."
+        ),
         tags=["extensions"],
     )
     async def list_extensions() -> ExtensionsResponse:
-        # 확장 로더는 M6 다 (roadmap M6). 실패한 확장을 숨기지 않는다는 계약만
-        # 먼저 세워 둔다 — 지금은 로드한 것도 실패한 것도 없다.
-        return ExtensionsResponse(loaded=[], failed=[])
+        return ExtensionsResponse(
+            loaded=[_extension_info(record) for record in ext_result.loaded],
+            failed=[_extension_info(record) for record in ext_result.failed],
+        )
 
     # ------------------------------------------------------------------ WS
 
@@ -498,6 +517,17 @@ def create_app(
             created_at=record.created_at,
             started_at=record.started_at,
             finished_at=record.finished_at,
+            error=record.error,
+        )
+
+    def _extension_info(record: ExtensionRecord) -> ExtensionInfo:
+        return ExtensionInfo(
+            id=record.id,
+            name=record.name,
+            version=record.version,
+            nodal_api=record.nodal_api,
+            loaded=record.loaded,
+            node_count=record.node_count,
             error=record.error,
         )
 
