@@ -42,6 +42,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from math import ceil
 from typing import Any
 
 from nodal import (
@@ -91,6 +92,8 @@ __all__ = [
     "LoadCheckpoint",
     "LoraLoader",
     "VAEDecode",
+    "ZImageImg2Img",
+    "ZImageLoader",
 ]
 
 #: 샘플러 이름 → `diffusers` 스케줄러 클래스.
@@ -179,6 +182,70 @@ class LoadCheckpoint:
         handle = store.load(ckpt, loader=loader)
         checkpoint = getattr(handle, "checkpoint", handle)
         return NodeResult(handle, ClipHandle(checkpoint), VaeHandle(checkpoint))
+
+
+@node(
+    id="diffusion.ZImageLoader",
+    title="Load Z-Image",
+    category="diffusion/loaders",
+    aliases=["Z-Image", "zimage", "Z 이미지"],
+    cacheable=False,
+)
+class ZImageLoader:
+    """분리된 로컬 Z-Image 가중치를 공식 Diffusers 파이프라인으로 조립한다.
+
+    transformer · Qwen3 text encoder · VAE 가중치는 로컬 모델 디렉토리에서만
+    읽는다. `config_repo` 는 config/tokenizer/scheduler 메타데이터 출처다.
+    """
+
+    transformer: Combo = Combo.from_provider(
+        "diffusion_models",
+        doc="models/diffusion_models 의 Z-Image transformer safetensors.",
+    )
+    text_encoder: Combo = Combo.from_provider(
+        "text_encoders",
+        doc="models/text_encoders 의 Qwen3 text encoder safetensors.",
+    )
+    vae: Combo = Combo.from_provider("vae", doc="models/vae 의 Z-Image VAE safetensors.")
+    config_repo: Str = Str(
+        "Tongyi-MAI/Z-Image",
+        doc="가중치가 아닌 config/tokenizer/scheduler 메타데이터 출처.",
+    )
+
+    returns = {"model": Model}
+
+    def run(
+        self,
+        transformer: str,
+        text_encoder: str,
+        vae: str,
+        config_repo: str,
+        ctx: NodeContext,
+    ) -> NodeResult:
+        _require_torch()
+        from .manager import ModelManager
+
+        store = _store(ctx)
+        if not isinstance(store, ModelManager):
+            raise RuntimeError(
+                "Z-Image 로딩에는 ModelManager 가 필요하다. 이 실행의 ctx.models 는 "
+                f"{type(store).__name__} 다 — 서버로 실행하거나 ModelManager 를 주입하라."
+            )
+
+        transformer_target = _component_target("diffusion_models", transformer)
+        text_encoder_target = _component_target("text_encoders", text_encoder)
+        vae_target = _component_target("vae", vae)
+        return NodeResult(
+            store.zimage(
+                transformer_ref=transformer,
+                transformer_target=transformer_target,
+                text_encoder_ref=text_encoder,
+                text_encoder_target=text_encoder_target,
+                vae_ref=vae,
+                vae_target=vae_target,
+                config_repo=config_repo,
+            )
+        )
 
 
 @node(
@@ -537,6 +604,109 @@ class KSampler:
 
 
 @node(
+    id="diffusion.ZImageImg2Img",
+    title="Z-Image Image to Image",
+    category="diffusion/sampling",
+    aliases=["Z-Image i2i", "이미지 변환", "img2img"],
+    cacheable=True,
+)
+class ZImageImg2Img:
+    """이미지와 프롬프트를 공식 `ZImageImg2ImgPipeline`에 전달한다.
+
+    Z-Image의 VAE 인코딩·노이즈 주입·스케줄러 루프는 Diffusers가 소유한다.
+    이 노드는 nodal 소켓을 파이프라인 인자로 연결하고 진행률·취소만 중계한다.
+    """
+
+    model: Model
+    image: Image
+    prompt: Str = Str("", multiline=True, placeholder="Transform the image into ...")
+    negative_prompt: Str = Str("", multiline=True)
+    strength: Float = Float(
+        0.6,
+        min=0.0,
+        max=1.0,
+        step=0.05,
+        doc="원본을 바꾸는 세기. 0은 원본에 가깝고 1은 가장 많이 바꾼다.",
+    )
+    steps: Int = Int(30, min=1, max=150, doc="디노이즈 스텝 수.")
+    guidance_scale: Float = Float(
+        5.0,
+        min=0.0,
+        max=20.0,
+        step=0.1,
+        doc="프롬프트 조건 강도.",
+    )
+    seed: Seed = Seed(0, doc="같은 시드·같은 입력이면 같은 결과가 나온다.")
+
+    returns = {"image": Image}
+
+    def run(
+        self,
+        model: ModelHandle,
+        image: Any,
+        prompt: str,
+        negative_prompt: str,
+        strength: float,
+        steps: int,
+        guidance_scale: float,
+        seed: int,
+        ctx: NodeContext,
+    ) -> NodeResult:
+        torch = _require_torch()
+        import numpy as np
+
+        checkpoint = model.checkpoint
+        if checkpoint.architecture != "ZImageImg2ImgPipeline":
+            raise ValueError(
+                "ZImageImg2Img 에는 ZImageLoader 출력만 연결할 수 있다. "
+                f"받은 모델은 {checkpoint.architecture} 다."
+            )
+
+        array = np.asarray(image, dtype=np.float32)
+        if array.ndim != 4 or array.shape[-1] not in (3, 4):
+            raise ValueError(
+                f"Z-Image 입력은 (B,H,W,C) 이미지여야 한다. 받은 shape={array.shape!r}."
+            )
+        # Diffusers image processors consume RGB.  Nodal's Image contract also
+        # permits RGBA, so composite transparent pixels onto white instead of
+        # leaking an unsupported fourth channel into the pipeline.
+        if array.shape[-1] == 4:
+            alpha = array[..., 3:4]
+            array = array[..., :3] * alpha + (1.0 - alpha)
+
+        generator = torch.Generator("cpu").manual_seed(int(seed))
+        effective_steps = max(1, min(steps, ceil(steps * strength)))
+
+        def on_step(
+            _pipe: Any,
+            index: int,
+            _timestep: Any,
+            kwargs: dict[str, Any],
+        ) -> dict[str, Any]:
+            ctx.raise_if_cancelled()
+            ctx.progress(index + 1, effective_steps)
+            return kwargs
+
+        with checkpoint.lock:
+            result = checkpoint.pipe(
+                prompt=prompt,
+                negative_prompt=negative_prompt,
+                image=array,
+                strength=strength,
+                num_inference_steps=steps,
+                guidance_scale=guidance_scale,
+                generator=generator,
+                output_type="np",
+                callback_on_step_end=on_step,
+            )
+
+        output = np.asarray(result.images, dtype=np.float32)
+        if output.ndim == 3:
+            output = output[None, ...]
+        return NodeResult(output, preview=output)
+
+
+@node(
     id="diffusion.VAEDecode",
     title="VAE Decode",
     category="diffusion/latent",
@@ -588,6 +758,19 @@ def _loader_for(ref: str) -> str:
         if ref.endswith((".safetensors", ".ckpt"))
         else "diffusers.pretrained"
     )
+
+
+def _component_target(provider: str, name: str) -> str:
+    """컴포넌트 이름을 로컬 파일로 푼다. 원격 fallback은 허용하지 않는다."""
+    from .scanner import resolve
+
+    path = resolve(provider, name)
+    if path is None:
+        raise FileNotFoundError(
+            f"{provider} 컴포넌트를 찾지 못했다: {name!r}. "
+            "NODAL_MODELS_DIR 또는 `nodal serve --models` 아래의 해당 디렉토리를 확인하라."
+        )
+    return str(path)
 
 
 def _adapter_name(lora_name: str) -> str:
@@ -854,11 +1037,13 @@ def _add_noise(pipe: Any, latents: Any, generator: Any, steps: int, start: int) 
 #: 이 팩이 등록하는 노드들.
 NODES = (
     LoadCheckpoint,
+    ZImageLoader,
     LoraLoader,
     ControlNetLoader,
     ControlNetApply,
     CLIPTextEncode,
     EmptyLatent,
     KSampler,
+    ZImageImg2Img,
     VAEDecode,
 )

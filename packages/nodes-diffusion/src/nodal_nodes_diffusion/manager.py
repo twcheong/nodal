@@ -41,7 +41,7 @@ from nodal.models import DevicePlan, ModelLoadError
 from .devices import DevicePolicy, empty_cache, free_memory, resolve_plan, to_torch_dtype
 from .handles import Checkpoint, ClipHandle, ControlNetHandle, ModelHandle, VaeHandle
 
-__all__ = ["DEFAULT_CAPACITY", "LOADERS", "ModelManager"]
+__all__ = ["DEFAULT_CAPACITY", "LOADERS", "ZIMAGE_LOADER", "ModelManager"]
 
 _log = logging.getLogger("nodal.diffusion.models")
 
@@ -57,6 +57,11 @@ LOADERS = ("diffusers.pretrained", "diffusers.single_file")
 #: ControlNet 은 파이프라인이 아니라 컴포넌트 하나라 로더가 따로다. 같은 캐시에
 #: 같은 상한으로 들어간다 — VRAM 을 차지하는 것은 마찬가지다.
 CONTROLNET_LOADER = "diffusers.controlnet"
+
+#: ComfyUI 스타일로 분리된 Z-Image transformer · text encoder · VAE 를 공식
+#: diffusers 파이프라인으로 조립하는 로더. 일반 `load()` 는 참조 하나를 받지만
+#: 이 로더는 컴포넌트 셋이 필요하므로 `ModelManager.zimage()` 로만 들어온다.
+ZIMAGE_LOADER = "diffusers.zimage_components"
 
 #: 단일 파일 체크포인트의 확장자.
 SINGLE_FILE_SUFFIXES = (".safetensors", ".ckpt")
@@ -144,6 +149,39 @@ class ModelManager:
 
     def vae(self, ref: str, *, loader: str = "diffusers.pretrained") -> VaeHandle:
         return self._track(VaeHandle(self._checkpoint(ref, loader)))
+
+    # -------------------------------------------------------------- Z-Image
+
+    def zimage(
+        self,
+        *,
+        transformer_ref: str,
+        transformer_target: str,
+        text_encoder_ref: str,
+        text_encoder_target: str,
+        vae_ref: str,
+        vae_target: str,
+        config_repo: str,
+    ) -> ModelHandle:
+        """분리된 로컬 컴포넌트를 Z-Image img2img 파이프라인으로 조립한다.
+
+        가중치는 전부 로컬 파일에서 읽는다. `config_repo` 에서는 아키텍처 설정,
+        tokenizer, scheduler처럼 작은 메타데이터만 가져온다. 같은 컴포넌트 셋은
+        일반 체크포인트와 같은 LRU · 약한 참조 캐시를 쓴다.
+        """
+        ref = "|".join((transformer_ref, text_encoder_ref, vae_ref, config_repo))
+        checkpoint = self._entry(
+            _key(ref, ZIMAGE_LOADER),
+            lambda: self._load_zimage(
+                ref=ref,
+                transformer_target=transformer_target,
+                text_encoder_target=text_encoder_target,
+                vae_target=vae_target,
+                config_repo=config_repo,
+            ),
+        )
+        assert isinstance(checkpoint, Checkpoint)
+        return self._track(ModelHandle(checkpoint))
 
     # ----------------------------------------------------------- ControlNet
 
@@ -256,6 +294,51 @@ class ModelManager:
         self._place(pipe, plan)
         _log.info("로드: %s (%s) → %s", ref, architecture, plan.compute)
         return Checkpoint(ref=ref, loader=loader, pipe=pipe, plan=plan, architecture=architecture)
+
+    def _load_zimage(
+        self,
+        *,
+        ref: str,
+        transformer_target: str,
+        text_encoder_target: str,
+        vae_target: str,
+        config_repo: str,
+    ) -> Checkpoint:
+        plan = self.plan
+        torch_dtype = to_torch_dtype(plan.dtype)
+        try:
+            pipe = _load_zimage_pipeline(
+                transformer_target=transformer_target,
+                text_encoder_target=text_encoder_target,
+                vae_target=vae_target,
+                config_repo=config_repo,
+                torch_dtype=torch_dtype,
+            )
+        except Exception as exc:
+            raise ModelLoadError(
+                ref,
+                loader=ZIMAGE_LOADER,
+                reason=str(exc),
+                expected=("ZImageImg2ImgPipeline",),
+                evidence=(
+                    f"transformer: {transformer_target}",
+                    f"text_encoder: {text_encoder_target}",
+                    f"vae: {vae_target}",
+                    f"config: {config_repo}",
+                ),
+            ) from exc
+
+        pipe.set_progress_bar_config(disable=True)
+        architecture = type(pipe).__name__
+        self._place(pipe, plan)
+        _log.info("로드: Z-Image %s → %s", ref, plan.compute)
+        return Checkpoint(
+            ref=ref,
+            loader=ZIMAGE_LOADER,
+            pipe=pipe,
+            plan=plan,
+            architecture=architecture,
+        )
 
     def _resolve_ref(self, ref: str, loader: str) -> str:
         """상대 참조를 모델 루트 기준으로 푼다. 절대 경로·저장소 ID 는 그대로."""
@@ -402,6 +485,67 @@ def _call_loader(loader: str, target: str, torch_dtype: Any) -> Any:
     # untyped call 로 막으므로 여기서만 푼다 — 반환은 어차피 Any 다.
     return DiffusionPipeline.from_pretrained(  # type: ignore[no-untyped-call]
         target, torch_dtype=torch_dtype
+    )
+
+
+def _load_zimage_pipeline(
+    *,
+    transformer_target: str,
+    text_encoder_target: str,
+    vae_target: str,
+    config_repo: str,
+    torch_dtype: Any,
+) -> Any:
+    """로컬 split 가중치와 공식 설정으로 Z-Image img2img를 조립한다.
+
+    디노이저·텍스트 인코더·VAE의 **가중치**는 인자로 받은 로컬 파일만 읽는다.
+    모델 저장소에서는 config/tokenizer/scheduler 메타데이터만 가져온다. 이 경계를
+    함수 하나로 모아 단위 테스트가 네트워크와 대형 가중치 없이 대체할 수 있게 한다.
+    """
+    from diffusers import (
+        AutoencoderKL,
+        FlowMatchEulerDiscreteScheduler,
+        ZImageImg2ImgPipeline,
+        ZImageTransformer2DModel,
+    )
+    from transformers import AutoConfig, AutoTokenizer, Qwen3Model
+
+    transformer = ZImageTransformer2DModel.from_single_file(
+        transformer_target,
+        config=config_repo,
+        subfolder="transformer",
+        torch_dtype=torch_dtype,
+    )
+    text_config = AutoConfig.from_pretrained(config_repo, subfolder="text_encoder")
+    # Transformers checks adapter metadata before it resolves a bare local file;
+    # on Windows that path is consequently validated as though it were a Hub ID.
+    # Point the config at the explicit filename and load from its containing
+    # directory so the regular memory-mapped safetensors path stays in use.
+    text_path = Path(text_encoder_target)
+    text_config.transformers_weights = text_path.name
+    text_encoder = Qwen3Model.from_pretrained(
+        str(text_path.parent),
+        config=text_config,
+        torch_dtype=torch_dtype,
+        use_safetensors=True,
+    )
+    tokenizer = AutoTokenizer.from_pretrained(config_repo, subfolder="tokenizer")
+    vae = AutoencoderKL.from_single_file(
+        vae_target,
+        config=config_repo,
+        subfolder="vae",
+        torch_dtype=torch_dtype,
+    )
+    scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(  # type: ignore[no-untyped-call]
+        config_repo,
+        subfolder="scheduler",
+    )
+    return ZImageImg2ImgPipeline(  # type: ignore[no-untyped-call]
+        scheduler=scheduler,
+        vae=vae,
+        text_encoder=text_encoder,
+        tokenizer=tokenizer,
+        transformer=transformer,
     )
 
 

@@ -49,6 +49,8 @@ def test_pack_registers_without_torch():
         "diffusion.LoadCheckpoint",
         "diffusion.LoraLoader",
         "diffusion.VAEDecode",
+        "diffusion.ZImageImg2Img",
+        "diffusion.ZImageLoader",
     }
     assert len(NODES) == len(ids)
 
@@ -81,6 +83,13 @@ def test_seed_is_optional_with_a_default():
     seed = _inputs("diffusion.KSampler")["seed"]
     assert seed["required"] is False
     assert seed["default"] == 0
+
+
+def test_zimage_seed_uses_the_same_widget_contract():
+    seed = _inputs("diffusion.ZImageImg2Img")["seed"]
+    assert seed["type"] == "INT"
+    assert seed["widget"]["seed"] is True
+    assert seed["widget"]["control"] in Seed.CONTROLS
 
 
 # ------------------------------------------------------------------ 소켓 타입

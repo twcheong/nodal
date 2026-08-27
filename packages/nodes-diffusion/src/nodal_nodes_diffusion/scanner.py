@@ -8,6 +8,8 @@
 
     models/
       checkpoints/   *.safetensors · *.ckpt · diffusers 폴더
+      diffusion_models/ *.safetensors · diffusers transformer 폴더
+      text_encoders/ *.safetensors · transformers 폴더
       loras/         *.safetensors
       vae/           *.safetensors · diffusers 폴더
       controlnet/    *.safetensors · diffusers 폴더
@@ -52,6 +54,8 @@ MODELS_ENV_VAR = "NODAL_MODELS_DIR"
 #: 그대로 실려 프론트로 간다. 바꾸면 그래프 문서가 아니라 **UI 가** 깨진다.
 PROVIDERS: dict[str, tuple[str, tuple[str, ...]]] = {
     "checkpoints": ("checkpoints", (".safetensors", ".ckpt")),
+    "diffusion_models": ("diffusion_models", (".safetensors",)),
+    "text_encoders": ("text_encoders", (".safetensors",)),
     "loras": ("loras", (".safetensors",)),
     "vae": ("vae", (".safetensors", ".ckpt")),
     "controlnet": ("controlnet", (".safetensors",)),
