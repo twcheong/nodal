@@ -174,6 +174,19 @@ _PROVIDER_SOCKETS = [
         "qwen3.safetensors",
     ),
     ("diffusion.ZImageLoader", "vae", "vae", "z-image-vae.safetensors"),
+    (
+        "diffusion.Flux2KleinLoader",
+        "transformer",
+        "diffusion_models",
+        "flux2-klein.safetensors",
+    ),
+    (
+        "diffusion.Flux2KleinLoader",
+        "text_encoder",
+        "text_encoders",
+        "qwen3.safetensors",
+    ),
+    ("diffusion.Flux2KleinLoader", "vae", "vae", "flux2-vae.safetensors"),
     ("diffusion.LoraLoader", "lora_name", "loras", "my-lora.safetensors"),
     (
         "diffusion.ZImageLoraLoader",
@@ -209,6 +222,10 @@ def test_scanned_names_reach_the_node_schema(models_dir):
     for node_id, socket_name, provider, filename in _PROVIDER_SOCKETS:
         socket = next(i for i in nodes[node_id]["inputs"] if i["name"] == socket_name)
         assert socket["widget"]["provider"] == provider
-        assert socket["widget"]["options"] == [filename], (
+        expected = sorted(
+            {candidate for _, _, source, candidate in _PROVIDER_SOCKETS if source == provider}
+        )
+        assert socket["widget"]["options"] == expected, (
             f"{node_id}.{socket_name} 의 옵션이 비었다 — 이 콤보는 화면에서 '모델 없음' 이다"
         )
+        assert filename in socket["widget"]["options"]

@@ -42,6 +42,19 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-28 · Codex · 직접 다중 레퍼런스는 FLUX.2 Klein 조건 토큰으로 실행
+
+- **결정**: 서로 다른 캐릭터 레퍼런스를 픽셀 평균이나 LoRA 학습으로 요약하지 않고,
+  Apache-2.0 FLUX.2 Klein 4B 파이프라인의 독립 이미지 조건 토큰으로 최대 네 장
+  전달한다. `diffusion.Flux2KleinMultiReference`는 각 입력을 별도 이미지로 유지한다
+- **이유**: Z-Image의 공개 체크포인트에는 Omni용 SigLIP 계층과 가중치가 없고,
+  일반 img2img의 이미지 목록은 독립 생성 배치다. FLUX.2 Klein은 공개 가중치가
+  실제 다중 레퍼런스 편집으로 학습됐고 16GB 소비자 GPU 범위에 맞는다
+- **영향 범위**: `packages/nodes-diffusion`,
+  `examples/templates/flux2_klein_multi_reference.nodal.json`
+- **되돌릴 수 있나**: 예 — 공식 Z-Image Omni 체크포인트가 배포되면 같은 네 Image
+  입력 표면 뒤에 별도 로더·샘플러를 추가해 두 경로를 병행할 수 있다
+
 ### 2026-08-28 · Codex · Z-Image 다중 레퍼런스 일관성은 전용 LoRA 학습으로 고정
 
 - **결정**: 정렬되지 않은 여러 캐릭터 이미지를 런타임에 픽셀 융합하지 않고,

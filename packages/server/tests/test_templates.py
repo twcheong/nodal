@@ -375,6 +375,30 @@ def test_zimage_character_lora_template_routes_identity_model() -> None:
     assert result.outputs == ("call:save",)
 
 
+def test_flux2_klein_template_routes_four_independent_references() -> None:
+    template = load_catalog(EXAMPLES).get("flux2_klein_multi_reference")
+    assert template is not None
+    references = {f"reference_{index}" for index in range(1, 5)}
+    assert references <= set(template.input_schema["required"])
+    assert template.input_schema["properties"]["steps"]["default"] == 4
+
+    arguments = {
+        **{name: f"assets/{name}.png" for name in references},
+        "prompt": "same character in a peace-sign pose",
+        "transformer": "flux2.safetensors",
+        "text_encoder": "qwen.safetensors",
+        "vae": "flux2-ae.safetensors",
+    }
+    graph = build_call_graph(template, arguments)
+    result = flatten(graph, (CALL_NODE_ID,))
+
+    assert result.issues == ()
+    for name in references:
+        assert result.graph.nodes["call:generate"].inputs[name].source_node == f"input:{name}"
+    assert result.graph.nodes["call:generate"].inputs["model"].source_node == "call:load"
+    assert result.outputs == ("call:save",)
+
+
 def test_example_input_schema(thumbnail: Template) -> None:
     """M6.0 완료 증거. 이 값이 곧 MCP 클라이언트가 보는 것이다."""
     assert thumbnail.input_schema == {

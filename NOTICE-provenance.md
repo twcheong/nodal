@@ -36,6 +36,15 @@ nodal 은 **Apache-2.0** 이다 (→ `docs/license.md`). GPL 코드가 한 줄�
 
 ## 기록
 
+### 2026-08-28 — Black Forest Labs FLUX.2 Klein
+
+- **라이선스**: Apache-2.0 (FLUX.2 Klein 4B)
+- **참조한 것**: 공식 FLUX.2 저장소의 다중 레퍼런스 파이프라인 사용법과 공개
+  Diffusers `Flux2KleinPipeline` API
+- **구현 방식**: nodal의 기존 컴포넌트 로더·모델 핸들·Image 소켓 규칙에 맞춰
+  공개 Diffusers API를 호출하는 배선만 백지 구현했다
+- **복사 여부**: 없음
+
 ### 2026-08-28 — Hugging Face Diffusers Z-Image DreamBooth LoRA
 
 - **라이선스**: Apache-2.0
