@@ -1,0 +1,163 @@
+{
+  "nodal_version": "1",
+  "id": "018f2c00-0000-7000-8000-0000000e0007",
+
+  "definitions": {
+    "sdxl_character_lora": {
+      "doc": "여러 레퍼런스로 학습된 SDXL 캐릭터 LoRA와 프롬프트를 함께 사용해 화풍과 인물 정체성을 유지한다. 직접 픽셀 융합보다 포즈 변경에 강한 일관성 우선 경로다.",
+      "params": {
+        "ckpt": {
+          "type": "STRING",
+          "doc": "LoRA의 베이스와 호환되는 SDXL 체크포인트 파일명·절대 경로 또는 HF 모델 ID.",
+          "widget": { "provider": "checkpoints" }
+        },
+        "lora_name": {
+          "type": "STRING",
+          "doc": "여러 캐릭터 레퍼런스로 학습된 models/loras의 SDXL LoRA.",
+          "widget": { "provider": "loras" }
+        },
+        "prompt": {
+          "type": "STRING",
+          "doc": "LoRA 트리거 단어를 포함한 인물·포즈·장면 프롬프트."
+        },
+        "negative_prompt": {
+          "type": "STRING",
+          "default": "photorealistic, 3d render, different character, different hairstyle, cropped head, cropped feet, extra fingers, malformed hands, blurry",
+          "doc": "피할 화풍·구도·해부 오류."
+        },
+        "lora_strength": {
+          "type": "FLOAT",
+          "default": 0.9,
+          "doc": "캐릭터와 학습 화풍의 보존 강도.",
+          "widget": { "min": 0.0, "max": 2.0, "step": 0.05 }
+        },
+        "width": {
+          "type": "INT",
+          "default": 768,
+          "widget": { "min": 512, "max": 2048, "step": 8 }
+        },
+        "height": {
+          "type": "INT",
+          "default": 1024,
+          "widget": { "min": 512, "max": 2048, "step": 8 }
+        },
+        "steps": {
+          "type": "INT",
+          "default": 30,
+          "widget": { "min": 1, "max": 150, "step": 1 }
+        },
+        "cfg": {
+          "type": "FLOAT",
+          "default": 6.5,
+          "widget": { "min": 0.0, "max": 20.0, "step": 0.1 }
+        },
+        "sampler_name": {
+          "type": "STRING",
+          "default": "dpmpp_2m",
+          "widget": {
+            "options": ["euler", "euler_ancestral", "heun", "dpmpp_2m", "dpmpp_2m_sde", "ddim"]
+          }
+        },
+        "scheduler": {
+          "type": "STRING",
+          "default": "karras",
+          "widget": { "options": ["normal", "karras", "exponential", "simple"] }
+        },
+        "seed": {
+          "type": "INT",
+          "default": 0,
+          "doc": "같은 시드·같은 입력이면 같은 결과가 나온다.",
+          "widget": { "seed": true, "control": "randomize", "min": 0, "max": 9007199254740991, "step": 1 }
+        }
+      },
+      "nodes": {
+        "load": {
+          "type": "diffusion.LoadCheckpoint",
+          "inputs": { "ckpt": { "$param": "ckpt" } }
+        },
+        "lora": {
+          "type": "diffusion.LoraLoader",
+          "inputs": {
+            "model": { "$link": ["load", "model"] },
+            "clip": { "$link": ["load", "clip"] },
+            "lora_name": { "$param": "lora_name" },
+            "strength": { "$param": "lora_strength" }
+          }
+        },
+        "positive": {
+          "type": "diffusion.CLIPTextEncode",
+          "inputs": {
+            "clip": { "$link": ["lora", "clip"] },
+            "text": { "$param": "prompt" }
+          }
+        },
+        "negative": {
+          "type": "diffusion.CLIPTextEncode",
+          "inputs": {
+            "clip": { "$link": ["lora", "clip"] },
+            "text": { "$param": "negative_prompt" }
+          }
+        },
+        "canvas": {
+          "type": "diffusion.EmptyLatent",
+          "inputs": {
+            "width": { "$param": "width" },
+            "height": { "$param": "height" },
+            "batch_size": 1
+          }
+        },
+        "sample": {
+          "type": "diffusion.KSampler",
+          "inputs": {
+            "model": { "$link": ["lora", "model"] },
+            "positive": { "$link": ["positive", "conditioning"] },
+            "negative": { "$link": ["negative", "conditioning"] },
+            "latent": { "$link": ["canvas", "latent"] },
+            "seed": { "$param": "seed" },
+            "steps": { "$param": "steps" },
+            "cfg": { "$param": "cfg" },
+            "sampler_name": { "$param": "sampler_name" },
+            "scheduler": { "$param": "scheduler" },
+            "denoise": 1.0
+          }
+        },
+        "decode": {
+          "type": "diffusion.VAEDecode",
+          "inputs": {
+            "vae": { "$link": ["load", "vae"] },
+            "latent": { "$link": ["sample", "latent"] }
+          }
+        },
+        "save": {
+          "type": "image.Save",
+          "inputs": {
+            "image": { "$link": ["decode", "image"] },
+            "embed_workflow": true
+          }
+        }
+      },
+      "returns": {
+        "image": { "$link": ["save", "asset"] }
+      }
+    }
+  },
+
+  "nodes": {
+    "call": {
+      "type": "subgraph.sdxl_character_lora",
+      "inputs": {
+        "ckpt": "hf-internal-testing/tiny-sdxl-pipe",
+        "lora_name": "character.safetensors",
+        "prompt": "character, solo, full body, standing",
+        "width": 512,
+        "height": 512,
+        "steps": 4,
+        "seed": 8272026
+      }
+    }
+  },
+  "outputs": ["call"],
+  "ui": {
+    "$comment": "Consistency-first SDXL path: a multi-image-trained LoRA carries identity and style while the prompt controls pose and scene."
+  }
+}

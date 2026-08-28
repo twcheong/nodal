@@ -341,6 +341,30 @@ def test_multi_reference_template_exposes_and_routes_eight_images() -> None:
         assert link.source_socket == "image"
 
 
+def test_sdxl_character_lora_template_routes_model_clip_and_vae() -> None:
+    template = load_catalog(EXAMPLES).get("sdxl_character_lora")
+    assert template is not None
+    assert set(template.input_schema["required"]) == {"ckpt", "lora_name", "prompt"}
+    assert template.input_schema["properties"]["lora_strength"]["default"] == 0.9
+
+    graph = build_call_graph(
+        template,
+        {
+            "ckpt": "base.safetensors",
+            "lora_name": "character.safetensors",
+            "prompt": "character, full body",
+        },
+    )
+    result = flatten(graph, (CALL_NODE_ID,))
+
+    assert result.issues == ()
+    assert result.graph.nodes["call:lora"].inputs["model"].source_node == "call:load"
+    assert result.graph.nodes["call:positive"].inputs["clip"].source_node == "call:lora"
+    assert result.graph.nodes["call:sample"].inputs["model"].source_node == "call:lora"
+    assert result.graph.nodes["call:decode"].inputs["vae"].source_node == "call:load"
+    assert result.outputs == ("call:save",)
+
+
 def test_example_input_schema(thumbnail: Template) -> None:
     """M6.0 완료 증거. 이 값이 곧 MCP 클라이언트가 보는 것이다."""
     assert thumbnail.input_schema == {
