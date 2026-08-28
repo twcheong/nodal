@@ -238,15 +238,17 @@ class ResizeImage:
     title="Multi-Reference Image",
     category="image/transform",
     aliases=["다중 레퍼런스", "여러 이미지", "reference fuse"],
+    version="2",
 )
 class MultiReferenceImage:
     """최대 8장의 레퍼런스를 같은 캔버스에 맞춘 뒤 한 장으로 융합한다.
 
     서로 다른 크기는 중앙 크롭 후 리사이즈하고, RGBA는 흰색 배경에 합성한다.
     ``median``은 일부 레퍼런스의 배경·조명 이상치에 강하고 ``mean``은 모든
-    픽셀을 부드럽게 평균낸다. 이는 얼굴 임베딩/IP-Adapter가 아니라 픽셀 공간의
-    대표 초기 이미지를 만드는 노드이므로, 비슷한 구도와 정렬의 자료에서 가장
-    잘 동작한다.
+    픽셀을 부드럽게 평균낸다. 융합 뒤에는 첫 레퍼런스를 ``anchor_weight``만큼
+    다시 섞어 원본 그림체·얼굴·의상을 보존한다. 이는 얼굴 임베딩/IP-Adapter가
+    아니라 픽셀 공간의 대표 초기 이미지를 만드는 노드이므로, 비슷한 구도와
+    정렬의 자료에서 가장 잘 동작한다.
     """
 
     reference_1: Socket = Socket(Image, doc="기준이 되는 첫 번째 레퍼런스.")
@@ -260,6 +262,13 @@ class MultiReferenceImage:
     width: Int = Int(512, min=1, max=16384, step=8)
     height: Int = Int(512, min=1, max=16384, step=8)
     mode: Combo = Combo("median", options=list(_REFERENCE_FUSION_MODES))
+    anchor_weight: Float = Float(
+        0.7,
+        min=0.0,
+        max=1.0,
+        step=0.05,
+        doc="첫 레퍼런스의 그림체·정체성을 보존하는 비율.",
+    )
 
     returns = Image
 
@@ -276,6 +285,7 @@ class MultiReferenceImage:
         width: int,
         height: int,
         mode: str,
+        anchor_weight: float,
     ) -> NodeResult:
         references = (
             reference_1,
@@ -298,7 +308,10 @@ class MultiReferenceImage:
 
         stack = np.stack(frames, axis=0)
         fused = np.mean(stack, axis=0) if mode == "mean" else np.median(stack, axis=0)
-        out = clip01(np.asarray(fused, dtype=np.float32)[np.newaxis, ...])
+        anchor = _fit_reference(to_float32(reference_1)[0], width, height)
+        fused = np.asarray(fused, dtype=np.float32)
+        preserved = anchor * anchor_weight + fused * (1.0 - anchor_weight)
+        out = clip01(preserved[np.newaxis, ...])
         return NodeResult(out, preview=out)
 
 

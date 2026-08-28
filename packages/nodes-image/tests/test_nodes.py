@@ -129,6 +129,7 @@ def test_multi_reference_median_uses_every_connected_image() -> None:
             4,
             4,
             "median",
+            0.0,
         )
         .values[0]
     )
@@ -154,6 +155,7 @@ def test_multi_reference_mean_accepts_mixed_sizes_and_batches() -> None:
             6,
             8,
             "mean",
+            0.0,
         )
         .values[0]
     )
@@ -178,11 +180,35 @@ def test_multi_reference_composites_rgba_on_white() -> None:
             2,
             2,
             "median",
+            0.7,
         )
         .values[0]
     )
 
     assert np.all(out == pytest.approx(1.0))
+
+
+def test_multi_reference_anchor_weight_preserves_first_reference() -> None:
+    out = (
+        MultiReferenceImage()
+        .run(
+            solid(0.2),
+            solid(0.8),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            4,
+            4,
+            "mean",
+            0.75,
+        )
+        .values[0]
+    )
+
+    assert out[0, 0, 0, 0] == pytest.approx(0.275)
 
 
 # ------------------------------------------------------------------ Crop

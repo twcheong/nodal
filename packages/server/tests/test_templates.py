@@ -326,6 +326,8 @@ def test_multi_reference_template_exposes_and_routes_eight_images() -> None:
     assert template is not None
     expected = {f"reference_{index}" for index in range(1, 9)}
     assert expected <= set(template.input_schema["required"])
+    assert template.input_schema["properties"]["anchor_weight"]["default"] == 0.7
+    assert template.input_schema["properties"]["strength"]["default"] == 0.45
 
     arguments = {name: f"assets/{name}.png" for name in expected}
     graph = build_call_graph(template, arguments)

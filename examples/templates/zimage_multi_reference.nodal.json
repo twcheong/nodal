@@ -80,9 +80,16 @@
           "doc": "median은 배경·조명 이상치에 강하고 mean은 모든 픽셀을 평균낸다.",
           "widget": { "options": ["median", "mean"] }
         },
+        "anchor_weight": {
+          "type": "FLOAT",
+          "default": 0.7,
+          "doc": "첫 번째 레퍼런스의 그림체·얼굴·의상을 보존하는 비율.",
+          "widget": { "min": 0.0, "max": 1.0, "step": 0.05 }
+        },
         "strength": {
           "type": "FLOAT",
-          "default": 0.6,
+          "default": 0.45,
+          "doc": "낮을수록 앵커의 그림체와 정체성을 보존하고, 높을수록 프롬프트의 포즈·장면을 따른다.",
           "widget": { "min": 0.0, "max": 1.0, "step": 0.05 }
         },
         "steps": {
@@ -116,7 +123,8 @@
             "reference_8": { "$param": "reference_8" },
             "width": { "$param": "width" },
             "height": { "$param": "height" },
-            "mode": { "$param": "fusion_mode" }
+            "mode": { "$param": "fusion_mode" },
+            "anchor_weight": { "$param": "anchor_weight" }
           }
         },
         "load": {
@@ -180,7 +188,8 @@
         "text_encoder": "qwen_3_4b.safetensors",
         "vae": "ae.safetensors",
         "fusion_mode": "median",
-        "strength": 0.55,
+        "anchor_weight": 0.7,
+        "strength": 0.45,
         "steps": 12,
         "guidance_scale": 4.0,
         "seed": 8272026
