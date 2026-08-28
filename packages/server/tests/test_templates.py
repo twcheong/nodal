@@ -341,27 +341,37 @@ def test_multi_reference_template_exposes_and_routes_eight_images() -> None:
         assert link.source_socket == "image"
 
 
-def test_sdxl_character_lora_template_routes_model_clip_and_vae() -> None:
-    template = load_catalog(EXAMPLES).get("sdxl_character_lora")
+def test_zimage_character_lora_template_routes_identity_model() -> None:
+    template = load_catalog(EXAMPLES).get("zimage_character_lora")
     assert template is not None
-    assert set(template.input_schema["required"]) == {"ckpt", "lora_name", "prompt"}
-    assert template.input_schema["properties"]["lora_strength"]["default"] == 0.9
+    required = set(template.input_schema["required"])
+    assert {
+        "source",
+        "prompt",
+        "transformer",
+        "text_encoder",
+        "vae",
+        "lora_name",
+    } <= required
+    assert template.input_schema["properties"]["lora_strength"]["default"] == 1.0
 
     graph = build_call_graph(
         template,
         {
-            "ckpt": "base.safetensors",
-            "lora_name": "character.safetensors",
-            "prompt": "character, full body",
+            "source": "assets/pose.png",
+            "prompt": "hwiwon character",
+            "transformer": "z.safetensors",
+            "text_encoder": "qwen.safetensors",
+            "vae": "ae.safetensors",
+            "lora_name": "identity.safetensors",
         },
     )
     result = flatten(graph, (CALL_NODE_ID,))
 
     assert result.issues == ()
-    assert result.graph.nodes["call:lora"].inputs["model"].source_node == "call:load"
-    assert result.graph.nodes["call:positive"].inputs["clip"].source_node == "call:lora"
-    assert result.graph.nodes["call:sample"].inputs["model"].source_node == "call:lora"
-    assert result.graph.nodes["call:decode"].inputs["vae"].source_node == "call:load"
+    assert result.graph.nodes["call:identity"].inputs["model"].source_node == "call:load"
+    assert result.graph.nodes["call:generate"].inputs["model"].source_node == "call:identity"
+    assert result.graph.nodes["call:generate"].inputs["image"].source_node == "input:source"
     assert result.outputs == ("call:save",)
 
 

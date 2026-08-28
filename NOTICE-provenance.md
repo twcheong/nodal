@@ -36,6 +36,16 @@ nodal 은 **Apache-2.0** 이다 (→ `docs/license.md`). GPL 코드가 한 줄�
 
 ## 기록
 
+### 2026-08-28 — Hugging Face Diffusers Z-Image DreamBooth LoRA
+
+- **라이선스**: Apache-2.0
+- **참조한 것**: 공식 `train_dreambooth_lora_z_image.py`와 Z-Image 학습 문서의
+  다중 이미지 DreamBooth LoRA 학습·`load_lora_weights` 추론 API
+- **구현 방식**: 공식 학습 스크립트는 커밋 대상 밖의 `output/`에서 로컬 LoRA를
+  만드는 실행 도구로 그대로 사용했다. nodal의 `ZImageLoraLoader`는 기존
+  `LoraLoader`의 핸들 격리 규칙과 공개 Diffusers API를 조합해 백지 구현했다
+- **복사 여부**: 없음 — Diffusers 스크립트 코드는 nodal 배포 파일에 포함하지 않는다
+
 ### 2026-08-11 — ComfyUI (Comfy-Org/ComfyUI) 아키텍처 조사
 
 - **라이선스**: GPL-3.0

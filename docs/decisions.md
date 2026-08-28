@@ -42,6 +42,22 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-28 · Codex · Z-Image 다중 레퍼런스 일관성은 전용 LoRA 학습으로 고정
+
+- **결정**: 정렬되지 않은 여러 캐릭터 이미지를 런타임에 픽셀 융합하지 않고,
+  전체 레퍼런스로 Z-Image DreamBooth LoRA를 학습한다. 실행 그래프에서는
+  `diffusion.ZImageLoraLoader`가 정체성·화풍을 모델 핸들에 붙이고,
+  `ZImageImg2Img`의 한 장 입력과 프롬프트가 포즈·구도를 담당한다
+- **이유**: 공식 `ZImageImg2ImgPipeline`은 초기 이미지 한 장만 받고 IP-Adapter
+  같은 다중 이미지 임베딩 입력을 제공하지 않는다. 정렬되지 않은 8장을 median이나
+  mean으로 섞은 GPU 실측에서는 얼굴과 화풍이 무너졌다. 반면 공식 Diffusers는
+  Z-Image용 DreamBooth LoRA 학습과 `load_lora_weights` 추론을 지원하므로, 여러 장의
+  공통 정체성을 모델 파라미터로 학습하는 것이 지원되는 경로다
+- **영향 범위**: `packages/nodes-diffusion`,
+  `examples/templates/zimage_character_lora.nodal.json`
+- **되돌릴 수 있나**: 예 — 추후 Z-Image용 다중 이미지 어댑터가 공식 지원되면
+  별도 로더 노드를 추가하고 기존 LoRA 경로는 그대로 병행할 수 있다
+
 ### 2026-08-28 · Codex · 다중 레퍼런스 융합은 첫 이미지를 스타일·정체성 앵커로 보존
 
 - **결정**: `image.MultiReference` v2에 `anchor_weight`를 추가한다. 전체

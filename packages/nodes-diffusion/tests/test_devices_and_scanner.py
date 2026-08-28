@@ -175,6 +175,12 @@ _PROVIDER_SOCKETS = [
     ),
     ("diffusion.ZImageLoader", "vae", "vae", "z-image-vae.safetensors"),
     ("diffusion.LoraLoader", "lora_name", "loras", "my-lora.safetensors"),
+    (
+        "diffusion.ZImageLoraLoader",
+        "lora_name",
+        "loras",
+        "my-lora.safetensors",
+    ),
     ("diffusion.ControlNetLoader", "control_net_name", "controlnet", "my-cnet.safetensors"),
 ]
 

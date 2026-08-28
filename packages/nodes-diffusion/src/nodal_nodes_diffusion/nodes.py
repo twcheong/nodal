@@ -94,6 +94,7 @@ __all__ = [
     "VAEDecode",
     "ZImageImg2Img",
     "ZImageLoader",
+    "ZImageLoraLoader",
 ]
 
 #: 샘플러 이름 → `diffusers` 스케줄러 클래스.
@@ -284,34 +285,52 @@ class LoraLoader:
         strength: float,
         ctx: NodeContext,
     ) -> NodeResult:
-        _require_torch()
-        from .scanner import resolve
-
-        checkpoint = model.checkpoint
-        path = resolve("loras", lora_name)
-        target = str(path) if path is not None else lora_name
-        adapter = _adapter_name(lora_name)
-
-        with checkpoint.lock:
-            if adapter not in checkpoint.loaded:
-                try:
-                    checkpoint.pipe.load_lora_weights(target, adapter_name=adapter)
-                except Exception as exc:
-                    raise RuntimeError(
-                        f"LoRA 를 얹지 못했다: {lora_name!r} ({target}). "
-                        f"체크포인트 아키텍처는 {checkpoint.architecture} 다 — "
-                        f"LoRA 가 같은 계열용인지 확인하라. 원인: {exc}"
-                    ) from exc
-                checkpoint.loaded.add(adapter)
-                # `load_lora_weights` 는 방금 얹은 어댑터를 켜 둔 채로 돌아온다.
-                # 그대로 두면 이 노드를 거치지 않은 분기도 LoRA 를 쓰게 된다.
-                _deactivate(checkpoint)
-
-        adapters = with_adapter(model.adapters, adapter, strength)
+        loaded = _load_lora_model(model, lora_name, strength)
         return NodeResult(
-            ModelHandle(checkpoint, adapters=adapters),
-            ClipHandle(checkpoint, adapters=adapters, clip_skip=clip.clip_skip),
+            loaded,
+            ClipHandle(
+                loaded.checkpoint,
+                adapters=loaded.adapters,
+                clip_skip=clip.clip_skip,
+            ),
         )
+
+
+@node(
+    id="diffusion.ZImageLoraLoader",
+    title="Load Z-Image LoRA",
+    category="diffusion/loaders",
+    aliases=["Z-Image 로라", "zimage lora", "캐릭터 LoRA"],
+    cacheable=False,
+)
+class ZImageLoraLoader:
+    """Z-Image 전용 LoRA를 모델 핸들에 붙인다.
+
+    여러 레퍼런스로 학습한 캐릭터 LoRA가 정체성과 화풍을 담당하고, 실행 시
+    프롬프트와 img2img 입력은 포즈·구도를 담당한다. 일반 `LoraLoader`와 같은
+    분기 격리 규칙을 쓰되 Z-Image에는 별도 CLIP 소켓이 없어 Model만 돌려준다.
+    """
+
+    model: Model
+    lora_name: Combo = Combo.from_provider("loras", doc="models/loras의 Z-Image LoRA.")
+    strength: Float = Float(1.0, min=-4.0, max=4.0, step=0.05, doc="어댑터 세기.")
+
+    returns = {"model": Model}
+
+    def run(
+        self,
+        model: ModelHandle,
+        lora_name: str,
+        strength: float,
+        ctx: NodeContext,
+    ) -> NodeResult:
+        del ctx
+        if model.checkpoint.architecture != "ZImageImg2ImgPipeline":
+            raise ValueError(
+                "ZImageLoraLoader에는 ZImageLoader 출력만 연결할 수 있다. "
+                f"받은 모델은 {model.checkpoint.architecture} 다."
+            )
+        return NodeResult(_load_lora_model(model, lora_name, strength))
 
 
 @node(
@@ -687,7 +706,7 @@ class ZImageImg2Img:
             ctx.progress(index + 1, effective_steps)
             return kwargs
 
-        with checkpoint.lock:
+        with _adapters_applied(checkpoint, model.adapters):
             result = checkpoint.pipe(
                 prompt=prompt,
                 negative_prompt=negative_prompt,
@@ -776,6 +795,35 @@ def _component_target(provider: str, name: str) -> str:
 def _adapter_name(lora_name: str) -> str:
     """어댑터 이름. `diffusers` 가 식별자로 쓰므로 경로 문자를 뺀다."""
     return "".join(c if c.isalnum() else "_" for c in lora_name)
+
+
+def _load_lora_model(model: ModelHandle, lora_name: str, strength: float) -> ModelHandle:
+    """LoRA 가중치를 한 번 올리고 적용 상태는 새 Model 핸들에만 기록한다."""
+    _require_torch()
+    from .scanner import resolve
+
+    checkpoint = model.checkpoint
+    path = resolve("loras", lora_name)
+    target = str(path) if path is not None else lora_name
+    adapter = _adapter_name(lora_name)
+
+    with checkpoint.lock:
+        if adapter not in checkpoint.loaded:
+            try:
+                checkpoint.pipe.load_lora_weights(target, adapter_name=adapter)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"LoRA 를 얹지 못했다: {lora_name!r} ({target}). "
+                    f"체크포인트 아키텍처는 {checkpoint.architecture} 다 — "
+                    f"LoRA 가 같은 계열용인지 확인하라. 원인: {exc}"
+                ) from exc
+            checkpoint.loaded.add(adapter)
+            # load_lora_weights는 새 어댑터를 켜 둔다. 핸들 분기를 오염시키지 않게
+            # 실제 샘플링 전까지 다시 끈다.
+            _deactivate(checkpoint)
+
+    adapters = with_adapter(model.adapters, adapter, strength)
+    return ModelHandle(checkpoint, adapters=adapters)
 
 
 def _adapter_tag(adapters: tuple[Adapter, ...]) -> str:
@@ -1039,6 +1087,7 @@ NODES = (
     LoadCheckpoint,
     ZImageLoader,
     LoraLoader,
+    ZImageLoraLoader,
     ControlNetLoader,
     ControlNetApply,
     CLIPTextEncode,

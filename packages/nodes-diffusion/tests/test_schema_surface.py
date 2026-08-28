@@ -50,6 +50,7 @@ def test_pack_registers_without_torch():
         "diffusion.LoraLoader",
         "diffusion.VAEDecode",
         "diffusion.ZImageImg2Img",
+        "diffusion.ZImageLoraLoader",
         "diffusion.ZImageLoader",
     }
     assert len(NODES) == len(ids)

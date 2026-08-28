@@ -62,6 +62,7 @@ from .nodes import (
     VAEDecode,
     ZImageImg2Img,
     ZImageLoader,
+    ZImageLoraLoader,
 )
 from .scanner import MODELS_ENV_VAR, models_root, register_providers, scan, set_models_root
 
@@ -94,6 +95,7 @@ __all__ = [
     "VaeHandle",
     "ZImageImg2Img",
     "ZImageLoader",
+    "ZImageLoraLoader",
     "detect_kind",
     "encode_latent_preview",
     "latent_preview",

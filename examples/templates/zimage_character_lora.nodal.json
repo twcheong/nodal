@@ -1,0 +1,142 @@
+{
+  "nodal_version": "1",
+  "id": "018f2c00-0000-7000-8000-0000000e0008",
+
+  "definitions": {
+    "zimage_character_lora": {
+      "doc": "여러 캐릭터 레퍼런스로 학습한 Z-Image LoRA를 적용한 뒤, 한 장의 구도 이미지와 프롬프트로 새 포즈를 생성한다. LoRA가 정체성·화풍을, source와 prompt가 구도·포즈를 담당한다.",
+      "params": {
+        "source": {
+          "type": "Image",
+          "doc": "구도와 대략적인 포즈를 잡을 초기 이미지. 파일 경로 또는 asset:<hash>."
+        },
+        "prompt": {
+          "type": "STRING",
+          "doc": "학습 트리거 단어와 원하는 인물·포즈·장면 설명."
+        },
+        "negative_prompt": {
+          "type": "STRING",
+          "default": "",
+          "doc": "피할 요소."
+        },
+        "transformer": {
+          "type": "STRING",
+          "doc": "models/diffusion_models의 Z-Image transformer 파일명."
+        },
+        "text_encoder": {
+          "type": "STRING",
+          "doc": "models/text_encoders의 Qwen3 encoder 파일명."
+        },
+        "vae": {
+          "type": "STRING",
+          "doc": "models/vae의 Z-Image VAE 파일명."
+        },
+        "config_repo": {
+          "type": "STRING",
+          "default": "Tongyi-MAI/Z-Image",
+          "doc": "config/tokenizer/scheduler 메타데이터 출처."
+        },
+        "lora_name": {
+          "type": "STRING",
+          "doc": "여러 레퍼런스로 학습한 models/loras의 Z-Image LoRA."
+        },
+        "lora_strength": {
+          "type": "FLOAT",
+          "default": 1.0,
+          "doc": "학습된 캐릭터 정체성과 화풍의 적용 세기.",
+          "widget": { "min": 0.0, "max": 2.0, "step": 0.05 }
+        },
+        "strength": {
+          "type": "FLOAT",
+          "default": 0.75,
+          "doc": "source를 바꾸는 세기. LoRA가 정체성을 보존하므로 기존 다중 픽셀 융합보다 높게 쓸 수 있다.",
+          "widget": { "min": 0.0, "max": 1.0, "step": 0.05 }
+        },
+        "steps": {
+          "type": "INT",
+          "default": 30,
+          "widget": { "min": 1, "max": 150, "step": 1 }
+        },
+        "guidance_scale": {
+          "type": "FLOAT",
+          "default": 5.0,
+          "widget": { "min": 0.0, "max": 20.0, "step": 0.1 }
+        },
+        "seed": {
+          "type": "INT",
+          "default": 0,
+          "doc": "같은 시드·같은 입력이면 같은 결과가 나온다.",
+          "widget": { "seed": true, "control": "randomize", "min": 0, "max": 9007199254740991, "step": 1 }
+        }
+      },
+      "nodes": {
+        "load": {
+          "type": "diffusion.ZImageLoader",
+          "inputs": {
+            "transformer": { "$param": "transformer" },
+            "text_encoder": { "$param": "text_encoder" },
+            "vae": { "$param": "vae" },
+            "config_repo": { "$param": "config_repo" }
+          }
+        },
+        "identity": {
+          "type": "diffusion.ZImageLoraLoader",
+          "inputs": {
+            "model": { "$link": ["load", "model"] },
+            "lora_name": { "$param": "lora_name" },
+            "strength": { "$param": "lora_strength" }
+          }
+        },
+        "generate": {
+          "type": "diffusion.ZImageImg2Img",
+          "inputs": {
+            "model": { "$link": ["identity", "model"] },
+            "image": { "$param": "source" },
+            "prompt": { "$param": "prompt" },
+            "negative_prompt": { "$param": "negative_prompt" },
+            "strength": { "$param": "strength" },
+            "steps": { "$param": "steps" },
+            "guidance_scale": { "$param": "guidance_scale" },
+            "seed": { "$param": "seed" }
+          }
+        },
+        "save": {
+          "type": "image.Save",
+          "inputs": {
+            "image": { "$link": ["generate", "image"] },
+            "embed_workflow": true
+          }
+        }
+      },
+      "returns": {
+        "image": { "$link": ["save", "asset"] }
+      }
+    }
+  },
+
+  "nodes": {
+    "source": {
+      "type": "image.Load",
+      "inputs": { "path": "examples/sample.png" }
+    },
+    "call": {
+      "type": "subgraph.zimage_character_lora",
+      "inputs": {
+        "source": { "$link": ["source", "image"] },
+        "prompt": "hwiwon character, full body, standing",
+        "transformer": "z_image_bf16.safetensors",
+        "text_encoder": "qwen_3_4b.safetensors",
+        "vae": "ae.safetensors",
+        "lora_name": "hwiwon-zimage.safetensors",
+        "strength": 0.75,
+        "steps": 12,
+        "guidance_scale": 4.0,
+        "seed": 8272026
+      }
+    }
+  },
+  "outputs": ["call"],
+  "ui": {
+    "$comment": "Multi-reference consistency comes from the trained Z-Image LoRA; runtime pixels are not averaged."
+  }
+}
