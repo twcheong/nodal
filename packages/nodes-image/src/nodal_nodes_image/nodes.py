@@ -17,7 +17,20 @@ from typing import Any
 import numpy as np
 from PIL import Image as PILImage
 
-from nodal import Bool, Combo, Failure, Float, Image, Int, Mask, NodeContext, NodeResult, Str, node
+from nodal import (
+    Bool,
+    Combo,
+    Failure,
+    Float,
+    Image,
+    Int,
+    Mask,
+    NodeContext,
+    NodeResult,
+    Socket,
+    Str,
+    node,
+)
 
 from .image import clip01, from_pil, to_float32
 from .png import encode_png
@@ -30,6 +43,7 @@ __all__ = [
     "LoadAssetImage",
     "LoadImage",
     "MaskFromImage",
+    "MultiReferenceImage",
     "ResizeImage",
     "SaveImage",
 ]
@@ -43,6 +57,7 @@ _RESAMPLE = {
 }
 
 _BLEND_MODES = ("normal", "add", "multiply", "screen", "difference")
+_REFERENCE_FUSION_MODES = ("median", "mean")
 
 
 def _broadcast_mask(mask: np.ndarray, like: np.ndarray) -> np.ndarray:
@@ -218,6 +233,75 @@ class ResizeImage:
         return NodeResult(out, preview=out)
 
 
+@node(
+    id="image.MultiReference",
+    title="Multi-Reference Image",
+    category="image/transform",
+    aliases=["다중 레퍼런스", "여러 이미지", "reference fuse"],
+)
+class MultiReferenceImage:
+    """최대 8장의 레퍼런스를 같은 캔버스에 맞춘 뒤 한 장으로 융합한다.
+
+    서로 다른 크기는 중앙 크롭 후 리사이즈하고, RGBA는 흰색 배경에 합성한다.
+    ``median``은 일부 레퍼런스의 배경·조명 이상치에 강하고 ``mean``은 모든
+    픽셀을 부드럽게 평균낸다. 이는 얼굴 임베딩/IP-Adapter가 아니라 픽셀 공간의
+    대표 초기 이미지를 만드는 노드이므로, 비슷한 구도와 정렬의 자료에서 가장
+    잘 동작한다.
+    """
+
+    reference_1: Socket = Socket(Image, doc="기준이 되는 첫 번째 레퍼런스.")
+    reference_2: Socket = Socket(Image, None, doc="선택 레퍼런스 2.")
+    reference_3: Socket = Socket(Image, None, doc="선택 레퍼런스 3.")
+    reference_4: Socket = Socket(Image, None, doc="선택 레퍼런스 4.")
+    reference_5: Socket = Socket(Image, None, doc="선택 레퍼런스 5.")
+    reference_6: Socket = Socket(Image, None, doc="선택 레퍼런스 6.")
+    reference_7: Socket = Socket(Image, None, doc="선택 레퍼런스 7.")
+    reference_8: Socket = Socket(Image, None, doc="선택 레퍼런스 8.")
+    width: Int = Int(512, min=1, max=16384, step=8)
+    height: Int = Int(512, min=1, max=16384, step=8)
+    mode: Combo = Combo("median", options=list(_REFERENCE_FUSION_MODES))
+
+    returns = Image
+
+    def run(
+        self,
+        reference_1: Any,
+        reference_2: Any | None,
+        reference_3: Any | None,
+        reference_4: Any | None,
+        reference_5: Any | None,
+        reference_6: Any | None,
+        reference_7: Any | None,
+        reference_8: Any | None,
+        width: int,
+        height: int,
+        mode: str,
+    ) -> NodeResult:
+        references = (
+            reference_1,
+            reference_2,
+            reference_3,
+            reference_4,
+            reference_5,
+            reference_6,
+            reference_7,
+            reference_8,
+        )
+        frames = [
+            _fit_reference(frame, width, height)
+            for reference in references
+            if reference is not None
+            for frame in to_float32(reference)
+        ]
+        if not frames:
+            raise ValueError("레퍼런스 이미지가 한 장도 없다")
+
+        stack = np.stack(frames, axis=0)
+        fused = np.mean(stack, axis=0) if mode == "mean" else np.median(stack, axis=0)
+        out = clip01(np.asarray(fused, dtype=np.float32)[np.newaxis, ...])
+        return NodeResult(out, preview=out)
+
+
 @node(id="image.Crop", title="Crop Image", category="image/transform", aliases=["자르기"])
 class CropImage:
     """직사각형으로 자른다. 범위를 벗어나면 이미지 경계로 잘린다."""
@@ -339,6 +423,41 @@ class CompositeImages:
         return NodeResult(out, preview=out)
 
 
+def _fit_reference(frame: np.ndarray, width: int, height: int) -> np.ndarray:
+    """프레임 하나를 RGB로 정규화하고 목표 비율의 중앙 크롭으로 맞춘다."""
+    channels = frame.shape[-1]
+    if channels == 1:
+        rgb = np.repeat(frame, 3, axis=-1)
+    elif channels == 4:
+        alpha = frame[..., 3:4]
+        rgb = frame[..., :3] * alpha + (1.0 - alpha)
+    else:
+        rgb = frame[..., :3]
+
+    source_h, source_w = rgb.shape[:2]
+    target_ratio = width / height
+    source_ratio = source_w / source_h
+    if source_ratio > target_ratio:
+        crop_w = max(1, round(source_h * target_ratio))
+        left = (source_w - crop_w) // 2
+        cropped = rgb[:, left : left + crop_w]
+    else:
+        crop_h = max(1, round(source_w / target_ratio))
+        top = (source_h - crop_h) // 2
+        cropped = rgb[top : top + crop_h, :]
+
+    resized = [
+        np.asarray(
+            PILImage.fromarray(cropped[..., channel], mode="F").resize(
+                (width, height), PILImage.Resampling.LANCZOS
+            ),
+            dtype=np.float32,
+        )
+        for channel in range(3)
+    ]
+    return clip01(np.stack(resized, axis=-1))
+
+
 def _decode_bytes(data: bytes) -> np.ndarray:
     """바이트에서 이미지를 읽는다. 업로드된 에셋을 노드가 쓸 때를 위한 것."""
     with PILImage.open(io.BytesIO(data)) as handle:
@@ -352,6 +471,7 @@ NODES = (
     LoadAssetImage,
     SaveImage,
     ResizeImage,
+    MultiReferenceImage,
     CropImage,
     BlendImages,
     MaskFromImage,

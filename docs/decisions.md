@@ -42,6 +42,25 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-28 · Codex · 다중 레퍼런스는 고정 소켓 융합 노드와 8장 MCP 템플릿으로 제공
+
+- **결정**: `image.MultiReference`는 첫 Image 소켓 하나와 선택 Image 소켓 7개를
+  받아 중앙 크롭·리사이즈 후 픽셀 공간의 median/mean으로 대표 초기 이미지 한 장을
+  만든다. MCP 카탈로그에는 8개의 `Image` 파라미터를 각각 노출하는
+  `zimage_multi_reference` 템플릿을 추가하고 그 출력을 기존
+  `diffusion.ZImageImg2Img`에 연결한다. 기존 단일 이미지 노드와 템플릿은 유지한다
+- **이유**: 현재 캐논 그래프의 입력 링크는 소켓 값 바로 아래에만 존재하고,
+  `List[Image]` 안의 링크는 리터럴이라 실행 의존성으로 해석되지 않는다. MCP의
+  `asset:` 라우팅도 의도적으로 Image 문자열 하나만 받는다. 목록 링크라는 새 그래프
+  계약을 만들지 않고도 여러 이미지가 각각 독립된 타입 검사·캐시 무효화·에셋
+  라우팅을 거치게 하려면 고정 소켓이 가장 작은 인터페이스다. 또한 현재 로컬
+  Z-Image 파이프라인에는 얼굴 임베딩/IP-Adapter가 없으므로 이 기능을 그런
+  어댑터로 오인시키지 않고 픽셀 기반 초기 이미지 융합으로 명시한다
+- **영향 범위**: `packages/nodes-image`,
+  `examples/templates/zimage_multi_reference.nodal.json`
+- **되돌릴 수 있나**: 예 — 추후 캐논 그래프가 목록 안 링크를 정식 지원하거나
+  허용적 라이선스의 다중 이미지 어댑터가 들어오면 템플릿 내부 구현을 교체할 수 있다
+
 ### 2026-08-27 · Codex · Z-Image img2img는 공식 Diffusers 전용 파이프라인 노드로 시작
 
 - **결정**: ComfyUI 스타일 split 파일(transformer · Qwen3 text encoder · VAE)을

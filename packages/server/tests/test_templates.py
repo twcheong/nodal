@@ -321,6 +321,24 @@ def test_example_template_loads(thumbnail: Template) -> None:
     assert thumbnail.returns == ("image",)
 
 
+def test_multi_reference_template_exposes_and_routes_eight_images() -> None:
+    template = load_catalog(EXAMPLES).get("zimage_multi_reference")
+    assert template is not None
+    expected = {f"reference_{index}" for index in range(1, 9)}
+    assert expected <= set(template.input_schema["required"])
+
+    arguments = {name: f"assets/{name}.png" for name in expected}
+    graph = build_call_graph(template, arguments)
+
+    for name in expected:
+        loader = graph.nodes[f"input:{name}"]
+        assert loader.type == "image.Load"
+        assert loader.inputs == {"path": arguments[name]}
+        link = graph.nodes[CALL_NODE_ID].inputs[name]
+        assert link.source_node == f"input:{name}"
+        assert link.source_socket == "image"
+
+
 def test_example_input_schema(thumbnail: Template) -> None:
     """M6.0 완료 증거. 이 값이 곧 MCP 클라이언트가 보는 것이다."""
     assert thumbnail.input_schema == {
