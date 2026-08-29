@@ -42,6 +42,7 @@ EXPECTED_OPERATIONS = {
     ("post", "/api/assets"),
     ("get", "/api/assets/{asset_hash}"),
     ("get", "/api/extensions"),
+    ("get", "/api/extensions/{extension_id}/web/{file_path}"),  # M7.2.1 — 프론트 ESM 서브트리
 }
 
 #: core dataclass ↔ 서버 pydantic 미러. 이 쌍의 필드가 어긋나면 안 된다.

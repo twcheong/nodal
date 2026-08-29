@@ -368,7 +368,7 @@ class GraphFromPngResponse(_Model):
 
 
 class ExtensionInfo(_Model):
-    """로드된, 또는 로드에 실패한 확장 하나 (design.md §8, M6)."""
+    """로드된, 또는 로드에 실패한 확장 하나 (design.md §8, M7.2)."""
 
     id: str
     name: str
@@ -376,6 +376,14 @@ class ExtensionInfo(_Model):
     nodal_api: str = Field(description="확장이 선언한 API 버전 범위")
     loaded: bool
     node_count: int = 0
+    web_entry_url: str | None = Field(
+        default=None,
+        description=(
+            "확장의 `web/index.js` 를 낼 URL(`/api/` 아래). 프론트는 이 값을 "
+            "그대로 `import()` 한다 — id 로 조립하지 않는다. `web/index.js` 가 "
+            "없거나 확장이 로드되지 않았으면 null"
+        ),
+    )
     error: str | None = Field(default=None, description="로드 실패 사유")
 
 

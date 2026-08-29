@@ -138,7 +138,35 @@ def test_load_extensions_registers_nodes_from_valid_extension(tmp_path: Path):
     assert record.id == "com.example.good"
     assert record.node_count == 1
     assert record.loaded is True
+    assert record.web_dir is None, "web/ 이 없으면 null 이어야 한다"
     assert "ext_test.Echo" in registry
+
+
+def test_web_dir_is_set_only_when_index_js_exists(tmp_path: Path):
+    ext_root = tmp_path / "extensions"
+
+    with_entry = ext_root / "with-entry"
+    _write_manifest(with_entry, ext_id="com.example.with_entry", nodal_api="^0.1")
+    (with_entry / "web").mkdir(parents=True)
+    (with_entry / "web" / "index.js").write_text("export default 1;\n", encoding="utf-8")
+
+    without_entry = ext_root / "without-entry"
+    _write_manifest(without_entry, ext_id="com.example.without_entry", nodal_api="^0.1")
+    (without_entry / "web").mkdir(parents=True)
+    (without_entry / "web" / "helper.js").write_text("export const x = 1;\n", encoding="utf-8")
+
+    no_web_dir_at_all = ext_root / "no-web-at-all"
+    _write_manifest(no_web_dir_at_all, ext_id="com.example.no_web", nodal_api="^0.1")
+
+    registry = NodeRegistry()
+    result = load_extensions(registry, ext_root)
+
+    by_id = {record.id: record for record in result.loaded}
+    assert by_id["com.example.with_entry"].web_dir == with_entry / "web"
+    assert by_id["com.example.without_entry"].web_dir is None, (
+        "web/ 은 있어도 index.js 가 없으면 진입점이 없다 — null"
+    )
+    assert by_id["com.example.no_web"].web_dir is None
 
 
 def test_load_extensions_rejects_out_of_range_api_below_lower_bound(tmp_path: Path):
