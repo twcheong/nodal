@@ -5,6 +5,7 @@ import { ApiError, type EventListener, type GraphApiClient } from "./client";
 import type {
   AssetRef,
   CreateRunResponse,
+  ExtensionsResponse,
   GraphFromPngResponse,
   Issue,
   NodeSchema,
@@ -253,6 +254,11 @@ export class MockGraphApiClient implements GraphApiClient {
   async listNodes(): Promise<NodesResponse> {
     await Promise.resolve();
     return { nodes: [...MOCK_NODE_SCHEMAS], types_version: TYPES_VERSION };
+  }
+
+  async listExtensions(): Promise<ExtensionsResponse> {
+    await Promise.resolve();
+    return { loaded: [], failed: [] };
   }
 
   async validateGraph(graph: GraphDocument): Promise<ValidateResponse> {

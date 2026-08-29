@@ -33,3 +33,25 @@ describe("PNG 워크플로 복원 요청", () => {
     );
   });
 });
+
+describe("확장 카탈로그 요청", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("생성 계약의 GET /api/extensions 응답을 그대로 읽는다", async () => {
+    const body = { loaded: [], failed: [] };
+    const fetchMock = vi.fn<typeof fetch>(async () =>
+      Promise.resolve(
+        new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await new HttpGraphApiClient("https://nodal.test").listExtensions();
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://nodal.test/api/extensions");
+    expect(response).toEqual(body);
+  });
+});
