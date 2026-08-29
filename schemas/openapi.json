@@ -285,7 +285,7 @@
       },
       "ExtensionInfo": {
         "additionalProperties": false,
-        "description": "로드된, 또는 로드에 실패한 확장 하나 (design.md §8, M6).",
+        "description": "로드된, 또는 로드에 실패한 확장 하나 (design.md §8, M7.2).",
         "properties": {
           "error": {
             "anyOf": [
@@ -324,6 +324,18 @@
           "version": {
             "title": "Version",
             "type": "string"
+          },
+          "web_entry_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "확장의 `web/index.js` 를 낼 URL(`/api/` 아래). 프론트는 이 값을 그대로 `import()` 한다 — id 로 조립하지 않는다. `web/index.js` 가 없거나 확장이 로드되지 않았으면 null",
+            "title": "Web Entry Url"
           }
         },
         "required": [
@@ -2075,6 +2087,92 @@
           }
         },
         "summary": "로드된 확장 · 실패한 확장",
+        "tags": [
+          "extensions"
+        ]
+      }
+    },
+    "/api/extensions/{extension_id}/web/{file_path}": {
+      "get": {
+        "description": "`ExtensionInfo.web_entry_url` 이 가리키는 자리다. `index.js` 하나가 아니라 확장의 `web/` 서브트리 전체를 낸다 — 엔트리가 import 하는 형제 파일이 있으면 그것도 같은 경로 아래서 풀린다. **로드에 실패한 확장은 절대 내지 않는다** — 배너와 실행이 어긋나면 안 된다 (design.md §8).",
+        "operationId": "get_extension_web_asset_api_extensions__extension_id__web__file_path__get",
+        "parameters": [
+          {
+            "description": "확장 id",
+            "in": "path",
+            "name": "extension_id",
+            "required": true,
+            "schema": {
+              "description": "확장 id",
+              "title": "Extension Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "`web/` 기준 상대 경로",
+            "in": "path",
+            "name": "file_path",
+            "required": true,
+            "schema": {
+              "description": "`web/` 기준 상대 경로",
+              "title": "File Path",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/javascript": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "`web/` 서브트리의 파일 그대로. `.js`·`.mjs` 는 언제나 `text/javascript` — 그래야 브라우저가 ESM 으로 실행한다"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청이 잘못됐다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "대상이 없다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "그래프 검증 실패. `issues` 가 어느 노드·어느 소켓인지 지목한다"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "계약은 확정됐지만 아직 구현되지 않았다 (M3)"
+          }
+        },
+        "summary": "확장 프론트 ESM 서브트리",
         "tags": [
           "extensions"
         ]

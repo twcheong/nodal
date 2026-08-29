@@ -61,6 +61,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/extensions/{extension_id}/web/{file_path}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 확장 프론트 ESM 서브트리
+         * @description `ExtensionInfo.web_entry_url` 이 가리키는 자리다. `index.js` 하나가 아니라 확장의 `web/` 서브트리 전체를 낸다 — 엔트리가 import 하는 형제 파일이 있으면 그것도 같은 경로 아래서 풀린다. **로드에 실패한 확장은 절대 내지 않는다** — 배너와 실행이 어긋나면 안 된다 (design.md §8).
+         */
+        get: operations["get_extension_web_asset_api_extensions__extension_id__web__file_path__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/graph/from-png": {
         parameters: {
             query?: never;
@@ -323,7 +343,7 @@ export interface components {
         };
         /**
          * ExtensionInfo
-         * @description 로드된, 또는 로드에 실패한 확장 하나 (design.md §8, M6).
+         * @description 로드된, 또는 로드에 실패한 확장 하나 (design.md §8, M7.2).
          */
         ExtensionInfo: {
             /**
@@ -349,6 +369,11 @@ export interface components {
             node_count: number;
             /** Version */
             version: string;
+            /**
+             * Web Entry Url
+             * @description 확장의 `web/index.js` 를 낼 URL(`/api/` 아래). 프론트는 이 값을 그대로 `import()` 한다 — id 로 조립하지 않는다. `web/index.js` 가 없거나 확장이 로드되지 않았으면 null
+             */
+            web_entry_url?: string | null;
         };
         /**
          * ExtensionsResponse
@@ -1226,6 +1251,67 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExtensionsResponse"];
+                };
+            };
+        };
+    };
+    get_extension_web_asset_api_extensions__extension_id__web__file_path__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 확장 id */
+                extension_id: string;
+                /** @description `web/` 기준 상대 경로 */
+                file_path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `web/` 서브트리의 파일 그대로. `.js`·`.mjs` 는 언제나 `text/javascript` — 그래야 브라우저가 ESM 으로 실행한다 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/javascript": string;
+                };
+            };
+            /** @description 요청이 잘못됐다 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 대상이 없다 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 그래프 검증 실패. `issues` 가 어느 노드·어느 소켓인지 지목한다 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 계약은 확정됐지만 아직 구현되지 않았다 (M3) */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

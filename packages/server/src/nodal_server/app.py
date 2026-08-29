@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import mimetypes
 from collections.abc import AsyncIterator, Sequence
 from pathlib import Path as FsPath
 from typing import Annotated
@@ -106,6 +107,20 @@ def _http_error(
     """`ErrorResponse` 모양을 갖춘 예외. 에러 본문은 언제나 하나의 모양이다."""
     body = error_body(code, message, issues)  # type: ignore[arg-type]
     return _ApiError(status_code, ErrorResponse(error=body))
+
+
+def _web_media_type(path: FsPath) -> str:
+    """확장 `web/` 자산의 Content-Type. `.js`·`.mjs` 는 항상 강제한다.
+
+    `mimetypes` 가 플랫폼 등록에 따라 `.js` 를 `text/javascript` 대신
+    `application/javascript` 로 줄 수 있다 — 그러면 브라우저가 ESM 으로
+    실행하지 않고 조용히 죽는다 (design.md §8). 그 외 파일은 표준 추측에
+    맡긴다.
+    """
+    if path.suffix in (".js", ".mjs"):
+        return "text/javascript"
+    guessed, _ = mimetypes.guess_type(path.name)
+    return guessed or "application/octet-stream"
 
 
 def create_app(
@@ -453,6 +468,55 @@ def create_app(
             failed=[_extension_info(record) for record in ext_result.failed],
         )
 
+    @app.get(
+        "/api/extensions/{extension_id}/web/{file_path:path}",
+        response_class=Response,
+        responses={
+            200: {
+                "content": {"text/javascript": {"schema": {"type": "string"}}},
+                "description": (
+                    "`web/` 서브트리의 파일 그대로. `.js`·`.mjs` 는 언제나 "
+                    "`text/javascript` — 그래야 브라우저가 ESM 으로 실행한다"
+                ),
+            },
+            **_ERRORS,
+        },
+        summary="확장 프론트 ESM 서브트리",
+        description=(
+            "`ExtensionInfo.web_entry_url` 이 가리키는 자리다. `index.js` 하나가 "
+            "아니라 확장의 `web/` 서브트리 전체를 낸다 — 엔트리가 import 하는 "
+            "형제 파일이 있으면 그것도 같은 경로 아래서 풀린다. **로드에 실패한 "
+            "확장은 절대 내지 않는다** — 배너와 실행이 어긋나면 안 된다 "
+            "(design.md §8)."
+        ),
+        tags=["extensions"],
+    )
+    async def get_extension_web_asset(
+        extension_id: Annotated[str, Path(description="확장 id")],
+        file_path: Annotated[str, Path(description="`web/` 기준 상대 경로")],
+    ) -> Response:
+        record = next((r for r in ext_result.loaded if r.id == extension_id), None)
+        if record is None or record.web_dir is None:
+            raise _http_error(
+                status.HTTP_404_NOT_FOUND,
+                "extension_web_not_found",
+                f"확장 {extension_id!r} 은 web/ 을 제공하지 않거나 로드되지 않았다",
+            )
+
+        # 경로 탈출 방어: 해석 후 base 안인지 확인한다. `..` 도 심볼릭 링크로
+        # 밖을 가리키는 것도 이 한 번의 비교로 걸린다 — resolve() 가 링크를
+        # 따라가므로 그 결과가 base 밖이면 무조건 거부된다.
+        base = record.web_dir.resolve()
+        target = (record.web_dir / file_path).resolve()
+        if not target.is_relative_to(base) or not target.is_file():
+            raise _http_error(
+                status.HTTP_404_NOT_FOUND,
+                "extension_web_asset_not_found",
+                f"확장 {extension_id!r} 의 web/ 에 {file_path!r} 이 없다",
+            )
+
+        return Response(content=target.read_bytes(), media_type=_web_media_type(target))
+
     # ------------------------------------------------------------------ WS
 
     @app.websocket("/ws")
@@ -528,6 +592,9 @@ def create_app(
             nodal_api=record.nodal_api,
             loaded=record.loaded,
             node_count=record.node_count,
+            web_entry_url=(
+                f"/api/extensions/{record.id}/web/index.js" if record.web_dir is not None else None
+            ),
             error=record.error,
         )
 

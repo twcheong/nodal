@@ -11,7 +11,9 @@
     ├── nodal.toml               # 매니페스트 (필수)
     ├── nodes/*.py                # @node 데코레이터 (선택)
     ├── templates/*.nodal.json    # §12.8 카탈로그에 합류하는 템플릿 (선택)
-    └── web/index.js              # 프론트 ESM — 이 로더는 다루지 않는다 (M7.3)
+    └── web/index.js              # 프론트 ESM 엔트리 (선택). 존재 여부만 이
+                                   # 로더가 본다 — 실제로 내보내는 것은
+                                   # `nodal_server.app` 의 정적 라우트다 (§8)
 
 확장 하나가 예외를 던져도 나머지는 로드된다 — 템플릿 카탈로그가 파일 하나의
 실패로 전체를 잃지 않는 것과 같은 규칙이다 (`nodal_server.templates`).
@@ -72,6 +74,11 @@ class ExtensionRecord:
     root: Path
     node_count: int = 0
     templates_dir: Path | None = None
+    #: `web/index.js` 가 있을 때만 채운다 — 서버가 이 값의 유무로 `ExtensionInfo`
+    #: 의 `web_entry_url` 을 null 로 낼지 정한다 (design.md §8). 값은 `web/`
+    #: 서브트리 전체를 가리킨다: 엔트리 하나만 내면 그 엔트리가 import 하는
+    #: 형제 파일이 깨지므로, 서버는 이 디렉토리 밑을 통째로 낸다.
+    web_dir: Path | None = None
     error: str | None = None
 
     @property
@@ -225,6 +232,7 @@ def _load_one(registry: NodeRegistry, ext_dir: Path) -> ExtensionRecord:
             )
 
     templates_dir = ext_dir / "templates"
+    web_dir = ext_dir / "web"
     return ExtensionRecord(
         id=ext_id,
         name=name,
@@ -233,6 +241,8 @@ def _load_one(registry: NodeRegistry, ext_dir: Path) -> ExtensionRecord:
         root=ext_dir,
         node_count=node_count,
         templates_dir=templates_dir if templates_dir.is_dir() else None,
+        # index.js 가 없으면 서빙할 진입점이 없다 — 서브트리 자체는 있어도 null.
+        web_dir=web_dir if (web_dir / "index.js").is_file() else None,
     )
 
 

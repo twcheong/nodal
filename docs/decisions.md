@@ -42,6 +42,37 @@
 
 <!-- 새 항목을 이 아래에 추가 -->
 
+### 2026-08-27 · Claude Code · M7.2 확장 프론트 엔트리 — URL 은 서버가 준다 (사용자 결정)
+
+- **결정**: `ExtensionInfo` 에 `web_entry_url` 필드를 추가한다. 값은 서버가
+  조립한 **완성된** `/api/...` 경로(`/api/extensions/{id}/web/index.js`)이고,
+  `web/index.js` 가 없으면 `null` 이다. **프론트는 `id` 로 URL 을 다시
+  조립하지 않는다** — 서버가 준 문자열을 그대로 `import()` 한다
+- **이유**: URL 의 모양(경로 접두·세그먼트 순서)이 서버 라우트 정의와 프론트
+  조립 코드 두 곳에 각각 표현되면 반드시 어긋난다 — §12.1 이 ComfyUI MCP
+  브리지를 거부한 이유("서버가 이미 아는 것을 대신 말하면 두 번 표현되고,
+  두 번 표현된 것은 어긋난다")와 정확히 같은 실패 양상이고, `GET
+  /api/models` 가 실제로 이렇게 죽었다(`decisions.md` 2026-08-18). 서버가
+  나중에 라우트를 바꿔도(예: 정적 파일 서버로 교체) 프론트가 고칠 곳이
+  없어야 한다
+- **부수 결정**: 확장의 `web/` 서브트리 전체를 `GET
+  /api/extensions/{id}/web/{file_path:path}` 로 낸다(엔트리 하나만 내면
+  형제 파일 import 가 깨진다). URL 은 `/api/` 아래에 둬 `vite.config.ts` 의
+  기존 프록시를 그대로 쓴다 — 별도 정적 마운트는 프록시 규칙을 두 번째로
+  만든다. 경로 탈출(`..`·심볼릭 링크)은 해석된 경로가 그 확장의 `web/`
+  하위인지 확인해서 막고, `loaded=True` 인 확장만 낸다. `.js`·`.mjs` 는
+  `Content-Type: text/javascript` 를 강제한다 — 플랫폼 `mimetypes` 등록에
+  맡기면 `application/javascript` 가 나올 수 있고 브라우저가 ESM 으로
+  실행하지 않는다
+- **영향 범위**: `packages/core/src/nodal/extensions.py`
+  (`ExtensionRecord.web_dir`), `packages/server/src/nodal_server/schemas.py`
+  (`ExtensionInfo.web_entry_url`), `packages/server/src/nodal_server/app.py`
+  (`GET /api/extensions/{id}/web/{file_path:path}`), `schemas/openapi.json`,
+  `apps/web/src/api/generated.ts` (같은 커밋에서 재생성, 규칙 8), `design.md`
+  §8
+- **되돌릴 수 있나**: 예 — 다만 `web_entry_url` 을 배포한 뒤 필드를 빼거나
+  모양을 바꾸면 이미 그 값을 저장/캐시한 프론트 코드가 깨진다
+
 ### 2026-08-27 · Claude Code + Codex · M7.2 확장 API 버전과 범위 문법 (사용자 승인)
 
 - **결정**: 공개 계약을 사용자 확인 후 다음으로 확정했다:
