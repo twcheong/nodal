@@ -1,21 +1,24 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 
 import { createGraphApiClient } from "./api";
 import { AssetUrlContext } from "./api/context";
 import { createEventBuffer } from "./api/eventBuffer";
 import { GraphCanvas, type CanvasHandle } from "./components/GraphCanvas";
+import { ExtensionBanner } from "./components/ExtensionBanner";
 import { Inspector } from "./components/Inspector";
 import { NodePalette } from "./components/NodePalette";
 import { Toolbar } from "./components/Toolbar";
 import { isPngFile } from "./editor/pngDrop";
 import { validateGraphDocument } from "./graph/schema";
+import { loadFrontendExtensions, type ExtensionFailure } from "./extensions/loader";
 import { useEditorStore } from "./state/editorStore";
 
 export function App(): React.JSX.Element {
   const api = useMemo(() => createGraphApiClient(), []);
   const fileInput = useRef<HTMLInputElement>(null);
   const canvas = useRef<CanvasHandle>(null);
+  const [extensionFailures, setExtensionFailures] = useState<ExtensionFailure[]>([]);
   const graph = useEditorStore((state) => state.graph);
   const runStatus = useEditorStore((state) => state.runStatus);
   const runSubmissionPending = useEditorStore((state) => state.runSubmissionPending);
@@ -40,6 +43,31 @@ export function App(): React.JSX.Element {
       })
       .catch((error: unknown) => {
         if (active) setCatalogError(readError(error));
+      });
+    api
+      .listExtensions()
+      .then(loadFrontendExtensions)
+      .then((failures) => {
+        if (active) setExtensionFailures(failures);
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setExtensionFailures([
+          {
+            extension: {
+              id: "nodal.extensions",
+              name: "확장 카탈로그",
+              version: "",
+              nodal_api: "",
+              loaded: false,
+              node_count: 0,
+              error: readError(error),
+              web_entry_url: null,
+            },
+            source: "frontend",
+            reason: readError(error),
+          },
+        ]);
       });
     const eventBuffer = createEventBuffer(handleEvent);
     const unsubscribe = api.subscribe(eventBuffer.push);
@@ -158,6 +186,10 @@ export function App(): React.JSX.Element {
             <GraphCanvas ref={canvas} onPngDrop={restoreGraphFromPng} />
             <Inspector />
           </div>
+          <ExtensionBanner
+            failures={extensionFailures}
+            onDismiss={() => setExtensionFailures([])}
+          />
           {message ? (
             <button className="toast" type="button" onClick={() => setMessage(null)}>
               {message}

@@ -4,6 +4,7 @@ import type {
   ErrorResponse,
   GraphFromPngResponse,
   NodesResponse,
+  ExtensionsResponse,
   ValidateResponse,
   WsEvent,
 } from "./types";
@@ -16,6 +17,7 @@ export interface GraphApiClient {
   readonly mode: "mock" | "live";
   assetUrl(asset: AssetRef): string;
   listNodes(): Promise<NodesResponse>;
+  listExtensions(): Promise<ExtensionsResponse>;
   validateGraph(graph: GraphDocument): Promise<ValidateResponse>;
   createRun(graph: GraphDocument, useCache: boolean): Promise<CreateRunResponse>;
   graphFromPng(file: File): Promise<GraphFromPngResponse>;
@@ -49,6 +51,10 @@ export class HttpGraphApiClient implements GraphApiClient {
 
   listNodes(): Promise<NodesResponse> {
     return this.#request<NodesResponse>(API_PATHS.nodes);
+  }
+
+  listExtensions(): Promise<ExtensionsResponse> {
+    return this.#request<ExtensionsResponse>(API_PATHS.extensions);
   }
 
   validateGraph(graph: GraphDocument): Promise<ValidateResponse> {

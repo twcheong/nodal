@@ -45,3 +45,10 @@ describe("M4 목 카탈로그", () => {
     expect(ckpt?.widget?.options).toEqual(["sdxl-demo.safetensors", "tiny-sd-pipe"]);
   });
 });
+
+describe("M7 목 확장 카탈로그", () => {
+  it("웹 엔트리가 없는 빈 카탈로그라서 목 캔버스에 부수효과를 만들지 않는다", async () => {
+    const response = await new MockGraphApiClient().listExtensions();
+    expect(response).toEqual({ loaded: [], failed: [] });
+  });
+});
