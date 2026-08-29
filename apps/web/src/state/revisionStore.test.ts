@@ -2,12 +2,13 @@ import { mkdtemp, readFile, readdir, rm, unlink, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { GraphDocument } from "../graph/types";
 import {
   DebouncedRevisionWriter,
   GraphRevisionStore,
+  installRevisionFlushHandlers,
   LEGACY_GRAPH_STORAGE_KEY,
   migrateLegacyGraphRevision,
   type RevisionDirectory,
@@ -94,7 +95,31 @@ describe("자동 저장 리비전", () => {
     expect(await migrateLegacyGraphRevision(store, storage)).toBeNull();
     expect(values.get(LEGACY_GRAPH_STORAGE_KEY)).toBe("{broken");
   });
+
+  it("문서가 숨겨지거나 내려갈 때 대기 중인 저장을 즉시 flush한다", () => {
+    const page = new EventTarget();
+    const visibility = new TestVisibilityTarget();
+    const flush = vi.fn(() => Promise.resolve(null));
+    const removeHandlers = installRevisionFlushHandlers({ flush }, { page, visibility });
+
+    visibility.dispatchEvent(new Event("visibilitychange"));
+    expect(flush).not.toHaveBeenCalled();
+
+    visibility.visibilityState = "hidden";
+    visibility.dispatchEvent(new Event("visibilitychange"));
+    page.dispatchEvent(new Event("pagehide"));
+    expect(flush).toHaveBeenCalledTimes(2);
+
+    removeHandlers();
+    visibility.dispatchEvent(new Event("visibilitychange"));
+    page.dispatchEvent(new Event("pagehide"));
+    expect(flush).toHaveBeenCalledTimes(2);
+  });
 });
+
+class TestVisibilityTarget extends EventTarget {
+  visibilityState: DocumentVisibilityState = "visible";
+}
 
 async function nodeDirectory(): Promise<RevisionDirectory> {
   const path = await mkdtemp(join(tmpdir(), "nodal-revisions-"));

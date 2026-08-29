@@ -107,6 +107,39 @@ export class DebouncedRevisionWriter {
   }
 }
 
+interface LifecycleEventTarget {
+  addEventListener(type: string, listener: EventListener): void;
+  removeEventListener(type: string, listener: EventListener): void;
+}
+
+interface VisibilityEventTarget extends LifecycleEventTarget {
+  readonly visibilityState: DocumentVisibilityState;
+}
+
+/**
+ * 탭이 백그라운드로 가거나 문서가 내려가기 전에 대기 중인 리비전 쓰기를 시작한다.
+ * OPFS 쓰기는 비동기이므로 브라우저/OS의 강제 종료까지 완료를 보장하지는 않는다.
+ */
+export function installRevisionFlushHandlers(
+  writer: Pick<DebouncedRevisionWriter, "flush">,
+  targets: { page: LifecycleEventTarget; visibility: VisibilityEventTarget },
+  onError: (error: unknown) => void = () => undefined,
+): () => void {
+  const flush = () => {
+    void writer.flush().catch(onError);
+  };
+  const flushWhenHidden = () => {
+    if (targets.visibility.visibilityState === "hidden") flush();
+  };
+
+  targets.visibility.addEventListener("visibilitychange", flushWhenHidden);
+  targets.page.addEventListener("pagehide", flush);
+  return () => {
+    targets.visibility.removeEventListener("visibilitychange", flushWhenHidden);
+    targets.page.removeEventListener("pagehide", flush);
+  };
+}
+
 export async function createBrowserRevisionStore(): Promise<GraphRevisionStore> {
   if (typeof navigator === "undefined" || typeof navigator.storage?.getDirectory !== "function") {
     throw new Error("이 브라우저는 OPFS 자동 저장을 지원하지 않습니다");

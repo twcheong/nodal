@@ -16,6 +16,7 @@ import { useEditorStore } from "./state/editorStore";
 import {
   createBrowserRevisionStore,
   DebouncedRevisionWriter,
+  installRevisionFlushHandlers,
   migrateLegacyGraphRevision,
 } from "./state/revisionStore";
 
@@ -124,6 +125,28 @@ export function App(): React.JSX.Element {
     lastScheduledRevision.current = serialized;
     revisionWriter.current.schedule(graph);
   }, [graph, revisionReady]);
+
+  useEffect(
+    () =>
+      installRevisionFlushHandlers(
+        {
+          flush: () => {
+            const writer = revisionWriter.current;
+            if (!writer) return Promise.resolve(null);
+            const currentGraph = useEditorStore.getState().graph;
+            const serialized = JSON.stringify(currentGraph);
+            if (serialized !== lastScheduledRevision.current) {
+              lastScheduledRevision.current = serialized;
+              writer.schedule(currentGraph);
+            }
+            return writer.flush();
+          },
+        },
+        { page: window, visibility: document },
+        (error) => setMessage(`자동 저장 실패: ${readError(error)}`),
+      ),
+    [setMessage],
+  );
 
   const save = () => {
     const blob = new Blob([JSON.stringify(graph, null, 2)], { type: "application/json" });
