@@ -32,7 +32,8 @@ nodal 은 그 지점들을 처음부터 다르게 잡았다.
 
 ## 지금 무엇이 되는가
 
-**M3 까지 완료.** 로드맵 M0~M6 중 4개 단계가 끝났다.
+코드는 M7 범위까지 들어와 있다. 로드맵 체크박스는 사람이 실제 결과를 판정한 뒤에만
+켜므로, 체크가 비어 있는 것과 코드가 없는 것은 같은 뜻이 아니다.
 
 ### ✅ 되는 것
 
@@ -43,24 +44,36 @@ nodal 은 그 지점들을 처음부터 다르게 잡았다.
 - **실시간 상태** — WebSocket 으로 노드별 대기/실행/캐시/에러 색상이 즉시 바뀐다
 - **이미지 노드 7종** — Load · Save · Resize · Crop · Blend · Mask · Composite.
   노드 안에 이미지 프리뷰가 그려진다
+- **Diffusion 노드** — 체크포인트·텍스트 인코딩·샘플링·VAE 디코드·LoRA. 무거운
+  torch/diffusers 런타임은 CPU와 NVIDIA CUDA 중 명시적으로 골라 설치한다
+- **조건 분기·배치·서브그래프** — 실행하지 않을 브랜치를 차단하고, 서브그래프는
+  검증·실행 전에 캐논 그래프로 평탄화한다
 - **PNG 워크플로 임베딩** — Save 한 PNG 의 `iTXt` 청크에 그래프가 UTF-8 로 들어간다.
   그 PNG 를 캔버스에 **드래그앤드롭하면 워크플로가 그대로 복원된다**
-- **CLI** — `nodal run` 하나로 UI 없이 그래프를 실행한다. 어느 노드가 캐시로 스킵됐는지
+- **MCP 자동화** — 템플릿별 툴, 비동기 실행과 폴링, 이미지 에셋 업로드·참조. MCP와
+  REST가 같은 서버·레지스트리·실행 큐를 쓴다
+- **확장 노드 팩** — `~/.nodal/extensions`의 매니페스트와 Python 노드를 자동 발견하고,
+  실패한 확장은 다른 확장을 막지 않은 채 API와 UI 배너에 원인을 남긴다
+- **Undo/redo와 복구 리비전** — 노드 저작 변경을 되돌리고 OPFS에 최근 캐논 그래프
+  리비전을 남긴다
+- **CLI** — `nodal run`으로 UI 없이 그래프를 실행한다. 어느 노드가 캐시로 스킵됐는지
   기호로 보인다
 - **에러 메시지** — 항상 **어느 노드의 어느 소켓**인지 지목한다. 익명 에러가 없다
 
 ### ❌ 아직 안 되는 것
 
-솔직하게 적는다. 아래는 전부 **아직 구현되지 않았다.**
+솔직하게 적는다. 현재 경계는 다음과 같다.
 
-- **Diffusion 이 없다 (M4).** 이미지를 *생성* 하지는 못한다. 체크포인트 로딩, KSampler,
-  VAE, LoRA, ControlNet 이 전부 다음 단계다. **지금은 GPU 가 필요 없고, 쓰지도 않는다.**
-  현재 상태는 "노드 그래프로 돌아가는 이미지 *처리* 도구"에 가깝다
-- **조건 분기가 없다 (M5).** lazy 입력, Switch/Router 노드, 서브그래프, 배치 처리
-- **확장 시스템이 없다 (M6).** 서드파티 노드 팩을 설치하는 경로가 아직 없다.
-  (`--pack` 으로 이름을 대면 로드되긴 하지만 매니페스트·격리 환경이 없다)
-- **Undo/redo 가 없다 (M6).** Yjs 가 스택에는 있지만 아직 붙이지 않았다
-- **패키징이 없다 (M6).** 원클릭 런처 없이 아래처럼 직접 띄운다
+- **프론트 커스텀 위젯 API가 없다.** 확장 ESM의 URL 제공·1회 평가·실패 배너는
+  동작하지만, 모듈이 호출할 등록 함수와 마운트·해제 수명주기는 정하지 않았다.
+  `globalThis`나 임의 DOM 변경은 지원되는 확장 방법이 아니다
+- **확장 매니페스트의 Python 의존성을 자동 설치하지 않는다.** nodal 자체만 쓰는
+  노드 팩은 설치할 수 있지만, `[dependencies].python`을 해석해 환경에 넣는 경로는 없다
+- **런처는 서명된 독립 실행 파일이 아니다.** 공유받은 체크아웃에서 설치·빌드·실행을
+  한 번에 수행하는 스크립트이므로 `uv`와 Node.js가 필요하다
+- **원격 공개용 인증이 없다.** 기본 `127.0.0.1` 로컬 바인딩을 유지한다. 인증 없이
+  `0.0.0.0`으로 열지 않는다
+- lazy 입력과 실행 중 동적 노드 확장은 MVP 밖이다. 서브그래프는 로드 시 평탄화한다
 - **한국어 UI 만 있다.** i18n 은 로드맵에 없다
 
 ---
@@ -73,61 +86,72 @@ nodal 은 그 지점들을 처음부터 다르게 잡았다.
 |---|---|---|
 | [`uv`](https://docs.astral.sh/uv/) | 최신 | Python 은 `uv` 가 알아서 받아온다. 직접 설치할 필요 없다 |
 | Node.js | 20+ | |
-| `pnpm` | 11+ | `corepack enable` 하면 버전이 자동으로 맞는다 |
+| Corepack | Node.js에 포함 | 저장소가 선언한 pnpm 버전을 실행한다 |
 
-GPU 는 **필요 없다.** 기본 설치에는 torch 가 들어가지 않는다 — 아래에서 되는
-것들은 전부 CPU 로 돈다.
+GPU는 필수가 아니다. 첫 실행에서 `core`·`cpu`·`cuda` 중 하나를 고르고
+`~/.nodal/runtime`에 저장한다. 비대화형 첫 실행의 기본은 `core`이며 torch를 설치하지
+않는다. 선택한 모드는 시작할 때 항상 출력된다.
 
-### 1. 설치
+### 1. 원클릭 실행
 
-```bash
-uv sync
-```
+macOS에서는 `launch-nodal.command`, Windows에서는 `launch-nodal.bat`, Linux에서는
+`launch-nodal.sh`를 실행한다. 처음 한 번 Python 환경 동기화와 프론트 빌드를 수행한 뒤
+백엔드·웹 UI·MCP를 `127.0.0.1:8188`의 같은 프로세스에서 띄우고 브라우저를 연다.
 
-```bash
-pnpm install
-```
-
-두 락파일(`uv.lock`, `pnpm-lock.yaml`)이 커밋되어 있으므로 버전은 그대로 재현된다.
-
-<details>
-<summary>NVIDIA GPU 장비에서 diffusion 노드를 쓰려면 (M4, 아직 구현 중)</summary>
-
-torch 는 옵트인이다. CPU 휠이 기본이고 CUDA 는 따로 켠다:
+터미널에서 모드를 지정할 수도 있다.
 
 ```bash
-uv sync --group diffusion
+./launch-nodal.command --runtime core   # torch 없음
+./launch-nodal.command --runtime cpu    # CPU torch + diffusers
+./launch-nodal.command --runtime cuda   # NVIDIA CUDA (Mac에서는 명시적으로 실패)
 ```
 
-```bash
-uv sync --extra cuda
+Windows:
+
+```powershell
+.\launch-nodal.bat --runtime cuda
 ```
 
-위가 CPU(맥 개발 · CI), 아래가 CUDA(NVIDIA 리눅스/윈도우 장비)다. 둘은 동시에
-켤 수 없다 — 같은 이름의 torch 가 다른 인덱스에 있어서 배타 관계다. 자세한
-것은 [`docs/dev.md`](docs/dev.md).
+사용자 데이터는 저장소 밖의 `~/.nodal/`에 남는다.
 
-</details>
+```text
+~/.nodal/
+├── assets/
+├── extensions/
+├── models/
+├── templates/
+└── runtime
+```
 
-### 2. 백엔드 서버
+런처 없이 개발 명령을 직접 쓰려면 [`docs/dev.md`](docs/dev.md)를 따른다. 두
+락파일(`uv.lock`, `pnpm-lock.yaml`)이 설치 버전을 고정한다.
+
+현재 Mac에서는 실제 설치·빌드·UI/API 실행을 확인했다. Windows 배치와 CUDA 분기는
+GPU 장비에서 실측하기 전까지 완료로 판정하지 않는다 (`tools/smoke_node_pack.py`가
+두 운영체제에서 같은 노드 팩 설치 증거를 낸다).
+
+### 2. 수동 실행: 백엔드 서버
+
+원클릭 런처를 썼다면 아래 2·3단계는 건너뛴다. 개발 중 프로세스를 따로 띄울 때만 쓴다.
 
 ```bash
 uv run nodal serve
 ```
 
-`노드 18개 등록. http://127.0.0.1:8188/docs` 가 찍히면 성공이다.
+등록된 노드 수와 `http://127.0.0.1:8188/docs`가 찍히면 성공이다.
 `/docs` 에서 REST API 를 바로 눌러볼 수 있다.
 
 > Save 한 이미지를 디스크에 남기려면 `uv run nodal serve --assets ./assets` 로 띄운다.
 > 안 주면 메모리에만 있다가 서버를 끄면 사라진다 (시작할 때 알려준다).
 
-### 3. 프론트엔드 — **새 터미널에서**
+### 3. 프론트엔드 개발 서버 — **개발할 때만 새 터미널에서**
 
 ```bash
 pnpm --filter @nodal/web dev
 ```
 
-http://localhost:5173 을 연다. 우상단에 **`LIVE API`** 배지가 보이면 실서버에 붙은 것이다.
+원클릭 런처는 빌드된 프론트를 8188에서 함께 내므로 이 단계가 필요 없다. 프론트 코드를
+수정할 때만 http://localhost:5173 을 열며, 우상단에 **`LIVE API`** 배지가 보이면 실서버에 붙은 것이다.
 (백엔드 없이 화면만 보고 싶으면 `VITE_NODAL_API_MODE=mock` 을 앞에 붙인다.)
 
 여기까지 왔으면 아래 두 예제를 그대로 따라 해볼 수 있다.
@@ -181,7 +205,7 @@ uv run nodal run examples/arithmetic.nodal.json --twice --set offset.value=10
 ```bash
 uv run nodal validate examples/arithmetic.nodal.json   # 실행 없이 검증만
 uv run nodal nodes 곱하기                               # 한글 별칭으로 노드 검색
-uv run nodal nodes                                      # 등록된 노드 18개 전부
+uv run nodal nodes                                      # 등록된 노드 전부
 ```
 
 ### B. 브라우저에서 이미지 워크플로 — 3분
@@ -240,10 +264,12 @@ packages/core          # 그래프 엔진. torch 도 이미지도 모른다. 도
 packages/server        # FastAPI — REST + WebSocket
 packages/nodes-core    # 기본 노드 팩 (수학·문자열) + `nodal` CLI
 packages/nodes-image   # 이미지 노드 팩 (numpy · Pillow 는 여기에만 있다)
+packages/nodes-diffusion # diffusion 노드 팩 (torch 런타임은 옵트인)
 apps/web               # Vite + React 프론트엔드
 schemas/               # 생성된 JSON Schema · OpenAPI (손으로 고치지 않는다)
 examples/              # 예제 그래프 + 샘플 이미지
 tools/                 # 개발 스크립트 (CI 재현, 스키마 생성, 샘플 이미지 생성)
+launch-nodal.*          # macOS · Windows · Linux 원클릭 래퍼
 ```
 
 의존성은 **한 방향으로만** 흐른다:
@@ -265,8 +291,9 @@ packages/nodes-*  →  packages/core
 | 파일 | 무엇 | 읽어야 하나 |
 |---|---|---|
 | [`docs/design.md`](docs/design.md) | 아키텍처 · 데이터 모델 · 실행 엔진 · API 스펙 | **설계가 궁금하면 여기.** 이 저장소에서 가장 내용이 많은 문서다 |
-| [`docs/roadmap.md`](docs/roadmap.md) | M0~M6 마일스톤과 완료 기준 | **진행 상황이 궁금하면 여기.** 체크박스가 현재 상태다 |
+| [`docs/roadmap.md`](docs/roadmap.md) | M0~M7 마일스톤과 완료 기준 | **진행 상황이 궁금하면 여기.** 체크박스는 사람 판정 상태다 |
 | [`docs/dev.md`](docs/dev.md) | 로컬에서 무엇을 실행하는지 | 직접 만져볼 거면 |
+| [`docs/node-authoring.md`](docs/node-authoring.md) | 서드파티 Python 노드 팩 작성·설치 | 노드 팩을 만들 거면 |
 | [`docs/decisions.md`](docs/decisions.md) | 설계 판단 변경 로그 | "왜 이렇게 했지?" 싶을 때 |
 | [`docs/license.md`](docs/license.md) | Apache-2.0 선택 근거 | 라이선스가 궁금하면 |
 

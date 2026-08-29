@@ -1,0 +1,5 @@
+[extension]
+id = "com.example.guide-pack"
+name = "Guide Pack"
+version = "0.1.0"
+nodal_api = "^0.1"

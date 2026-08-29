@@ -21,6 +21,54 @@ uv sync          # Python 워크스페이스 (core · server · nodes-core · no
 pnpm install     # JS 워크스페이스 (apps/web)
 ```
 
+### 원클릭 런처
+
+공유받은 체크아웃을 설치·빌드·실행하는 진입점은 운영체제별 래퍼다.
+
+| 운영체제 | 파일 |
+|---|---|
+| macOS | `launch-nodal.command` |
+| Windows | `launch-nodal.bat` |
+| Linux | `launch-nodal.sh` |
+
+세 파일은 모두 `tools/launch.py` 하나를 호출한다. 공통 부트스트랩이 `uv sync`,
+`pnpm install`, 프론트 빌드를 한 뒤 `nodal launch`를 실행하므로 플랫폼별 설치
+논리가 따로 자라지 않는다. `nodal launch`는 빌드된 UI와 API·WS·MCP를 같은
+`127.0.0.1:8188` 프로세스에서 내고 `~/.nodal/{assets,models,templates,extensions}`를
+명시적으로 사용한다.
+
+```bash
+./launch-nodal.command --runtime core
+./launch-nodal.command --runtime cpu
+./launch-nodal.command --runtime cuda
+```
+
+`core`는 torch 없음, `cpu`는 `uv sync --group diffusion`, `cuda`는
+`uv sync --extra cuda`와 정확히 대응한다. 선택은 `~/.nodal/runtime`에 저장되고
+시작 로그가 무엇을 설치했는지 항상 출력한다. `NODAL_RUNTIME=core|cpu|cuda`로 한 번만
+덮어쓸 수도 있다. 이 런처는 서명된 독립 실행 파일이 아니므로 uv와 Node.js가 필요하다.
+
+#### Windows GPU 장비 판정 절차
+
+M7 패키징 완료 판정은 Mac 보고만으로 하지 않는다. Windows GPU 장비의 깨끗한
+체크아웃에서 다음 원시 결과를 확인한다.
+
+```powershell
+.\launch-nodal.bat --runtime cuda --no-browser
+```
+
+서버가 뜬 뒤 다른 PowerShell에서:
+
+```powershell
+uv run --no-sync python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"
+(Invoke-RestMethod http://127.0.0.1:8188/api/nodes).nodes.Count
+uv run python tools\smoke_node_pack.py
+```
+
+확인할 값은 CUDA 빌드 버전, `torch.cuda.is_available() == True`, 0보다 큰 노드 수,
+그리고 스모크 출력의 `node=guide.InvertBoolean`이다. 에이전트 보고가 아니라 장비에서
+나온 이 값을 사람이 보고 판정한다.
+
 ### diffusion 노드 팩 (M4) — 옵트인
 
 기본 `uv sync` 에는 **torch 가 들어 있지 않다.** 리눅스 휠이 191.8 MB 라서,
@@ -301,13 +349,18 @@ uv run nodal serve --assets ./assets   # Save 결과를 디스크에 남긴다
 
 ## 노드 팩
 
-설치되어 있는 1st-party 팩(`nodal_nodes_image`)은 `run`·`validate`·`nodes`·`serve`
-**모든 명령에서 자동으로** 올라간다. 서드파티 팩은 이름을 댄다.
+설치되어 있는 1st-party 팩(`nodal_nodes_image`·`nodal_nodes_diffusion`)은
+`run`·`validate`·`nodes`·`serve` **모든 명령에서 자동으로** 올라간다. 예전
+`--pack MODULE` 경로도 남아 있지만, 매니페스트 확장의 발견 경로는
+`~/.nodal/extensions` 하나다.
 
 ```bash
-uv run nodal nodes                          # 등록된 노드 18개
+uv run nodal nodes                          # 등록된 노드 전체
 uv run nodal serve --pack my_custom_pack
 ```
+
+서드파티 노드 팩의 현재 규약과 설치 예제는 `node-authoring.md`에 있다. 커스텀
+프론트 위젯 API와 매니페스트 Python 의존성 자동 설치는 아직 없다.
 
 명령마다 레지스트리가 다르면 안 된다 — `nodes` 에는 보이는데 `run` 이 "등록되지 않은
 노드 타입"으로 실패하거나, CLI 로는 되는데 브라우저 팔레트에는 없는 상태가 그 증상이다
