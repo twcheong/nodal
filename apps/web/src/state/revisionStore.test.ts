@@ -8,6 +8,8 @@ import type { GraphDocument } from "../graph/types";
 import {
   DebouncedRevisionWriter,
   GraphRevisionStore,
+  LEGACY_GRAPH_STORAGE_KEY,
+  migrateLegacyGraphRevision,
   type RevisionDirectory,
 } from "./revisionStore";
 
@@ -61,6 +63,36 @@ describe("자동 저장 리비전", () => {
       "0000000000002-revision.nodal.json",
       "0000000000003-revision.nodal.json",
     ]);
+  });
+
+  it("기존 localStorage 그래프를 OPFS 리비전으로 쓴 뒤에만 키를 지운다", async () => {
+    const directory = await nodeDirectory();
+    const store = new GraphRevisionStore(directory, {
+      makeName: () => "0000000000001-migrated.nodal.json",
+    });
+    const graph = graphWithValue(9);
+    const values = new Map([[LEGACY_GRAPH_STORAGE_KEY, JSON.stringify(graph)]]);
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      removeItem: (key: string) => values.delete(key),
+    };
+
+    expect(await migrateLegacyGraphRevision(store, storage)).toEqual(graph);
+    expect(values.has(LEGACY_GRAPH_STORAGE_KEY)).toBe(false);
+    expect(await store.latest()).toEqual(graph);
+  });
+
+  it("기존 값이 깨졌으면 삭제하지 않고 복구 후보에서도 제외한다", async () => {
+    const directory = await nodeDirectory();
+    const store = new GraphRevisionStore(directory);
+    const values = new Map([[LEGACY_GRAPH_STORAGE_KEY, "{broken"]]);
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      removeItem: (key: string) => values.delete(key),
+    };
+
+    expect(await migrateLegacyGraphRevision(store, storage)).toBeNull();
+    expect(values.get(LEGACY_GRAPH_STORAGE_KEY)).toBe("{broken");
   });
 });
 

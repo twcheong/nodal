@@ -3,6 +3,7 @@ import { validateGraphDocument } from "../graph/schema";
 
 export const REVISION_RETENTION = 20;
 export const REVISION_DEBOUNCE_MS = 500;
+export const LEGACY_GRAPH_STORAGE_KEY = "nodal.lastGraph";
 
 export interface RevisionDirectory {
   list(): Promise<string[]>;
@@ -118,6 +119,30 @@ export async function createBrowserRevisionStore(): Promise<GraphRevisionStore> 
   const nodal = await root.getDirectoryHandle("nodal", { create: true });
   const revisions = await nodal.getDirectoryHandle("revisions", { create: true });
   return new GraphRevisionStore(new OpfsRevisionDirectory(revisions));
+}
+
+/**
+ * M7.4 이전의 쓰기 전용 localStorage 사본을 OPFS로 한 번 옮긴다.
+ *
+ * OPFS 쓰기가 완료되기 전에는 키를 지우지 않는다. 깨진 값도 지우지 않아 사용자가
+ * 개발자 도구에서 수동 복구할 여지를 남긴다. 반환값은 이번 시작에서 복구할 문서다.
+ */
+export async function migrateLegacyGraphRevision(
+  store: GraphRevisionStore,
+  storage: Pick<Storage, "getItem" | "removeItem"> = localStorage,
+): Promise<GraphDocument | null> {
+  try {
+    const raw = storage.getItem(LEGACY_GRAPH_STORAGE_KEY);
+    if (raw === null) return null;
+    const parsed: unknown = JSON.parse(raw);
+    const result = validateGraphDocument(parsed);
+    if (!result.valid) return null;
+    await store.save(result.document);
+    storage.removeItem(LEGACY_GRAPH_STORAGE_KEY);
+    return result.document;
+  } catch {
+    return null;
+  }
 }
 
 class OpfsRevisionDirectory implements RevisionDirectory {

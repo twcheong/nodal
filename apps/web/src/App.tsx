@@ -13,7 +13,11 @@ import { isPngFile } from "./editor/pngDrop";
 import { validateGraphDocument } from "./graph/schema";
 import { loadFrontendExtensions, type ExtensionFailure } from "./extensions/loader";
 import { useEditorStore } from "./state/editorStore";
-import { createBrowserRevisionStore, DebouncedRevisionWriter } from "./state/revisionStore";
+import {
+  createBrowserRevisionStore,
+  DebouncedRevisionWriter,
+  migrateLegacyGraphRevision,
+} from "./state/revisionStore";
 
 export function App(): React.JSX.Element {
   const api = useMemo(() => createGraphApiClient(), []);
@@ -90,7 +94,8 @@ export function App(): React.JSX.Element {
     const recoveryBaseline = JSON.stringify(useEditorStore.getState().graph);
     void createBrowserRevisionStore()
       .then(async (store) => {
-        const recovered = await store.latest();
+        const migrated = await migrateLegacyGraphRevision(store);
+        const recovered = migrated ?? (await store.latest());
         if (!active) return;
         if (recovered && JSON.stringify(useEditorStore.getState().graph) === recoveryBaseline) {
           lastScheduledRevision.current = JSON.stringify(recovered);
