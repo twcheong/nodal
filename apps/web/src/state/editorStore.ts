@@ -15,6 +15,10 @@ import type {
   NodalFlowNode,
   SearchState,
 } from "../editor/types";
+import { GraphHistory } from "./graphHistory";
+
+const initialGraph = createStarterGraph();
+const graphHistory = new GraphHistory(initialGraph);
 
 interface EditorState {
   graph: GraphDocument;
@@ -33,6 +37,8 @@ interface EditorState {
   runSubmissionPending: boolean;
   message: string | null;
   benchmarkFps: number | null;
+  canUndo: boolean;
+  canRedo: boolean;
   setSchemas: (schemas: NodeSchema[]) => void;
   setCatalogError: (message: string) => void;
   addNode: (schema: NodeSchema, position: XYPosition) => string;
@@ -43,6 +49,9 @@ interface EditorState {
   setLiteralInput: (nodeId: string, socket: string, value: JsonValue) => void;
   setSeedControl: (nodeId: string, socket: string, control: SeedControl) => void;
   setViewport: (viewport: Viewport) => void;
+  finishGraphGesture: () => void;
+  undo: () => void;
+  redo: () => void;
   beginConnection: (intent: ConnectionIntent | null) => void;
   openSearch: (position: XYPosition) => void;
   closeSearch: () => void;
@@ -57,7 +66,7 @@ interface EditorState {
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
-  graph: createStarterGraph(),
+  graph: initialGraph,
   schemas: [],
   runtime: {},
   issues: [],
@@ -73,38 +82,42 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   runSubmissionPending: false,
   message: null,
   benchmarkFps: null,
+  canUndo: false,
+  canRedo: false,
 
   setSchemas: (schemas) => set({ schemas, catalogState: "ready" }),
   setCatalogError: (message) => set({ catalogState: "error", message }),
 
   addNode: (schema, position) => {
     const nodeId = crypto.randomUUID();
-    set((state) => ({
-      graph: {
+    set((state) => {
+      const graph: GraphDocument = {
         ...state.graph,
         nodes: { ...(state.graph.nodes ?? {}), [nodeId]: createGraphNode(schema) },
         outputs: schema.output_node
           ? [...new Set([...(state.graph.outputs ?? []), nodeId])]
           : state.graph.outputs,
         ui: { ...(state.graph.ui ?? {}), [nodeId]: { pos: [position.x, position.y] } },
-      },
-      selectedNodeIds: [nodeId],
-      message: `${schema.title} 노드를 추가했습니다`,
-    }));
+      };
+      return {
+        ...captureGraph(state.graph, graph),
+        selectedNodeIds: [nodeId],
+        message: `${schema.title} 노드를 추가했습니다`,
+      };
+    });
     return nodeId;
   },
 
   toggleOutput: (nodeId) =>
     set((state) => {
       const outputs = state.graph.outputs ?? [];
-      return {
-        graph: {
-          ...state.graph,
-          outputs: outputs.includes(nodeId)
-            ? outputs.filter((output) => output !== nodeId)
-            : [...outputs, nodeId],
-        },
+      const graph: GraphDocument = {
+        ...state.graph,
+        outputs: outputs.includes(nodeId)
+          ? outputs.filter((output) => output !== nodeId)
+          : [...outputs, nodeId],
       };
+      return captureGraph(state.graph, graph);
     }),
 
   applyNodeChanges: (changes) =>
@@ -131,7 +144,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           }
         }
       }
-      return { graph, nodeMeasurements, selectedNodeIds: [...selected] };
+      return {
+        ...captureGraph(
+          state.graph,
+          graph,
+          changes.some((change) => change.type === "position"),
+        ),
+        nodeMeasurements,
+        selectedNodeIds: [...selected],
+      };
     }),
 
   deleteEdges: (edges) =>
@@ -140,7 +161,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       for (const edge of edges) {
         if (edge.targetHandle) graph = withoutInput(graph, edge.target, edge.targetHandle);
       }
-      return { graph };
+      return captureGraph(state.graph, graph);
     }),
 
   connectNodes: (connection) => {
@@ -160,33 +181,56 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       });
       return false;
     }
-    set((current) => ({
-      graph: withInput(current.graph, target, targetHandle, makeLink(source, sourceHandle)),
-      issues: current.issues.filter(
-        (issue) => !(issue.node_id === target && issue.socket === targetHandle),
-      ),
-      message: `${sourceSocket.name} → ${targetSocket.name} 연결`,
-    }));
+    set((current) => {
+      const graph = withInput(current.graph, target, targetHandle, makeLink(source, sourceHandle));
+      return {
+        ...captureGraph(current.graph, graph),
+        issues: current.issues.filter(
+          (issue) => !(issue.node_id === target && issue.socket === targetHandle),
+        ),
+        message: `${sourceSocket.name} → ${targetSocket.name} 연결`,
+      };
+    });
     return true;
   },
 
   setLiteralInput: (nodeId, socket, value) =>
-    set((state) => ({ graph: withInput(state.graph, nodeId, socket, value) })),
+    set((state) => captureGraph(state.graph, withInput(state.graph, nodeId, socket, value))),
   setSeedControl: (nodeId, socket, control) =>
-    set((state) => ({ graph: withSeedControl(state.graph, nodeId, socket, control) })),
+    set((state) =>
+      captureGraph(state.graph, withSeedControl(state.graph, nodeId, socket, control)),
+    ),
 
   setViewport: (viewport) =>
     set((state) => ({
       graph: { ...state.graph, ui: { ...(state.graph.ui ?? {}), viewport } },
     })),
 
+  finishGraphGesture: () => graphHistory.stopCapturing(),
+  undo: () =>
+    set((state) => {
+      const graph = graphHistory.undo(state.graph);
+      return graph
+        ? restoreHistoricalGraph(state, graph, "편집을 되돌렸습니다")
+        : graphHistory.status;
+    }),
+  redo: () =>
+    set((state) => {
+      const graph = graphHistory.redo(state.graph);
+      return graph
+        ? restoreHistoricalGraph(state, graph, "편집을 다시 적용했습니다")
+        : graphHistory.status;
+    }),
+
   beginConnection: (connection) => set({ connection }),
   openSearch: (flowPosition) => set({ search: { open: true, flowPosition } }),
   closeSearch: () => set((state) => ({ search: { ...state.search, open: false } })),
 
-  loadGraph: (graph) =>
+  loadGraph: (graph) => {
+    const normalized = normalizeGraph(graph);
+    graphHistory.reset(normalized);
     set({
-      graph: normalizeGraph(graph),
+      graph: normalized,
       runtime: {},
       issues: [],
       selectedNodeIds: [],
@@ -197,7 +241,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       runStartedAtMs: null,
       runSubmissionPending: false,
       message: "캐논 그래프를 불러왔습니다",
-    }),
+      ...graphHistory.status,
+    });
+  },
 
   setIssues: (issues) => set({ issues }),
   beginRunSubmission: () => {
@@ -313,8 +359,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
               .filter(([, runtime]) => ["succeeded", "cached"].includes(runtime.status))
               .map(([nodeId]) => nodeId),
           );
+          const graph = advanceGraphSeeds(state.graph, state.schemas, undefined, completedNodeIds);
           return {
-            graph: advanceGraphSeeds(state.graph, state.schemas, undefined, completedNodeIds),
+            ...captureGraph(state.graph, graph),
             runStatus: "succeeded",
             message: `${event.elapsed_ms}ms에 실행을 마쳤습니다`,
           };
@@ -337,6 +384,31 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setMessage: (message) => set({ message }),
   setBenchmarkFps: (benchmarkFps) => set({ benchmarkFps }),
 }));
+
+function captureGraph(
+  previous: GraphDocument,
+  graph: GraphDocument,
+  continuous = false,
+): { graph: GraphDocument; canUndo: boolean; canRedo: boolean } {
+  graphHistory.capture(previous, graph, continuous);
+  return { graph, ...graphHistory.status };
+}
+
+function restoreHistoricalGraph(
+  state: EditorState,
+  graph: GraphDocument,
+  message: string,
+): Partial<EditorState> {
+  const nodeIds = new Set(Object.keys(graph.nodes ?? {}));
+  return {
+    graph,
+    issues: [],
+    selectedNodeIds: state.selectedNodeIds.filter((nodeId) => nodeIds.has(nodeId)),
+    connection: null,
+    message,
+    ...graphHistory.status,
+  };
+}
 
 function withNodePosition(
   graph: GraphDocument,
