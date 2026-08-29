@@ -137,6 +137,7 @@ def test_serve_logs_catalog_rejections_and_memory_asset_warning(
         "mcp_host": "127.0.0.1",
         "mcp_port": 8188,
         "mcp_allowed_origins": ["https://client.example"],
+        "web_root": None,
     }
     assert launched == {
         "app": "app",
@@ -144,6 +145,46 @@ def test_serve_logs_catalog_rejections_and_memory_asset_warning(
         "port": 8188,
         "log_level": "info",
     }
+
+
+def test_launch_uses_persistent_user_directories_and_web_build(
+    monkeypatch: Any,
+    capsys: Any,
+    tmp_path: Path,
+) -> None:
+    web = tmp_path / "web"
+    paths = {
+        "assets": tmp_path / "home" / "assets",
+        "models": tmp_path / "home" / "models",
+        "templates": tmp_path / "home" / "templates",
+        "extensions": tmp_path / "home" / "extensions",
+    }
+    args = cli._parser().parse_args(
+        [
+            "launch",
+            "--web",
+            str(web),
+            "--assets",
+            str(paths["assets"]),
+            "--models",
+            str(paths["models"]),
+            "--templates",
+            str(paths["templates"]),
+            "--extensions",
+            str(paths["extensions"]),
+            "--no-browser",
+        ]
+    )
+    served: dict[str, Any] = {}
+    monkeypatch.setattr(cli, "_serve", lambda received: served.update(vars(received)) or 0)
+
+    assert cli._launch(args) == 0
+
+    assert all(path.is_dir() for path in paths.values())
+    assert served["web"] == web
+    assert served["extensions"] == paths["extensions"]
+    output = capsys.readouterr().out
+    assert f"확장: {paths['extensions']}" in output
 
 
 def test_build_registry_reports_extension_failures_on_stderr(capsys: Any, tmp_path: Path) -> None:

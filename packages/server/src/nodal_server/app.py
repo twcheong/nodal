@@ -21,7 +21,7 @@ from pathlib import Path as FsPath
 from typing import Annotated
 
 from fastapi import FastAPI, File, HTTPException, Path, Query, UploadFile, WebSocket, status
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.websockets import WebSocketDisconnect
 
 from nodal import (
@@ -135,6 +135,7 @@ def create_app(
     mcp_host: str = "127.0.0.1",
     mcp_port: int = 8188,
     mcp_allowed_origins: Sequence[str] = (),
+    web_root: FsPath | str | None = None,
 ) -> FastAPI:
     """앱을 만든다. 테스트가 자기 인스턴스를 갖도록 팩토리로 둔다.
 
@@ -155,6 +156,8 @@ def create_app(
             호출자(`nodal serve`)가 로드하고 결과만 여기 건넨다. 없으면
             "확장 0개" 로 답한다 — M6 스텁과 같은 응답이지만 이번엔 정말 아무도
             로드하지 않았다는 뜻이다.
+        web_root: 빌드된 프론트엔드 디렉토리. 지정하면 같은 프로세스의 `/`와 정적
+            파일 경로에서 낸다. API·WS·MCP 라우트가 먼저 등록되므로 가리지 않는다.
     """
     node_registry = registry if registry is not None else NodeRegistry()
     hub = EventHub()
@@ -181,6 +184,9 @@ def create_app(
         port=mcp_port,
         allowed_origins=mcp_allowed_origins,
     )
+    web_dir = FsPath(web_root).resolve() if web_root is not None else None
+    if web_dir is not None and not (web_dir / "index.html").is_file():
+        raise ValueError(f"프론트 빌드에 index.html 이 없다: {web_dir}")
 
     @contextlib.asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -602,4 +608,22 @@ def create_app(
     # SDK 아래에 mount하면 알 수 없는 다른 경로까지 Origin 검사를 받으므로 §12.9의
     # “검증은 /mcp에만”을 어긴다. Starlette Route는 FastAPI OpenAPI 대상이 아니다.
     app.router.routes.extend(mcp_app.routes)
+
+    if web_dir is not None:
+
+        @app.get("/", include_in_schema=False)
+        async def web_index() -> FileResponse:
+            return FileResponse(web_dir / "index.html")
+
+        @app.get("/{file_path:path}", include_in_schema=False)
+        async def web_asset(file_path: str) -> FileResponse:
+            target = (web_dir / file_path).resolve()
+            if not target.is_relative_to(web_dir) or not target.is_file():
+                raise _http_error(
+                    status.HTTP_404_NOT_FOUND,
+                    "web_asset_not_found",
+                    f"프론트 빌드에 {file_path!r} 이 없다",
+                )
+            return FileResponse(target)
+
     return app

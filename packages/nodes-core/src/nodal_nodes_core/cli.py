@@ -32,6 +32,10 @@ import asyncio
 import importlib
 import json
 import sys
+import threading
+import time
+import urllib.request
+import webbrowser
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -416,6 +420,7 @@ def _serve(args: argparse.Namespace) -> int:
         mcp_host=args.host,
         mcp_port=args.port,
         mcp_allowed_origins=args.mcp_allow_origin,
+        web_root=getattr(args, "web", None),
     )
 
     # flush=True — uvicorn 은 stderr 로 로그를 내보내고, 파이프로 받으면 stdout 은
@@ -449,6 +454,39 @@ def _serve(args: argparse.Namespace) -> int:
     _print_models_line(models)
     uvicorn.run(app, host=args.host, port=args.port, log_level=args.log_level)
     return 0
+
+
+def _launch(args: argparse.Namespace) -> int:
+    """패키지 런처: 영속 디렉토리를 준비하고 한 서버에서 UI까지 띄운다."""
+    for path in (args.assets, args.models, args.templates, args.extensions):
+        path.mkdir(parents=True, exist_ok=True)
+
+    print("nodal 사용자 데이터:", flush=True)
+    print(f"  확장: {args.extensions}", flush=True)
+    print(f"  템플릿: {args.templates}", flush=True)
+    print(f"  에셋: {args.assets}", flush=True)
+    print(f"  모델: {args.models}", flush=True)
+
+    if not args.no_browser:
+        thread = threading.Thread(
+            target=_open_browser_when_ready,
+            args=(args.host, args.port),
+            daemon=True,
+        )
+        thread.start()
+    return _serve(args)
+
+
+def _open_browser_when_ready(host: str, port: int) -> None:
+    browser_host = "127.0.0.1" if host in ("0.0.0.0", "::") else host
+    url = f"http://{browser_host}:{port}/"
+    for _ in range(100):
+        try:
+            with urllib.request.urlopen(f"http://{browser_host}:{port}/api/nodes", timeout=0.2):
+                webbrowser.open(url)
+                return
+        except OSError:
+            time.sleep(0.1)
 
 
 def _nodes(args: argparse.Namespace) -> int:
@@ -593,6 +631,12 @@ def _parser() -> argparse.ArgumentParser:
         help="서드파티 확장 디렉토리. 기본: ~/.nodal/extensions (design.md §8)",
     )
     serve.add_argument(
+        "--web",
+        type=Path,
+        metavar="DIR",
+        help="빌드된 프론트 디렉토리. 지정하면 같은 서버의 / 에서 UI를 낸다",
+    )
+    serve.add_argument(
         "--mcp-allow-origin",
         action="append",
         default=[],
@@ -600,6 +644,20 @@ def _parser() -> argparse.ArgumentParser:
         help="/mcp에서 추가로 허용할 Origin. 여러 번 지정할 수 있다",
     )
     serve.set_defaults(handler=_serve)
+
+    user_root = Path.home() / ".nodal"
+    launch = sub.add_parser("launch", help="영속 사용자 디렉토리와 웹 UI를 함께 띄운다")
+    launch.add_argument("--host", default="127.0.0.1")
+    launch.add_argument("--port", type=int, default=8188)
+    launch.add_argument("--log-level", default="info")
+    launch.add_argument("--web", type=Path, required=True, metavar="DIR")
+    launch.add_argument("--assets", type=Path, default=user_root / "assets")
+    launch.add_argument("--models", type=Path, default=user_root / "models")
+    launch.add_argument("--templates", type=Path, default=user_root / "templates")
+    launch.add_argument("--extensions", type=Path, default=user_root / "extensions")
+    launch.add_argument("--mcp-allow-origin", action="append", default=[])
+    launch.add_argument("--no-browser", action="store_true")
+    launch.set_defaults(pack=[], handler=_launch)
 
     nodes = sub.add_parser("nodes", help="등록된 노드를 보여준다")
     nodes.add_argument("query", nargs="?", help="퍼지 검색어 (별칭·한글 포함)")
