@@ -210,3 +210,56 @@ describe("실행 이벤트 상태", () => {
     );
   });
 });
+
+describe("M7.4 캐논 그래프 undo/redo", () => {
+  const baseline: GraphDocument = {
+    nodal_version: "1",
+    id: "00000000-0000-4000-8000-000000000710",
+    nodes: {},
+    outputs: [],
+    ui: { viewport: { x: 0, y: 0, zoom: 1 } },
+  };
+
+  beforeEach(() => {
+    useEditorStore.getState().loadGraph(baseline);
+    useEditorStore.setState({ schemas: [...MOCK_NODE_SCHEMAS] });
+  });
+
+  it("노드 추가 → undo → redo가 그래프 문서를 정확히 되돌린다", () => {
+    const schema = MOCK_NODE_SCHEMAS.find((candidate) => candidate.id === "math.Const");
+    if (!schema) throw new Error("math.Const 목 스키마가 없다");
+    const before = structuredClone(useEditorStore.getState().graph);
+
+    useEditorStore.getState().addNode(schema, { x: 120, y: 80 });
+    const added = structuredClone(useEditorStore.getState().graph);
+    expect(added).not.toEqual(before);
+    expect(useEditorStore.getState().canUndo).toBe(true);
+
+    useEditorStore.getState().undo();
+    expect(useEditorStore.getState().graph).toEqual(before);
+    expect(useEditorStore.getState().canRedo).toBe(true);
+
+    useEditorStore.getState().redo();
+    expect(useEditorStore.getState().graph).toEqual(added);
+  });
+
+  it("실행 중 편집과 undo는 제출된 실행 상태를 바꾸지 않는다", () => {
+    const schema = MOCK_NODE_SCHEMAS.find((candidate) => candidate.id === "math.Const");
+    if (!schema) throw new Error("math.Const 목 스키마가 없다");
+    const submitted = structuredClone(useEditorStore.getState().graph);
+    useEditorStore.getState().startRun("running-edit");
+    useEditorStore.getState().handleEvent({
+      t: "run.started",
+      run_id: "running-edit",
+      node_count: 0,
+    });
+
+    useEditorStore.getState().addNode(schema, { x: 40, y: 40 });
+    expect(useEditorStore.getState().runStatus).toBe("running");
+    useEditorStore.getState().undo();
+
+    expect(useEditorStore.getState().graph).toEqual(submitted);
+    expect(useEditorStore.getState().runStatus).toBe("running");
+    expect(useEditorStore.getState().activeRunId).toBe("running-edit");
+  });
+});

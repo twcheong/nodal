@@ -70,6 +70,7 @@ export function normalizeGraph(document: GraphDocument): GraphDocument {
     }
   });
   return {
+    ...document,
     nodal_version: GRAPH_VERSION,
     id: document.id ?? crypto.randomUUID(),
     nodes,

@@ -24,6 +24,10 @@ export function Toolbar({
   onBenchmark,
 }: ToolbarProps): React.JSX.Element {
   const busy = submissionPending || runStatus === "queued" || runStatus === "running";
+  const canUndo = useEditorStore((state) => state.canUndo);
+  const canRedo = useEditorStore((state) => state.canRedo);
+  const undo = useEditorStore((state) => state.undo);
+  const redo = useEditorStore((state) => state.redo);
   return (
     <header className="toolbar">
       <div className="brand">
@@ -39,6 +43,12 @@ export function Toolbar({
         </button>
         <button type="button" onClick={onLoad}>
           불러오기
+        </button>
+        <button type="button" disabled={!canUndo} onClick={undo} title="Ctrl/⌘+Z">
+          실행 취소
+        </button>
+        <button type="button" disabled={!canRedo} onClick={redo} title="Ctrl/⌘+Shift+Z">
+          다시 실행
         </button>
         <button type="button" onClick={onBenchmark}>
           200 노드 측정

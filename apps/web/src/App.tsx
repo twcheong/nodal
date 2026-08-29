@@ -13,12 +13,20 @@ import { isPngFile } from "./editor/pngDrop";
 import { validateGraphDocument } from "./graph/schema";
 import { loadFrontendExtensions, type ExtensionFailure } from "./extensions/loader";
 import { useEditorStore } from "./state/editorStore";
+import {
+  createBrowserRevisionStore,
+  DebouncedRevisionWriter,
+  migrateLegacyGraphRevision,
+} from "./state/revisionStore";
 
 export function App(): React.JSX.Element {
   const api = useMemo(() => createGraphApiClient(), []);
   const fileInput = useRef<HTMLInputElement>(null);
   const canvas = useRef<CanvasHandle>(null);
+  const revisionWriter = useRef<DebouncedRevisionWriter | null>(null);
+  const lastScheduledRevision = useRef<string | null>(null);
   const [extensionFailures, setExtensionFailures] = useState<ExtensionFailure[]>([]);
+  const [revisionReady, setRevisionReady] = useState(false);
   const graph = useEditorStore((state) => state.graph);
   const runStatus = useEditorStore((state) => state.runStatus);
   const runSubmissionPending = useEditorStore((state) => state.runSubmissionPending);
@@ -33,6 +41,8 @@ export function App(): React.JSX.Element {
   const startRun = useEditorStore((state) => state.startRun);
   const handleEvent = useEditorStore((state) => state.handleEvent);
   const setMessage = useEditorStore((state) => state.setMessage);
+  const undo = useEditorStore((state) => state.undo);
+  const redo = useEditorStore((state) => state.redo);
 
   useEffect(() => {
     let active = true;
@@ -80,11 +90,40 @@ export function App(): React.JSX.Element {
   }, [api, handleEvent, setCatalogError, setSchemas]);
 
   useEffect(() => {
-    const timer = globalThis.setTimeout(() => {
-      localStorage.setItem("nodal.lastGraph", JSON.stringify(graph));
-    }, 300);
-    return () => globalThis.clearTimeout(timer);
-  }, [graph]);
+    let active = true;
+    const recoveryBaseline = JSON.stringify(useEditorStore.getState().graph);
+    void createBrowserRevisionStore()
+      .then(async (store) => {
+        const migrated = await migrateLegacyGraphRevision(store);
+        const recovered = migrated ?? (await store.latest());
+        if (!active) return;
+        if (recovered && JSON.stringify(useEditorStore.getState().graph) === recoveryBaseline) {
+          lastScheduledRevision.current = JSON.stringify(recovered);
+          loadGraph(recovered);
+          setMessage("마지막으로 완료된 자동 저장 리비전을 복구했습니다");
+        }
+        revisionWriter.current = new DebouncedRevisionWriter(store, undefined, (error) => {
+          if (active) setMessage(`자동 저장 실패: ${readError(error)}`);
+        });
+        setRevisionReady(true);
+      })
+      .catch((error: unknown) => {
+        if (active) setMessage(`자동 저장을 사용할 수 없습니다: ${readError(error)}`);
+      });
+    return () => {
+      active = false;
+      revisionWriter.current?.dispose();
+      revisionWriter.current = null;
+    };
+  }, [loadGraph, setMessage]);
+
+  useEffect(() => {
+    if (!revisionReady || !revisionWriter.current) return;
+    const serialized = JSON.stringify(graph);
+    if (serialized === lastScheduledRevision.current) return;
+    lastScheduledRevision.current = serialized;
+    revisionWriter.current.schedule(graph);
+  }, [graph, revisionReady]);
 
   const save = () => {
     const blob = new Blob([JSON.stringify(graph, null, 2)], { type: "application/json" });
@@ -159,13 +198,28 @@ export function App(): React.JSX.Element {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey) || event.key !== "Enter") return;
+      if (!(event.ctrlKey || event.metaKey)) return;
+      const key = event.key.toLowerCase();
+      if (key === "z") {
+        if (isEditableTarget(event.target)) return;
+        event.preventDefault();
+        if (event.shiftKey) redo();
+        else undo();
+        return;
+      }
+      if (key === "y" && !event.shiftKey) {
+        if (isEditableTarget(event.target)) return;
+        event.preventDefault();
+        redo();
+        return;
+      }
+      if (event.key !== "Enter") return;
       event.preventDefault();
       void run(!event.shiftKey);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [run]);
+  }, [redo, run, undo]);
 
   return (
     <AssetUrlContext.Provider value={assetUrl}>
@@ -218,4 +272,12 @@ export function App(): React.JSX.Element {
 
 function readError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
 }

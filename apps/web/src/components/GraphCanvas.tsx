@@ -44,6 +44,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, GraphCanvasProps>(function G
   const selectedNodeIds = useEditorStore((state) => state.selectedNodeIds);
   const nodeMeasurements = useEditorStore((state) => state.nodeMeasurements);
   const applyNodeChanges = useEditorStore((state) => state.applyNodeChanges);
+  const finishGraphGesture = useEditorStore((state) => state.finishGraphGesture);
   const deleteEdges = useEditorStore((state) => state.deleteEdges);
   const connectNodes = useEditorStore((state) => state.connectNodes);
   const beginConnection = useEditorStore((state) => state.beginConnection);
@@ -183,6 +184,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, GraphCanvasProps>(function G
         nodeTypes={nodeTypes}
         defaultViewport={graphViewport(graph)}
         onNodesChange={applyNodeChanges}
+        onNodeDragStop={() => finishGraphGesture()}
         onEdgesDelete={deleteEdges}
         onConnect={(candidate) => connectNodes(candidate)}
         onConnectStart={sourceIntent}
