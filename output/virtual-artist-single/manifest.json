@@ -1,0 +1,47 @@
+{
+  "project": "hwiwon-new-single-promo",
+  "created_at": "2026-09-01",
+  "format": {
+    "aspect_ratio": "4:5",
+    "width": 1122,
+    "height": 1402,
+    "color_space": "sRGB"
+  },
+  "recommended": "04-moonlit-petals.png",
+  "copy_status": "No title or release copy supplied; all images intentionally contain no text.",
+  "references": [
+    "C:/kohya_ss/dataset/10_hwiwon/hwiwon (1).png",
+    "C:/kohya_ss/dataset/10_hwiwon/hwiwon (7).png",
+    "C:/kohya_ss/dataset/10_hwiwon/hwiwon (15).png",
+    "C:/kohya_ss/dataset/10_hwiwon/hwiwon (25).png"
+  ],
+  "identity_lock": [
+    "short black center-parted layered hair",
+    "warm brown eyes",
+    "silver hoop earrings on both ears",
+    "black hoodie over a white crew-neck shirt",
+    "polished 3D anime-realism"
+  ],
+  "files": [
+    {
+      "name": "01-rain-window.png",
+      "direction": "Rainy window at blue hour; intimate urban longing",
+      "sha256": "e5a1d7356c5e2c86cb47c17bafff29c3523fbf0555ab1c200dc9501c263f5604"
+    },
+    {
+      "name": "02-dawn-shore.png",
+      "direction": "Dawn shoreline; restrained quiet goodbye",
+      "sha256": "63e5a8d7b210b2dbcd10b2b48983e5f450c92d4a515ac0c5c080f19ffcf2d7e4"
+    },
+    {
+      "name": "03-empty-stage.png",
+      "direction": "Empty stage after rehearsal; direct music-release cue",
+      "sha256": "6d503e074fb768e74fe7cbd5ae6c2fb9c995af6e53cc33f6b20a8584105a8470"
+    },
+    {
+      "name": "04-moonlit-petals.png",
+      "direction": "Moonlit flower field; lyrical held-back longing",
+      "sha256": "6d67765d522e5459e4cb357e6ea1ddf60c4a672458e33615cbaa3be77cdcff58"
+    }
+  ]
+}
