@@ -1,7 +1,13 @@
 import { memo, useContext, useMemo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 
-import { isImageAsset, previewSize, previewSrc, type InputSocket } from "../api/types";
+import {
+  isImageAsset,
+  isVideoAsset,
+  previewSize,
+  previewSrc,
+  type InputSocket,
+} from "../api/types";
 import { AssetUrlContext } from "../api/context";
 import { formatDuration } from "../editor/progress";
 import { readSeedControl } from "../editor/seed";
@@ -45,6 +51,10 @@ export const NodalNode = memo(function NodalNode({ data, selected }: NodeProps<N
   );
   const imageOutputs = useMemo(
     () => (runtime.outputs ?? []).filter((output) => isImageAsset(output.asset)),
+    [runtime.outputs],
+  );
+  const videoOutputs = useMemo(
+    () => (runtime.outputs ?? []).filter((output) => isVideoAsset(output.asset)),
     [runtime.outputs],
   );
 
@@ -163,6 +173,27 @@ export const NodalNode = memo(function NodalNode({ data, selected }: NodeProps<N
                 }}
                 alt={`${output.socket} 실행 결과`}
               />
+            </div>
+          ))}
+        </section>
+      ) : null}
+
+      {videoOutputs.length ? (
+        <section className="node-results nodrag nowheel" aria-label="실행 결과 영상">
+          <small>실행 결과 영상</small>
+          {videoOutputs.map((output) => (
+            <div className="node-result" key={output.socket}>
+              <video
+                controls
+                preload="metadata"
+                playsInline
+                src={assetUrl(output.asset!)}
+                aria-label={`${output.socket} 실행 결과 영상`}
+                style={{ width: "100%", display: "block" }}
+              />
+              <a href={assetUrl(output.asset!)} download={`${output.asset!.hash}.webm`}>
+                영상 저장
+              </a>
             </div>
           ))}
         </section>

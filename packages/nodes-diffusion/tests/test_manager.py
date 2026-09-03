@@ -58,6 +58,15 @@ def test_in_use_while_a_handle_is_alive(manager: ModelManager):
     assert handle is not None  # 핸들을 살려 둔다
 
 
+def test_release_unused_preserves_live_handles(manager: ModelManager):
+    handle = manager.load(TINY_SD)
+    manager.release_unused()
+    assert len(manager.loaded()) == 1
+    del handle
+    manager.release_unused()
+    assert manager.loaded() == ()
+
+
 def test_not_in_use_after_handles_are_dropped(manager: ModelManager):
     import gc
 

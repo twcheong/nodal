@@ -334,6 +334,13 @@ class ModelManager:
         """`compute` 디바이스의 여유 바이트. 물어볼 수 없는 백엔드면 `None`."""
         return free_memory(self.plan.compute)
 
+    def release_unused(self) -> None:
+        """대형 영상 실행 전, 살아 있는 그래프 핸들을 보존하며 유휴 모델만 해제한다."""
+        with self._lock:
+            for key in list(self._entries):
+                if not self._entries[key].in_use:
+                    self._unload(key)
+
     def unload_all(self) -> None:
         """전부 내린다. 서버 종료와 테스트가 쓴다."""
         with self._lock:

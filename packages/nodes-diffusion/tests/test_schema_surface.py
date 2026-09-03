@@ -49,6 +49,7 @@ def test_pack_registers_without_torch():
         "diffusion.LoadCheckpoint",
         "diffusion.LoraLoader",
         "diffusion.VAEDecode",
+        "diffusion.MiniMaxH3",
     }
     assert len(NODES) == len(ids)
 

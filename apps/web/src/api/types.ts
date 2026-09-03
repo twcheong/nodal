@@ -136,3 +136,7 @@ export function assetSrc(asset: AssetRef): string {
 export function isImageAsset(asset: AssetRef | null | undefined): asset is AssetRef {
   return asset?.media_type.startsWith("image/") ?? false;
 }
+
+export function isVideoAsset(asset: AssetRef | null | undefined): asset is AssetRef {
+  return asset?.media_type.startsWith("video/") ?? false;
+}

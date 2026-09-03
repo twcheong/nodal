@@ -80,6 +80,8 @@ dev = [
 ]
 # 기본 그룹이 **아니다** (`default-groups` 에 넣지 않았다). 켜야 들어온다.
 diffusion = ["nodal-nodes-diffusion[runtime]", "torch>=2.6", "accelerate>=1.0"]
+# H3 옵션은 CPU/CUDA torch 선택을 바꾸지 않는다. GPU 서버: --extra cuda --group h3
+h3 = ["diffusers>=0.40,<0.41", "transformers>=5.15,<6", "torchao>=0.18,<0.19", "av>=16,<17"]
 
 # ---------------------------------------------------------------- ruff
 

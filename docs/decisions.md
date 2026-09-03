@@ -2453,3 +2453,12 @@ core 는 여전히 `pydantic` 하나뿐이다.
 - **영향 범위**: `packages/*/LICENSE`, `packages/*/NOTICE` (신규 8개),
   `packages/*/pyproject.toml`, `.github/workflows/ci.yml`, `docs/license.md`
 - **되돌릴 수 있나**: 예 — 다만 되돌리면 배포물이 §4(a) 를 위반한다
+
+
+### 2026-09-03: MiniMax H3 영상 어댑터
+
+사용자 요청에 따라 diffusers ModularPipeline으로 t2va/fl2va를 연결한다. 영상은 기존
+AssetRef와 인라인 불투명 MiniMaxH3Video 소켓을 사용해 공용 타입·OpenAPI 계약을 바꾸지 않는다.
+H3는 수십 GB 모델이라 매 실행별로 소유하고 종료·취소 시 구성요소를 해제한다. 기존
+ModelManager에는 사용 중인 핸들을 보존하는 유휴 모델 정리만 추가한다. PyAV는 선택적이며
+VP9/Opus WebM을 사용한다. 원격 장비·모델 형식 확인 전 실측 완료로 표기하지 않는다.

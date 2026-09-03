@@ -66,7 +66,7 @@ jobs:
       # pyproject.toml 의 `[tool.uv.sources]` 에 따라 PyTorch CPU 인덱스로
       # 해석된다. `--extra cuda` 는 여기서 절대 쓰지 않는다 — 러너에 GPU 가
       # 없을 뿐 아니라 CUDA 휠 묶음이 수 GB 다.
-      - run: uv sync --frozen --group diffusion
+      - run: uv sync --frozen --group diffusion --group h3
 
       # 실수로 CUDA 가 해석되지 않았는지 결과물로 확인한다. 설정을 믿지 않고
       # 실제로 설치된 것을 본다 — 설정은 나중에 누가 바꿀 수 있다.
