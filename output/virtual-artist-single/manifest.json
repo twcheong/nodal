@@ -7,7 +7,7 @@
     "height": 960,
     "color_space": "sRGB"
   },
-  "recommended": "07-nodal-zimage-riverside-preserve.png",
+  "recommended": "09-nodal-zimage-sunset-selected.png",
   "recommended_backend": "nodal MCP / run_template_zimage_i2i",
   "copy_status": "No title or release copy supplied; all images intentionally contain no text.",
   "references": [
@@ -59,9 +59,23 @@
     {
       "name": "07-nodal-zimage-riverside-preserve.png",
       "direction": "Selected nodal Z-Image pass at strength 0.20; restrained riverside mood",
-      "status": "selected",
+      "status": "superseded by sunset refinement",
       "nodal_asset": "82944155f052e6e7726ebdffb78696d0",
       "sha256": "024ffa5f6be875ab345f80140ed54fd572988dc18245ab0a1afc885f723569ab"
+    },
+    {
+      "name": "08-nodal-zimage-sunset.png",
+      "direction": "First sunset-lighting pass at strength 0.22",
+      "status": "rejected: remained too close to blue hour",
+      "nodal_asset": "695cf714262fa356a0830e95ff299203",
+      "sha256": "b49114316c426b7dc584832d9a6e37b341a525fa919483980fbe7288c09fa481"
+    },
+    {
+      "name": "09-nodal-zimage-sunset-selected.png",
+      "direction": "Selected subdued sunset pass with peach horizon and mauve-grey clouds",
+      "status": "selected",
+      "nodal_asset": "0c9d1aa2f7fb13a1725ceab5098a74a4",
+      "sha256": "f5f4b9d4e960da5e864450b6c63e708e3bf3ecd715552d96a5e18354903ca74d"
     }
   ]
 }
