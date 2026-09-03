@@ -1,0 +1,25 @@
+{
+  "endpoint": "http://127.0.0.1:8188/mcp",
+  "tool": "run_template_zimage_i2i",
+  "source_asset": "8b8cf10985bd7f3bb62c55c40d02a140",
+  "template_catalog": {
+    "loaded_count": 5,
+    "rejected_count": 0
+  },
+  "model": {
+    "transformer": "z_image_bf16.safetensors",
+    "text_encoder": "qwen_3_4b.safetensors",
+    "vae": "ae.safetensors",
+    "config_repo": "Tongyi-MAI/Z-Image"
+  },
+  "selected_run": {
+    "run_id": "a0f55219e0b44257a9dca3e115f74067",
+    "asset_hash": "82944155f052e6e7726ebdffb78696d0",
+    "width": 768,
+    "height": 960,
+    "strength": 0.2,
+    "steps": 24,
+    "guidance_scale": 4.0,
+    "seed": 9032026
+  }
+}
