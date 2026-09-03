@@ -71,6 +71,23 @@ nodal 은 **Apache-2.0** 이다 (→ `docs/license.md`). GPL 코드가 한 줄�
 
 ## 사용 중인 서드파티 의존성
 
+### 2026-09-03 — MiniMax H3 Pruned 외부 모델 어댑터
+
+- 출처: [multimodalart/MiniMax-H3-Pruned](https://huggingface.co/multimodalart/MiniMax-H3-Pruned),
+  revision `1a0ef5e65b639e84af81d883817968532180e9c7`.
+- 검토: 모델 카드, `modular_model_index.json`, `transformer/config.json`,
+  `transformer/modeling_minimax_h3_pruned.py` 전체. 소스 헤더는 Apache-2.0,
+  Copyright 2025 The MiniMax Team and The HuggingFace Team이다.
+- 모델 카드가 Pruned 좌표의 체크포인트 유래와 stock torchao 기반 ConvRot 재구현을
+  명시한다. ComfyUI 또는 Wan2GP 저장소 코드는 가져오거나 참조하지 않았다.
+- 사용: 외부 모델 클래스를 diffusers ModularPipeline에 주입하고 공개 `quantize_8bit`
+  메서드를 호출한다. 모델/denoise 구현은 nodal에 추가하지 않는다. 외부 코드 복사 없음.
+- 모델 폴더의 소스 SHA-256
+  `fe56b6b6b43d18ef4c46d98f5aa5b5bcac99be5412bbfa25a6bbfed1348ada47`을 검사한다.
+  다른 리비전의 코드는 재검토 없이 실행하지 않는다. 소스와 가중치는 배포물에 포함하지
+  않으며 가중치에는 MiniMax H3 Community License Agreement가 별도로 적용된다.
+- 코드 검증: 작은 임의 모델의 CPU 저장·재로딩과 ConvRot INT8 연산. 실제 GPU 영상은 미검증.
+
 허용적 라이선스만 사용한다 — 전부 Apache-2.0 배포물에 포함 가능하다. 상세 목록은 `docs/license.md` 참조.
 
 계획된 것 (M3~M4 에서 실제로 추가된다):

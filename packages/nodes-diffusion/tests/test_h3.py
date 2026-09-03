@@ -273,3 +273,133 @@ def test_loader_pins_component_paths_and_cleans_up_on_load_failure(model, monkey
     assert calls["pretrained_model_name_or_path"] == str(model)
     assert calls["local_files_only"] is True
     assert calls["unloaded"]
+
+
+def test_pruned_source_is_rejected_before_execution(model):
+    from nodal_nodes_diffusion import h3_pruned
+
+    (model / "transformer" / "config.json").write_text(
+        '{"_class_name":"MiniMaxH3PrunedTransformer3DModel"}'
+    )
+    (model / "transformer" / h3_pruned.SOURCE_NAME).write_text(
+        "raise AssertionError('unreviewed code executed')"
+    )
+    with pytest.raises(ValueError, match="검토한 버전"):
+        h3.model_directory(str(model))
+    with pytest.raises(ValueError, match="검토한 버전"):
+        h3_pruned.model_class(model)
+
+
+def test_convrot_profile_rejects_full_checkpoint_before_loading(model):
+    result = h3.MiniMaxH3().run(**arguments(model, memory_profile=h3.CONVROT_PROFILE))
+    assert isinstance(result, Failure)
+    assert result.socket == "memory_profile"
+
+
+@pytest.mark.parametrize("pruned", [False, True])
+def test_weight_only_keeps_full_model_quantization_and_pruned_precision(model, monkeypatch, pruned):
+    diffusers = pytest.importorskip("diffusers")
+    pytest.importorskip("torchao.quantization")
+    from nodal_nodes_diffusion import devices
+
+    class Pipe:
+        blocks = SimpleNamespace(expected_components=[])
+
+        def unload_components(self, names):
+            pass
+
+    def loader(*args, **kwargs):
+        excluded = kwargs["quantization_config"].modules_to_not_convert
+        assert ("adaln_proj" in excluded) is pruned
+        assert kwargs["local_files_only"]
+        raise RuntimeError("checked quantization configuration")
+
+    monkeypatch.setattr(h3, "is_pruned", lambda root: pruned)
+    monkeypatch.setattr(h3, "model_class", lambda root: SimpleNamespace(from_pretrained=loader))
+    monkeypatch.setattr(diffusers.MiniMaxH3Transformer3DModel, "from_pretrained", loader)
+    monkeypatch.setattr(diffusers.ModularPipeline, "from_pretrained", lambda *a, **kw: Pipe())
+    monkeypatch.setattr(devices, "empty_cache", lambda device: None)
+    with (
+        pytest.raises(RuntimeError, match="checked quantization configuration"),
+        h3._pipeline(model, "t2va", "int8_offload", context()),
+    ):
+        pytest.fail("the test loader stops before allocating weights")
+
+
+@pytest.mark.parametrize("fail_quantization", [False, True])
+def test_pruned_convrot_uses_custom_model_and_always_unloads(model, monkeypatch, fail_quantization):
+    diffusers = pytest.importorskip("diffusers")
+    transformers = pytest.importorskip("transformers")
+    pytest.importorskip("torchao.quantization")
+    from nodal_nodes_diffusion import devices
+
+    calls = []
+
+    class Component:
+        def requires_grad_(self, enabled):
+            assert not enabled
+
+        def quantize_8bit(self, **kwargs):
+            assert kwargs == {"device": "cuda:0"}
+            calls.append("convrot")
+            if fail_quantization:
+                raise RuntimeError("quantization failed")
+
+        def enable_group_offload(self, **kwargs):
+            assert kwargs["use_stream"] is False
+
+        def to(self, device):
+            pass
+
+    class Pruned:
+        @staticmethod
+        def from_pretrained(path, **kwargs):
+            assert path == str(model / "transformer")
+            assert kwargs["local_files_only"] and kwargs["use_safetensors"]
+            calls.append("pruned")
+            return Component()
+
+    class Pipe:
+        blocks = SimpleNamespace(expected_components=[SimpleNamespace(name="transformer")])
+        vae = Component()
+        audio_vae = Component()
+
+        def update_components(self, **kwargs):
+            self.__dict__.update(kwargs)
+
+        def load_components(self, **kwargs):
+            assert kwargs["pretrained_model_name_or_path"] == str(model)
+            assert kwargs["local_files_only"]
+            assert "trust_remote_code" not in kwargs
+            calls.append("components")
+
+        def unload_components(self, names):
+            calls.append("unload")
+
+    def text_loader(*args, **kwargs):
+        calls.append("text")
+        result = Component()
+        result.model = Component()
+        return result
+
+    monkeypatch.setattr(h3, "is_pruned", lambda root: True)
+    monkeypatch.setattr(h3, "model_class", lambda root: Pruned)
+    monkeypatch.setattr(diffusers.ModularPipeline, "from_pretrained", lambda *a, **kw: Pipe())
+    monkeypatch.setattr(
+        transformers.Qwen3VLForConditionalGeneration, "from_pretrained", text_loader
+    )
+    monkeypatch.setattr(devices, "empty_cache", lambda device: calls.append("cache"))
+    import diffusers.hooks
+
+    monkeypatch.setattr(diffusers.hooks, "apply_group_offloading", lambda *a, **kw: None)
+    if fail_quantization:
+        with (
+            pytest.raises(RuntimeError, match="quantization failed"),
+            h3._pipeline(model, "t2va", h3.CONVROT_PROFILE, context()),
+        ):
+            pytest.fail("failed quantization must not yield")
+        assert calls == ["pruned", "convrot", "unload", "cache"]
+    else:
+        with h3._pipeline(model, "t2va", h3.CONVROT_PROFILE, context()):
+            assert calls == ["pruned", "convrot", "text", "components"]
+        assert calls[-2:] == ["unload", "cache"]

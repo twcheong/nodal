@@ -9,6 +9,7 @@ from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
 from .h3 import model_directory
+from .h3_pruned import CONVROT_PROFILE, REVISION, is_pruned
 from .video import require_video_runtime
 
 
@@ -23,6 +24,11 @@ def check(model_path: str) -> dict[str, Any]:
     try:
         root = model_directory(model_path)
         report["model_path"] = str(root)
+        pruned = is_pruned(root)
+        report["model_variant"] = "pruned" if pruned else "standard"
+        report["suggested_memory_profile"] = CONVROT_PROFILE if pruned else "int8_offload"
+        if pruned:
+            report["reviewed_code_revision"] = REVISION
         report["weight_files"] = len(list(root.rglob("*.safetensors")))
         if not report["weight_files"]:
             report["errors"].append("safetensors 가중치 파일이 없다.")
@@ -49,7 +55,12 @@ def check(model_path: str) -> dict[str, Any]:
     except (ImportError, RuntimeError, AttributeError) as exc:
         report["errors"].append(str(exc))
     report["checks_passed"] = not report["errors"]
-    report["note"] = "파일/의존성 점검만 수행했다. int8에도 약 75GB 호스트 RAM이 필요할 수 있다."
+    report["note"] = (
+        "파일/의존성 점검만 수행했다. Pruned도 로딩 중 BF16 가중치를 보관하므로 "
+        "충분한 호스트 RAM이 필요하다. RTX 5080 실측 전이다."
+        if report.get("model_variant") == "pruned"
+        else "파일/의존성 점검만 수행했다. 일반 H3 int8에도 약 75GB 호스트 RAM이 필요할 수 있다."
+    )
     return report
 
 

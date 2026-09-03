@@ -19,11 +19,12 @@ from typing import Any
 from nodal import Combo, Failure, Image, Int, NodeContext, NodeResult, Seed, Socket, Str, node
 from nodal.types import OpaqueType
 
+from .h3_pruned import CONVROT_PROFILE, is_pruned, model_class, reviewed_source
 from .video import encode_webm, require_video_runtime
 
 MODEL_ENV = "NODAL_H3_MODEL"
 H3Video = OpaqueType("MiniMaxH3Video")
-PROFILES = ("int8_offload", "bf16_offload")
+PROFILES = ("int8_offload", "bf16_offload", CONVROT_PROFILE)
 
 
 def model_directory(value: str) -> Path:
@@ -53,6 +54,8 @@ def model_directory(value: str) -> Path:
     missing = [name for name in required if not (root / name).is_dir()]
     if missing:
         raise ValueError(f"{root}: 필요한 H3 구성요소 폴더가 없다: {', '.join(missing)}")
+    if is_pruned(root):
+        reviewed_source(root)
     return root
 
 
@@ -83,39 +86,61 @@ def _pipeline(root: Path, workflow: str, profile: str, ctx: NodeContext) -> Iter
 
     from .devices import empty_cache
 
+    pruned = is_pruned(root)
+    if profile == CONVROT_PROFILE and not pruned:
+        raise ValueError("ConvRot 프로필에는 MiniMax-H3-Pruned 폴더가 필요하다.")
     pipe = None
     try:
         pipe = diffusers.ModularPipeline.from_pretrained(
             str(root), workflow=workflow, local_files_only=True
         )
-        if profile == "int8_offload":
+        if pruned and profile != "int8_offload":
+            transformer = model_class(root).from_pretrained(
+                str(root / "transformer"),
+                torch_dtype=torch.bfloat16,
+                local_files_only=True,
+                use_safetensors=True,
+                low_cpu_mem_usage=True,
+            )
+            pipe.update_components(transformer=transformer)
+            del transformer
+            ctx.raise_if_cancelled()
+            if profile == CONVROT_PROFILE:
+                pipe.transformer.requires_grad_(False)
+                pipe.transformer.quantize_8bit(device=str(ctx.models.plan.compute))
+                ctx.raise_if_cancelled()
+        if profile in ("int8_offload", CONVROT_PROFILE):
             from transformers import Qwen3VLForConditionalGeneration
             from transformers import TorchAoConfig as TextTorchAoConfig
 
             quant = importlib.import_module("torchao.quantization")
-            pipe.update_components(
-                transformer=diffusers.MiniMaxH3Transformer3DModel.from_pretrained(
-                    str(root),
-                    subfolder="transformer",
-                    torch_dtype=torch.bfloat16,
-                    local_files_only=True,
-                    low_cpu_mem_usage=False,
-                    quantization_config=diffusers.TorchAoConfig(
-                        quant.Int8WeightOnlyConfig(version=2),
-                        modules_to_not_convert=[
-                            "proj_in",
-                            "audio_proj_in",
-                            "context_embedder",
-                            "time_embedder",
-                            "time_proj",
-                            "token_refiner",
-                            "norm_out",
-                            "proj_out",
-                            "audio_proj_out",
-                        ],
-                    ),
+            if profile == "int8_offload":
+                pipe.update_components(
+                    transformer=(
+                        model_class(root) if pruned else diffusers.MiniMaxH3Transformer3DModel
+                    ).from_pretrained(
+                        str(root),
+                        subfolder="transformer",
+                        torch_dtype=torch.bfloat16,
+                        local_files_only=True,
+                        low_cpu_mem_usage=False,
+                        quantization_config=diffusers.TorchAoConfig(
+                            quant.Int8WeightOnlyConfig(version=2),
+                            modules_to_not_convert=[
+                                "proj_in",
+                                "audio_proj_in",
+                                "context_embedder",
+                                "time_embedder",
+                                "time_proj",
+                                "token_refiner",
+                                "norm_out",
+                                "proj_out",
+                                "audio_proj_out",
+                            ]
+                            + (["adaln_proj"] if pruned else []),
+                        ),
+                    )
                 )
-            )
             ctx.raise_if_cancelled()
             pipe.update_components(
                 text_encoder=Qwen3VLForConditionalGeneration.from_pretrained(
@@ -151,13 +176,13 @@ def _pipeline(root: Path, workflow: str, profile: str, ctx: NodeContext) -> Iter
         pipe.transformer.enable_group_offload(
             offload_type="block_level",
             num_blocks_per_group=1,
-            use_stream=True,
+            use_stream=not pruned,
             **offload,
         )
         hooks.apply_group_offloading(
             pipe.text_encoder.model,
             offload_type="leaf_level",
-            use_stream=True,
+            use_stream=not pruned,
             **offload,
         )
         # Keep the video decoder off the GPU between layers on 12-16 GB devices.
@@ -177,7 +202,7 @@ def _pipeline(root: Path, workflow: str, profile: str, ctx: NodeContext) -> Iter
     id="diffusion.MiniMaxH3",
     title="MiniMax H3 Video",
     category="diffusion/video",
-    aliases=["영상", "동영상", "비디오", "미니맥스", "H3"],
+    aliases=["영상", "동영상", "비디오", "미니맥스", "H3", "Pruned", "ConvRot"],
     output_node=True,
     cacheable=False,
 )
@@ -229,6 +254,11 @@ class MiniMaxH3:
             return Failure(ValueError("프롬프트를 입력하세요."), socket="prompt")
         if memory_profile not in PROFILES:
             return Failure(ValueError("지원하지 않는 메모리 프로필이다."), socket="memory_profile")
+        if memory_profile == CONVROT_PROFILE and not is_pruned(root):
+            return Failure(
+                ValueError("ConvRot 프로필에는 MiniMax-H3-Pruned 폴더가 필요하다."),
+                socket="memory_profile",
+            )
         if ctx.models.plan.compute.kind != "cuda":
             return Failure(
                 RuntimeError("H3는 NVIDIA GPU 서버에서 실행하세요. docs/minimax-h3.md 참고."),
@@ -250,7 +280,7 @@ class MiniMaxH3:
             import torch
             from diffusers import MiniMaxH3Transformer3DModel  # noqa: F401
 
-            if memory_profile == "int8_offload":
+            if memory_profile in ("int8_offload", CONVROT_PROFILE):
                 importlib.import_module("torchao.quantization")
         except (ImportError, RuntimeError) as exc:
             return Failure(
