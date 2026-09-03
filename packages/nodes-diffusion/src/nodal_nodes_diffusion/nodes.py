@@ -873,7 +873,7 @@ class Flux2KleinMultiReference:
             height=height,
             width=width,
             num_inference_steps=steps,
-            guidance_scale=1.0,
+            guidance_scale=1.0 if checkpoint.pipe.config.is_distilled else 4.0,
             generator=generator,
             output_type="np",
             callback_on_step_end=on_step,

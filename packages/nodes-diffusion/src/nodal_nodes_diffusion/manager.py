@@ -649,6 +649,11 @@ def _load_flux2_klein_pipeline(
     )
     from transformers import AutoConfig, AutoTokenizer, GenerationConfig, Qwen3ForCausalLM
 
+    pipeline_config = Flux2KleinPipeline.load_config(config_repo)
+    is_distilled = pipeline_config.get("is_distilled", False)
+    if not isinstance(is_distilled, bool):
+        raise ValueError("FLUX.2 config의 is_distilled는 boolean이어야 한다.")
+
     transformer_path = Path(transformer_target)
     if transformer_path.is_dir():
         transformer = Flux2Transformer2DModel.from_pretrained(  # type: ignore[no-untyped-call]
@@ -696,7 +701,7 @@ def _load_flux2_klein_pipeline(
         text_encoder=text_encoder,
         tokenizer=tokenizer,
         transformer=transformer,
-        is_distilled=True,
+        is_distilled=is_distilled,
     )
 
 

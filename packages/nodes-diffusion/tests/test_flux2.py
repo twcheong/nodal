@@ -16,8 +16,9 @@ np = pytest.importorskip("numpy")
 
 
 class _FakePipe:
-    def __init__(self) -> None:
+    def __init__(self, *, is_distilled: bool = True) -> None:
         self.kwargs: dict[str, Any] = {}
+        self.config = SimpleNamespace(is_distilled=is_distilled)
 
     def __call__(self, **kwargs: Any) -> Any:
         self.kwargs = kwargs
@@ -54,8 +55,11 @@ def _model(pipe: Any, architecture: str = "Flux2KleinPipeline") -> ModelHandle:
     return ModelHandle(checkpoint)
 
 
-def test_multi_reference_passes_four_distinct_images_to_diffusers() -> None:
-    pipe = _FakePipe()
+@pytest.mark.parametrize("is_distilled,steps,guidance", [(True, 4, 1.0), (False, 50, 4.0)])
+def test_multi_reference_passes_four_distinct_images_to_diffusers(
+    is_distilled: bool, steps: int, guidance: float
+) -> None:
+    pipe = _FakePipe(is_distilled=is_distilled)
     ctx = _Context()
     references = [
         np.full((1, 18 + index, 20 + index, 4), index / 4, np.float32) for index in range(1, 5)
@@ -70,7 +74,7 @@ def test_multi_reference_passes_four_distinct_images_to_diffusers() -> None:
         prompt="Use the face from image 1 and outfit from image 3",
         width=64,
         height=80,
-        steps=4,
+        steps=steps,
         seed=42,
         ctx=ctx,  # type: ignore[arg-type]
     )
@@ -85,9 +89,10 @@ def test_multi_reference_passes_four_distinct_images_to_diffusers() -> None:
         (23, 21),
         (24, 22),
     ]
-    assert pipe.kwargs["guidance_scale"] == 1.0
+    assert pipe.kwargs["guidance_scale"] == guidance
+    assert pipe.kwargs["num_inference_steps"] == steps
     assert pipe.kwargs["generator"].initial_seed() == 42
-    assert ctx.progress_events == [(1, 4), (2, 4)]
+    assert ctx.progress_events == [(1, steps), (2, steps)]
 
 
 def test_multi_reference_omits_unconnected_optional_images() -> None:
