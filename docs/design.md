@@ -1652,6 +1652,9 @@ ComfyUI 생태계에는 바깥에서 HTTP API 를 감싸는 MCP 브리지가 여
   나오지 않는다
 - **템플릿이 선언한 파라미터만 받는다.** 임의 노드 주입 경로가 아니다. 타입 검증은
   이미 있는 것을 쓴다 (§2 원칙 2) — 실패하면 어느 파라미터인지 지목한다
+- **모든 템플릿 툴은 실행 제어 인자 `use_cache: BOOL = true`를 추가로 받는다.**
+  이것은 그래프 파라미터가 아니라 큐 실행 옵션이며 호출 그래프를 만들기 전에
+  분리한다. 캐시 성능 대조와 재현성 검증을 MCP 경로만으로 할 수 있어야 한다
 - **결과는 에셋 참조로 돌려준다.** content-addressed (§4.5). 이미지 바이트를 툴
   응답에 그대로 싣는 것은 클라이언트 컨텍스트를 태운다
 
@@ -1885,8 +1888,8 @@ missing_param | nodes.call.inputs.source_path | 필수 파라미터가 비어 �
 **툴 이름은 확정이다** (2026-08-24):
 
 ```
-run_template_<id>(...)   → 즉시 { run_id, status } 반환. 템플릿마다 하나 (§12.2)
-get_run(run_id)          → 상태 · 진행률 · 결과(에셋 참조)
+run_template_<id>(..., use_cache=true) → 즉시 { run_id, status } 반환 (§12.2)
+get_run(run_id)          → 상태 · 진행률 · 실행 시간 · executed/cached · 결과(에셋 참조)
 cancel_run(run_id)       → 협조적 취소를 요청한다
 list_templates()         → 카탈로그 상태. 거부된 파일과 이유를 포함한다 (§12.8)
 ```

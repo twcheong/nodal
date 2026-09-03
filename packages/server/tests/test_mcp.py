@@ -168,13 +168,22 @@ async def test_dynamic_tools_and_run_lifecycle(
                 "run_template_demo",
             }
             assert "execute_graph" not in tools
-            assert tools[template.tool_name].input_schema == template.input_schema
+            tool_schema = tools[template.tool_name].input_schema
+            assert tool_schema["properties"]["use_cache"] == {
+                "type": "boolean",
+                "description": "실행 간 입력 시그니처 캐시를 사용한다. 기본값은 true.",
+                "default": True,
+            }
+            assert tool_schema["required"] == template.input_schema["required"]
+            assert "use_cache" not in template.input_schema["properties"]
             assert "running일 수" in tools["cancel_run"].description
             assert tools[template.tool_name].description == template.describe()
 
             catalog_result = await client.call_tool("list_templates", {})
             assert catalog_result.is_error is False
             assert [item["id"] for item in catalog_result.structured_content["loaded"]] == ["demo"]
+            catalog_schema = catalog_result.structured_content["loaded"][0]["input_schema"]
+            assert catalog_schema["properties"]["use_cache"]["default"] is True
             (rejected,) = catalog_result.structured_content["rejected"]
             assert rejected["path"].endswith("broken.nodal.json")
             assert "broken" in rejected["reason"]
@@ -189,11 +198,14 @@ async def test_dynamic_tools_and_run_lifecycle(
             assert issue["socket"] == "value"
             assert runs.pending_count == 0
 
-            created = await client.call_tool("run_template_demo", {"value": 7})
+            created = await client.call_tool("run_template_demo", {"value": 7, "use_cache": False})
             assert created.is_error is False
             assert created.structured_content["status"] == "queued"
             assert hub.subscriber_count == 0, "progress token이 없으면 구독하지 않는다"
             run_id = created.structured_content["run_id"]
+            record = runs.get(run_id)
+            assert record is not None
+            assert record.use_cache is False
 
             detail: dict[str, Any]
             for _ in range(200):
@@ -206,6 +218,10 @@ async def test_dynamic_tools_and_run_lifecycle(
                 raise AssertionError("MCP 실행이 끝나지 않았다")
 
             assert detail["status"] == "succeeded"
+            assert detail["use_cache"] is False
+            assert detail["elapsed_ms"] is not None
+            assert detail["executed"] == ["call:out"]
+            assert detail["cached"] == []
             assert detail["progress"]["completed_nodes"] == detail["progress"]["total_nodes"]
             assert detail["results"] == {
                 "result": {

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
 import logging
 import uuid
@@ -57,6 +58,11 @@ _RUN_ID_SCHEMA: dict[str, Any] = {
     "properties": {"run_id": {"type": "string"}},
     "required": ["run_id"],
     "additionalProperties": False,
+}
+_USE_CACHE_PROPERTY: dict[str, Any] = {
+    "type": "boolean",
+    "description": "실행 간 입력 시그니처 캐시를 사용한다. 기본값은 true.",
+    "default": True,
 }
 
 
@@ -160,7 +166,7 @@ class MCPService:
             Tool(
                 name=template.tool_name,
                 description=template.describe(),
-                input_schema=template.input_schema,
+                input_schema=_tool_input_schema(template),
             )
             for template in self.catalog.templates
         )
@@ -191,8 +197,12 @@ class MCPService:
         arguments: dict[str, Any],
         context: ServerRequestContext[dict[str, Any]],
     ) -> CallToolResult:
+        call_arguments = dict(arguments)
+        use_cache = call_arguments.pop("use_cache", True)
+        if not isinstance(use_cache, bool):
+            raise MCPError(INVALID_PARAMS, "use_cache는 boolean이어야 한다")
         try:
-            graph = build_call_graph(template, arguments)
+            graph = build_call_graph(template, call_arguments)
         except AssetReferenceParameterError as exc:
             return _error("invalid_asset_reference", str(exc))
 
@@ -213,6 +223,7 @@ class MCPService:
                 graph.outputs,
                 run_id=run_id,
                 template_id=template.id,
+                use_cache=use_cache,
             )
         except BaseException:
             if progress_task is not None:
@@ -237,6 +248,10 @@ class MCPService:
         payload: dict[str, Any] = {
             "run_id": record.run_id,
             "status": record.status.value,
+            "use_cache": record.use_cache,
+            "elapsed_ms": record.elapsed_ms,
+            "executed": list(record.result.executed) if record.result is not None else [],
+            "cached": list(record.result.cached) if record.result is not None else [],
             "progress": _progress(record),
             "results": results,
         }
@@ -257,7 +272,7 @@ class MCPService:
                     "id": template.id,
                     "tool_name": template.tool_name,
                     "description": template.describe(),
-                    "input_schema": template.input_schema,
+                    "input_schema": _tool_input_schema(template),
                     "returns": list(template.returns),
                 }
                 for template in self.catalog.templates
@@ -334,6 +349,14 @@ def _run_id(arguments: dict[str, Any]) -> str:
     if not isinstance(run_id, str) or not run_id:
         raise MCPError(INVALID_PARAMS, "run_id는 비어 있지 않은 문자열이어야 한다")
     return run_id
+
+
+def _tool_input_schema(template: Template) -> dict[str, Any]:
+    """템플릿 파라미터에 MCP 실행 제어 인자만 비파괴적으로 덧붙인다."""
+    schema = copy.deepcopy(template.input_schema)
+    properties = schema.setdefault("properties", {})
+    properties["use_cache"] = copy.deepcopy(_USE_CACHE_PROPERTY)
+    return schema
 
 
 def _progress(record: RunRecord) -> dict[str, Any]:
