@@ -7,8 +7,9 @@
 
 **상태:** 로컬 어댑터와 영상 저장·재생 경로를 구현했다. H3 가중치를 사용한 원격
 GPU 추론은 아직 검증하지 않았다. 레포에는 RTX 5080 약 16GB 사용 기록이 있지만
-SSH 주소, 실제 H3 폴더, 원격 RAM 용량은 없다. 그 정보를 확인한 뒤 아래 순서로
-첫 생성을 검증한다. GPU가 있는 컴퓨터에서 nodal 서버를 실행해야 한다.
+실제 H3 폴더와 원격 RAM 용량은 아직 확인하지 못했다. 사용자는 Parsec으로 원격
+컴퓨터에 접속해 테스트한다. 아래 명령과 브라우저 조작은 모두 **Parsec 화면 안의
+GPU 컴퓨터에서** 수행한다. SSH 주소나 SSH 터널은 필요하지 않다.
 
 ## 지원하는 모델 형식
 
@@ -24,10 +25,22 @@ diffusers 형식으로 준비하는 작업을 별도로 진행한다. 가중치�
 - [공식 모델과 파일 안내](https://huggingface.co/MiniMaxAI/MiniMax-H3)
 - [공식 diffusers H3 사용법](https://huggingface.co/docs/diffusers/main/en/api/pipelines/minimax_h3)
 
-## 원격 GPU 설치와 점검
+## Parsec으로 접속한 GPU 컴퓨터에서 설치와 점검
 
 원격 컴퓨터의 이 버전 nodal 폴더에서 실행한다. 기존 작업 중인 체크아웃을 덮어쓰지
-않고 별도 폴더를 사용한다. 아래 모델 경로는 실제 경로로 바꾼다.
+않고 별도 폴더를 사용한다. 아래 모델 경로는 **원격 컴퓨터에 있는** 실제 경로로 바꾼다.
+현재 컴퓨터에서 이 명령을 실행하면 원격 GPU를 사용하지 않는다.
+
+원격 OS가 Windows라면 PowerShell에서:
+
+```powershell
+uv sync --extra cuda --group h3
+$env:NODAL_DEVICE = "cuda"
+$env:NODAL_H3_MODEL = 'D:\models\MiniMax-H3'
+uv run --no-sync python -m nodal_nodes_diffusion.h3_check
+```
+
+원격 OS가 Linux라면 터미널에서:
 
 ```bash
 uv sync --extra cuda --group h3
@@ -46,20 +59,18 @@ uv run --no-sync python -m nodal_nodes_diffusion.h3_check
 실행 전에 모델 형식과 대안을 다시 판단해야 한다. `bf16_offload`는 양자화를 끄며
 더 많은 호스트 RAM이 필요하다. 첫 생성은 모델 로딩·양자화 때문에 오래 걸릴 수 있다.
 
-원격 서버는 루프백에 바인딩하고 SSH 터널로 접속한다. 인증 없는 서버를 인터넷에
-직접 공개하지 않는다.
+점검에 사용한 **같은 원격 터미널**에서 서버를 시작한다. 서버와 브라우저가 모두
+원격 컴퓨터에서 실행되므로 루프백 주소를 사용한다. 별도의 포트 공개나 터널 설정은
+필요하지 않다. 아래 `h3-results`는 원격 컴퓨터의 영상 저장 폴더다.
 
 ```bash
-# 원격 GPU 컴퓨터
+# Parsec으로 접속한 GPU 컴퓨터
 pnpm install --frozen-lockfile
 pnpm --filter @nodal/web build
-uv run --no-sync nodal serve --host 127.0.0.1 --port 8188 --assets ~/nodal-h3-assets --web apps/web/dist
-
-# 현재 컴퓨터의 별도 터미널: USER와 GPU_HOST를 실제 접속 정보로 교체
-ssh -N -L 8188:127.0.0.1:8188 USER@GPU_HOST
+uv run --no-sync nodal serve --host 127.0.0.1 --port 8188 --assets ./h3-results --web apps/web/dist
 ```
 
-웹 빌드/런처 설정은 [개발 안내](dev.md)를 따른다. 브라우저에서
+웹 빌드/런처 설정은 [개발 안내](dev.md)를 따른다. **Parsec 화면 안의 원격 브라우저**에서
 `http://127.0.0.1:8188`에 접속하고 `examples/h3-text-to-video.nodal.json`을 연다.
 `model_path`를 비워 두면 **서버의** `NODAL_H3_MODEL`을 쓴다.
 
