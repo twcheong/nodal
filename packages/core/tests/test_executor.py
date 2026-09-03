@@ -7,6 +7,7 @@ from typing import ClassVar
 
 import pytest
 
+import nodal.preview as preview_module
 from nodal import (
     INT,
     AssetPreview,
@@ -35,6 +36,13 @@ from nodal import (
     parse_graph,
     register_preview_encoder,
 )
+
+
+@pytest.fixture(autouse=True)
+def isolate_preview_encoders(monkeypatch):
+    """Clearing test encoders must not unregister already imported node packs."""
+    monkeypatch.setattr(preview_module, "_ENCODERS", list(preview_module._ENCODERS))
+
 
 EXECUTION_GRAPH = {
     "nodes": {

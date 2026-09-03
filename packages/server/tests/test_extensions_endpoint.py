@@ -11,6 +11,7 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from nodal import ExtensionRecord, ExtensionsResult, NodeRegistry, load_extensions
@@ -247,7 +248,12 @@ def test_web_asset_rejects_symlink_escape(tmp_path: Path) -> None:
 
     outside_secret = tmp_path / "outside-secret.txt"
     outside_secret.write_text("shh", encoding="utf-8")
-    (ext_dir / "web" / "escape.js").symlink_to(outside_secret)
+    try:
+        (ext_dir / "web" / "escape.js").symlink_to(outside_secret)
+    except OSError as exc:
+        if getattr(exc, "winerror", None) == 1314:
+            pytest.skip("Windows requires Developer Mode or symlink privileges for this test")
+        raise
 
     registry = NodeRegistry()
     ext_result = load_extensions(registry, ext_root)

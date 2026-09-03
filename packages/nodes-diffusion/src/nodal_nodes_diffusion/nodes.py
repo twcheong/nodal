@@ -513,6 +513,7 @@ class KSampler:
             return kwargs
 
         call_kwargs: dict[str, Any] = {
+            "num_images_per_prompt": _images_per_prompt(latents, pos, neg),
             "num_inference_steps": steps,
             "guidance_scale": cfg,
             "latents": latents,
@@ -579,6 +580,19 @@ class VAEDecode:
 
 
 # ---------------------------------------------------------------------- 헬퍼
+
+
+def _images_per_prompt(
+    latents: Any, positive: ConditioningHandle, negative: ConditioningHandle
+) -> int:
+    """Expand prompt embeddings to the requested latent batch in diffusers."""
+    batch = int(latents.shape[0])
+    prompts = int(positive.embeds.shape[0])
+    if prompts < 1 or batch < 1 or batch % prompts:
+        raise ValueError(f"잠재 배치({batch})는 프롬프트 배치({prompts})의 배수여야 한다.")
+    if negative.embeds.shape[0] != prompts:
+        raise ValueError("positive와 negative의 프롬프트 배치 크기가 다르다.")
+    return batch // prompts
 
 
 def _loader_for(ref: str) -> str:
