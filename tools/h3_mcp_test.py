@@ -31,7 +31,7 @@ async def run(args: argparse.Namespace) -> None:
         print(json.dumps({"tools": [item.name for item in tools.tools]}), flush=True)
         if args.list_only:
             return
-        tool = "run_template_h3_test_video"
+        tool = "run_template_h3_image_video" if args.source else "run_template_h3_test_video"
         if tool not in {item.name for item in tools.tools}:
             raise RuntimeError(f"Missing MCP tool: {tool}")
         args.output.mkdir(parents=True, exist_ok=True)
@@ -40,11 +40,13 @@ async def run(args: argparse.Namespace) -> None:
         else:
             arguments = {
                 "prompt": args.prompt,
-                "seed": 7,
-                "steps": 10,
-                "width": 512,
-                "height": 288,
+                "seed": args.seed,
+                "steps": args.steps,
+                "width": args.width,
+                "height": args.height,
             }
+            if args.source:
+                arguments["source"] = args.source
             created = payload(await session.call_tool(tool, arguments))
             run_id = created["run_id"]
             receipt = {"url": args.url, "tool": tool, "arguments": arguments, **created}
@@ -70,6 +72,13 @@ def main() -> None:
     parser.add_argument("--url", default="http://127.0.0.1:8190/mcp")
     parser.add_argument("--list-only", action="store_true")
     parser.add_argument("--run-id")
+    parser.add_argument(
+        "--source", help="First-frame image path or asset:<hash>; enables image-to-video"
+    )
+    parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument("--steps", type=int, default=10)
+    parser.add_argument("--width", type=int, default=512)
+    parser.add_argument("--height", type=int, default=288)
     parser.add_argument("--output", type=Path, default=Path("outputs/h3/mcp-test"))
     parser.add_argument(
         "--prompt",

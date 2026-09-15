@@ -6,9 +6,10 @@
 연결할 수 있다. 이미지 배치는 한 장만 받는다.
 
 **상태:** 2026-09-15 Windows PC의 RTX 5080 16GB, RAM 63.61GiB에서
-Pruned ConvRot INT8의 실제 MCP 텍스트→영상 생성을 확인했다.
-512×288, 124프레임, 10스텝, seed 7의 한 실행에 대한 검증이며,
-960×544 및 시작/끝 이미지 입력의 실제 생성은 아직 검증하지 않았다.
+Pruned ConvRot INT8의 실제 MCP 텍스트→영상 및 시작 이미지→영상 생성을 확인했다.
+텍스트 입력은 512×288/10스텝, 시작 이미지 입력은 384×576/16스텝으로 각각
+124프레임, seed 7의 한 실행을 검증했다. 960×544 및 끝 이미지 입력의 실제
+생성은 아직 검증하지 않았다.
 사용자의 기존 파일은 `C:\ComfyUI\models\diffusion_models\minimax_h3_fl2va_pruned_int8_convrot.safetensors`다.
 사용자는 Parsec으로 원격
 컴퓨터에 접속해 테스트한다. 아래 명령과 브라우저 조작은 모두 **Parsec 화면 안의
@@ -163,6 +164,17 @@ uv run --no-sync python tools/h3_mcp_test.py
 클라이언트 연결이 끊겨도 서버가 실행을 소유한다. 이미 받은 실행 ID가 있으면
 `--run-id ID`로 관찰을 재개하며 새 영상을 중복 생성하지 않는다.
 
+이미지를 움직이려면 `h3_image_video.nodal.json`도 같은 카탈로그에 복사하고
+서버를 재시작한다. 이 템플릿은 `Image` 파라미터를 사용하므로 기존 MCP의
+경로/`asset:` 입력 라우팅을 그대로 거친다. 예를 들어 전신 세로 이미지는:
+
+```powershell
+uv run --no-sync python tools/h3_mcp_test.py --source 'C:\images\character.png' --width 384 --height 576 --steps 16 --output outputs/h3/character-walk --prompt 'The same character walks forward naturally. The camera tracks backward, keeping the entire body visible. Preserve identity, clothing and rendering style.'
+```
+
+`--source`가 있으면 `run_template_h3_image_video`, 없으면 기존 텍스트 테스트
+도구를 호출한다. `--seed`, `--steps`, `--width`, `--height`로 조건을 지정할 수 있다.
+
 2026-09-15 실제 성공 실행은 `383399486b924ade8bfeeefafb29c4a8`이다.
 MCP 결과 에셋은 `70687f5f2f8b9ed17432ae2a6b266dc3` (179,044바이트)이며
 VP9 512×288/24fps/124프레임과 Opus 스테레오 48kHz를 다시 디코딩해 확인했다.
@@ -171,6 +183,17 @@ VP9 512×288/24fps/124프레임과 Opus 스테레오 48kHz를 다시 디코딩�
 첫 샘플링은 약 70초, 이후에는 회당 약 9초였으며 반복 실행 속도의 보장은 아니다.
 로컬 결과는 `outputs/h3/h3-cat-mcp-test.webm`, MCP 수신 기록은
 `outputs/h3/mcp-test-03/`에 남긴다. 모델과 생성 영상은 Git에 포함하지 않는다.
+
+같은 날 시작 이미지 입력 실행 `e40262bc985b48608251c8bb5857a792`도 성공했다.
+원(이전 이름 휘원)의 원본 전신 이미지 `hwiwon (16).png`를 `--source`로 넣고
+384×576, 124프레임, 16스텝, seed 7로 앞으로 걷는 동작을 요청했다.
+MCP 에셋은 `13101ddf5def447e52838d7216805b16` (350,858바이트)이며,
+재디코딩 결과 VP9 384×576/24fps/124프레임(약 5.17초), Opus 스테레오 48kHz다.
+첫·중간·마지막 프레임에서 팔을 내리고 발을 번갈아 내딛는 변화, 검은 후드·청바지와
+전신 구도 유지를 확인했다. 요청부터 저장까지 약 9분 38초, 샘플링 15회는 약 4분 9초였다.
+이는 이 설정 한 건의 관찰이며 모든 이미지의 정체성·보행 품질을 보장하지 않는다.
+영상은 `outputs/h3/won-walk/won-walking.webm`, MCP 요청·결과 및 프레임 검증은
+`outputs/h3/won-walk/`에 남긴다.
 
 프레임 수는 124~345 사이에서 `17n+5`, 너비·높이는 32의 배수다. H3의 고정 24fps와
 프레임 정렬에 맞춘다. `steps`는 끝점 0을 포함한 sigma 지점 수이므로 모델 계산은
