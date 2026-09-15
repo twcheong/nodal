@@ -141,3 +141,14 @@ M0 시점에 실제로 설치된 것:
   <https://arxiv.org/abs/1808.00449> 초록의 독립 프레임 처리 한계를 참고했다.
 - 사용 범위: `docs/video-character-consistency.md`의 출처 있는 조사와 실험 제안.
   외부 코드 복사·가중치 다운로드·의존성 추가는 없다. ComfyUI 코드는 열거나 가져오지 않았다.
+
+## 2026-09-15 · 사용자 승인 Ref2VA 비교 연결
+
+- 동일 Pruned revision `1a0ef5e65b639e84af81d883817968532180e9c7`의
+  `transformer_ref/`를 추가 다운로드했다. 해당 폴더의 모델 소스 SHA-256은
+  기존 검토 소스와 같은 `fe56b6b6b43d18ef4c46d98f5aa5b5bcac99be5412bbfa25a6bbfed1348ada47`이다.
+  별도 무검증 코드 실행을 허용하지 않는다. 모델 라이선스는 기존 H3 조건을 따른다.
+- 설치된 diffusers의 `MiniMaxH3ImageReference`, Ref2VA 전처리 및
+  `ModularPipeline.update_components` 공개 설정 경로를 읽어 어댑터를 연결했다.
+  모델 연산 코드를 복사하지 않았으며 새 의존성을 추가하지 않았다.
+- 준비 이미지는 사용자 원본과 nodal `image.Crop`만 사용한다. 외부 이미지 생성 없음.

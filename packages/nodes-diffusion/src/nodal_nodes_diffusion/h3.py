@@ -27,7 +27,7 @@ H3Video = OpaqueType("MiniMaxH3Video")
 PROFILES = ("int8_offload", "bf16_offload", CONVROT_PROFILE)
 
 
-def model_directory(value: str) -> Path:
+def model_directory(value: str, component: str = "transformer") -> Path:
     """Validate the local layout without importing torch or reading weight tensors."""
     value = value.strip() or os.environ.get(MODEL_ENV, "").strip()
     if not value:
@@ -43,7 +43,7 @@ def model_directory(value: str) -> Path:
     if not isinstance(config, dict) or config.get("_class_name") != "MiniMaxH3ModularPipeline":
         raise ValueError(f"{index}: MiniMax H3 ModularPipeline 설정이 아니다.")
     required = (
-        "transformer",
+        component,
         "text_encoder",
         "tokenizer",
         "vae",
@@ -54,8 +54,8 @@ def model_directory(value: str) -> Path:
     missing = [name for name in required if not (root / name).is_dir()]
     if missing:
         raise ValueError(f"{root}: 필요한 H3 구성요소 폴더가 없다: {', '.join(missing)}")
-    if is_pruned(root):
-        reviewed_source(root)
+    if is_pruned(root, component):
+        reviewed_source(root, component)
     return root
 
 
@@ -86,7 +86,8 @@ def _pipeline(root: Path, workflow: str, profile: str, ctx: NodeContext) -> Iter
 
     from .devices import empty_cache
 
-    pruned = is_pruned(root)
+    component = "transformer_ref" if workflow == "ref2va" else "transformer"
+    pruned = is_pruned(root, component)
     if profile == CONVROT_PROFILE and not pruned:
         raise ValueError("ConvRot 프로필에는 MiniMax-H3-Pruned 폴더가 필요하다.")
     pipe = None
@@ -95,19 +96,19 @@ def _pipeline(root: Path, workflow: str, profile: str, ctx: NodeContext) -> Iter
             str(root), workflow=workflow, local_files_only=True
         )
         if pruned and profile != "int8_offload":
-            transformer = model_class(root).from_pretrained(
-                str(root / "transformer"),
+            transformer = model_class(root, component).from_pretrained(
+                str(root / component),
                 torch_dtype=torch.bfloat16,
                 local_files_only=True,
                 use_safetensors=True,
                 low_cpu_mem_usage=True,
             )
-            pipe.update_components(transformer=transformer)
+            pipe.update_components(**{component: transformer})
             del transformer
             ctx.raise_if_cancelled()
             if profile == CONVROT_PROFILE:
-                pipe.transformer.requires_grad_(False)
-                pipe.transformer.quantize_8bit(device=str(ctx.models.plan.compute))
+                getattr(pipe, component).requires_grad_(False)
+                getattr(pipe, component).quantize_8bit(device=str(ctx.models.plan.compute))
                 ctx.raise_if_cancelled()
         if profile in ("int8_offload", CONVROT_PROFILE):
             from transformers import Qwen3VLForConditionalGeneration
@@ -116,30 +117,34 @@ def _pipeline(root: Path, workflow: str, profile: str, ctx: NodeContext) -> Iter
             quant = importlib.import_module("torchao.quantization")
             if profile == "int8_offload":
                 pipe.update_components(
-                    transformer=(
-                        model_class(root) if pruned else diffusers.MiniMaxH3Transformer3DModel
-                    ).from_pretrained(
-                        str(root),
-                        subfolder="transformer",
-                        torch_dtype=torch.bfloat16,
-                        local_files_only=True,
-                        low_cpu_mem_usage=False,
-                        quantization_config=diffusers.TorchAoConfig(
-                            quant.Int8WeightOnlyConfig(version=2),
-                            modules_to_not_convert=[
-                                "proj_in",
-                                "audio_proj_in",
-                                "context_embedder",
-                                "time_embedder",
-                                "time_proj",
-                                "token_refiner",
-                                "norm_out",
-                                "proj_out",
-                                "audio_proj_out",
-                            ]
-                            + (["adaln_proj"] if pruned else []),
-                        ),
-                    )
+                    **{
+                        component: (
+                            model_class(root, component)
+                            if pruned
+                            else diffusers.MiniMaxH3Transformer3DModel
+                        ).from_pretrained(
+                            str(root),
+                            subfolder=component,
+                            torch_dtype=torch.bfloat16,
+                            local_files_only=True,
+                            low_cpu_mem_usage=False,
+                            quantization_config=diffusers.TorchAoConfig(
+                                quant.Int8WeightOnlyConfig(version=2),
+                                modules_to_not_convert=[
+                                    "proj_in",
+                                    "audio_proj_in",
+                                    "context_embedder",
+                                    "time_embedder",
+                                    "time_proj",
+                                    "token_refiner",
+                                    "norm_out",
+                                    "proj_out",
+                                    "audio_proj_out",
+                                ]
+                                + (["adaln_proj"] if pruned else []),
+                            ),
+                        )
+                    }
                 )
             ctx.raise_if_cancelled()
             pipe.update_components(
@@ -171,9 +176,10 @@ def _pipeline(root: Path, workflow: str, profile: str, ctx: NodeContext) -> Iter
 
         onload = torch.device(str(ctx.models.plan.compute))
         offload = {"onload_device": onload, "offload_device": torch.device("cpu")}
-        pipe.transformer.requires_grad_(False)
+        transformer = getattr(pipe, component)
+        transformer.requires_grad_(False)
         pipe.text_encoder.requires_grad_(False)
-        pipe.transformer.enable_group_offload(
+        transformer.enable_group_offload(
             offload_type="block_level",
             num_blocks_per_group=1,
             use_stream=not pruned,
@@ -188,6 +194,7 @@ def _pipeline(root: Path, workflow: str, profile: str, ctx: NodeContext) -> Iter
         # Keep the video decoder off the GPU between layers on 12-16 GB devices.
         pipe.vae.enable_group_offload(offload_type="leaf_level", use_stream=False, **offload)
         pipe.audio_vae.to(onload)
+        del transformer
         ctx.raise_if_cancelled()
         yield pipe
     finally:
@@ -207,7 +214,7 @@ def _pipeline(root: Path, workflow: str, profile: str, ctx: NodeContext) -> Iter
     cacheable=False,
 )
 class MiniMaxH3:
-    """텍스트 또는 시작/끝 이미지에서 소리가 포함된 24fps WebM 영상을 생성·저장한다."""
+    """텍스트, 시작/끝 프레임 또는 참조 이미지에서 24fps 유성 WebM을 생성한다."""
 
     model_path: Str = Str("", doc="원격 서버의 H3 diffusers 폴더. 비워 두면 NODAL_H3_MODEL 사용.")
     prompt: Str = Str(
@@ -215,6 +222,16 @@ class MiniMaxH3:
     )
     first_frame: Socket = Socket(Image, None, doc="선택: 시작 이미지 한 장")
     last_frame: Socket = Socket(Image, None, doc="선택: 마지막 이미지 한 장")
+    reference_1: Socket = Socket(Image, None, doc="Ref2VA 참조 1. 시작/끝 이미지와 함께 사용 불가.")
+    reference_2: Socket = Socket(Image, None, doc="선택: Ref2VA 참조 2. 참조 1 다음 순서.")
+    reference_3: Socket = Socket(Image, None, doc="선택: Ref2VA 참조 3. 참조 2 다음 순서.")
+    reference_short_edge: Int = Int(
+        2048,
+        min=256,
+        max=2048,
+        step=32,
+        doc="Ref2VA 참조 인코딩 짧은 변. 공식 기본 2048; 작은 값은 메모리와 참조 세부정보 감소.",
+    )
     width: Int = Int(960, min=256, max=1920, step=32)
     height: Int = Int(544, min=256, max=1920, step=32)
     num_frames: Int = Int(124, min=124, max=345, step=17, doc="24fps. 124장 ≈ 5.17초; 17장 단위.")
@@ -236,9 +253,36 @@ class MiniMaxH3:
         seed: int,
         memory_profile: str,
         ctx: NodeContext,
+        reference_1: Any = None,
+        reference_2: Any = None,
+        reference_3: Any = None,
+        reference_short_edge: int = 2048,
     ) -> NodeResult | Failure:
+        references = []
+        gap = False
+        for socket, value in (
+            ("reference_1", reference_1),
+            ("reference_2", reference_2),
+            ("reference_3", reference_3),
+        ):
+            if value is None:
+                gap = True
+                continue
+            if gap:
+                return Failure(
+                    ValueError("참조는 reference_1부터 순서대로 연결하세요."), socket=socket
+                )
+            try:
+                references.append(_keyframe(value))
+            except ValueError as exc:
+                return Failure(exc, socket=socket)
+        if references and (first_frame is not None or last_frame is not None):
+            return Failure(
+                ValueError("Ref2VA 참조와 시작/끝 키프레임을 섞을 수 없다."), socket="reference_1"
+            )
+        component = "transformer_ref" if references else "transformer"
         try:
-            root = model_directory(model_path)
+            root = model_directory(model_path, component)
         except (ValueError, OSError) as exc:
             return Failure(exc, socket="model_path")
         for name, value in (("width", width), ("height", height)):
@@ -250,11 +294,16 @@ class MiniMaxH3:
             return Failure(ValueError("프레임 수는 124~345, 17n+5여야 한다."), socket="num_frames")
         if not 2 <= steps <= 100:
             return Failure(ValueError("steps는 2~100이어야 한다."), socket="steps")
+        if not 256 <= reference_short_edge <= 2048 or reference_short_edge % 32:
+            return Failure(
+                ValueError("참조 짧은 변은 256~2048 사이의 32 배수여야 한다."),
+                socket="reference_short_edge",
+            )
         if not prompt.strip():
             return Failure(ValueError("프롬프트를 입력하세요."), socket="prompt")
         if memory_profile not in PROFILES:
             return Failure(ValueError("지원하지 않는 메모리 프로필이다."), socket="memory_profile")
-        if memory_profile == CONVROT_PROFILE and not is_pruned(root):
+        if memory_profile == CONVROT_PROFILE and not is_pruned(root, component):
             return Failure(
                 ValueError("ConvRot 프로필에는 MiniMax-H3-Pruned 폴더가 필요하다."),
                 socket="memory_profile",
@@ -280,6 +329,13 @@ class MiniMaxH3:
             import torch
             from diffusers import MiniMaxH3Transformer3DModel  # noqa: F401
 
+            if references:
+                from diffusers.modular_pipelines.minimax_h3.references import (
+                    MiniMaxH3ImageReference,
+                )
+
+                images["references"] = [MiniMaxH3ImageReference(image=ref) for ref in references]
+
             if memory_profile in ("int8_offload", CONVROT_PROFILE):
                 importlib.import_module("torchao.quantization")
         except (ImportError, RuntimeError) as exc:
@@ -294,8 +350,10 @@ class MiniMaxH3:
         if isinstance(ctx.models, ModelManager):
             ctx.models.release_unused()
         ctx.progress(0, total)
-        workflow = "fl2va" if images else "t2va"
+        workflow = "ref2va" if references else ("fl2va" if images else "t2va")
         with _pipeline(root, workflow, memory_profile, ctx) as pipe:
+            if references:
+                pipe.update_components(reference_image_short_edge=reference_short_edge)
             ctx.progress(1, total)
             completed = 1
 
@@ -308,8 +366,9 @@ class MiniMaxH3:
                 ctx.progress(min(completed, steps), total)
                 ctx.raise_if_cancelled()
 
-            pre_hook = pipe.transformer.register_forward_pre_hook(before_forward)
-            post_hook = pipe.transformer.register_forward_hook(after_forward)
+            transformer = getattr(pipe, component)
+            pre_hook = transformer.register_forward_pre_hook(before_forward)
+            post_hook = transformer.register_forward_hook(after_forward)
             try:
                 # TorchAO Int8Tensor CPU/CUDA transfers need storage/view tracking.
                 # inference_mode breaks group offloading on torch 2.13 + torchao 0.18.
@@ -327,6 +386,7 @@ class MiniMaxH3:
             finally:
                 pre_hook.remove()
                 post_hook.remove()
+                del transformer
             ctx.raise_if_cancelled()
             frames = result["videos"][0]
             waveform = result["audio"][0].detach().float().cpu().numpy()

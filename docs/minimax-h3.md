@@ -5,6 +5,30 @@
 다운로드한다. 기존 `Load Image` 또는 `Load Asset Image`의 출력을 `first_frame`에
 연결할 수 있다. 이미지 배치는 한 장만 받는다.
 
+### Ref2VA 참조 입력 (2026-09-15 추가)
+
+`reference_1`부터 순서대로 최대 3장의 이미지를 연결하면 별도 `ref2va` 경로와
+`transformer_ref/` 가중치를 사용한다. 시작/끝 프레임과 혼용하거나 중간 참조
+번호를 비우면 모델 로딩 전에 오류를 반환한다. 영상·음성 참조는 이 어댑터의
+지원 범위가 아니다. 같은 모델 인덱스만으로 참조 가중치가 설치되지는 않는다.
+
+기존 Pruned 설치 폴더에 다음 구성요소를 추가한다 (약 40.24GB):
+
+```powershell
+uv run --no-sync hf download multimodalart/MiniMax-H3-Pruned --revision 1a0ef5e65b639e84af81d883817968532180e9c7 --local-dir $h3Dir --include 'transformer_ref/*'
+```
+
+`reference_short_edge`는 참조 인코딩 짧은 변이며 공식 기본값 2048을 유지한다.
+작게 설정하면 메모리와 계산량을 줄이지만 참조 세부정보도 달라진다. 출력 영상의
+`width`/`height`와 별도 설정이다. 노드는 256~2048의 32 배수를 받으며,
+diffusers 공개 `update_components(reference_image_short_edge=...)`에 전달한다.
+이는 새로운 얼굴 잠금 기능이나 품질 보장이 아니다.
+
+원 비교용 MCP 템플릿은 `h3_compare_anchor`(같은 원본을 시작/끝에 연결)와
+`h3_compare_reference`(전신 + nodal 얼굴 크롭)다. 참조 템플릿의 크롭 기본 좌표는
+원의 원본 `(16)`에 맞춘 값이므로 다른 이미지에는 수정해야 한다.
+실험 조건과 실행 상태는 [원 비교 기록](won-method-comparison.md)을 참고한다.
+
 생성 후 선명도와 출력 크기를 보강하려면 [AI 영상 업스케일](video-upscale.md)의
 `AI Upscale Video` 노드를 연결한다. 기존 저장 영상도 H3 재생성 없이 처리할 수 있다.
 다만 생성 단계에서 깨진 눈 모양을 복구하는 보장은 없으며 잘못된 경계를 강조할 수 있다.

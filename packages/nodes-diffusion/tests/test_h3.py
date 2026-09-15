@@ -44,6 +44,9 @@ def test_schema_and_optional_frames():
     assert schema.output_node and not schema.cacheable
     assert schema.inputs["first_frame"].default is None
     assert schema.inputs["last_frame"].default is None
+    for name in ("reference_1", "reference_2", "reference_3"):
+        assert schema.inputs[name].default is None
+    assert schema.inputs["reference_short_edge"].default == 2048
     assert schema.inputs["seed"].widget["seed"] is True
     assert schema.inputs["seed"].widget["control"] == "fixed"
     assert "video" in schema.outputs
@@ -89,6 +92,8 @@ def arguments(model, **updates):
         ("steps", 1),
         ("prompt", " "),
         ("memory_profile", "unknown"),
+        ("reference_short_edge", 767),
+        ("reference_short_edge", 2080),
     ],
 )
 def test_invalid_inputs_fail_before_loading(model, socket, value):
@@ -115,6 +120,10 @@ def fake_inference(monkeypatch):
     class Pipe:
         def __init__(self):
             self.transformer = torch.nn.Identity()
+            self.transformer_ref = self.transformer
+
+        def update_components(self, **kwargs):
+            calls["config"] = kwargs
 
         def __call__(self, **kwargs):
             calls["grad_enabled"] = torch.is_grad_enabled()
@@ -321,8 +330,12 @@ def test_weight_only_keeps_full_model_quantization_and_pruned_precision(model, m
         assert kwargs["local_files_only"]
         raise RuntimeError("checked quantization configuration")
 
-    monkeypatch.setattr(h3, "is_pruned", lambda root: pruned)
-    monkeypatch.setattr(h3, "model_class", lambda root: SimpleNamespace(from_pretrained=loader))
+    monkeypatch.setattr(h3, "is_pruned", lambda root, component="transformer": pruned)
+    monkeypatch.setattr(
+        h3,
+        "model_class",
+        lambda root, component="transformer": SimpleNamespace(from_pretrained=loader),
+    )
     monkeypatch.setattr(diffusers.MiniMaxH3Transformer3DModel, "from_pretrained", loader)
     monkeypatch.setattr(diffusers.ModularPipeline, "from_pretrained", lambda *a, **kw: Pipe())
     monkeypatch.setattr(devices, "empty_cache", lambda device: None)
@@ -334,7 +347,12 @@ def test_weight_only_keeps_full_model_quantization_and_pruned_precision(model, m
 
 
 @pytest.mark.parametrize("fail_quantization", [False, True])
-def test_pruned_convrot_uses_custom_model_and_always_unloads(model, monkeypatch, fail_quantization):
+@pytest.mark.parametrize(
+    "workflow,component", [("fl2va", "transformer"), ("ref2va", "transformer_ref")]
+)
+def test_pruned_convrot_uses_custom_model_and_always_unloads(
+    model, monkeypatch, fail_quantization, workflow, component
+):
     diffusers = pytest.importorskip("diffusers")
     transformers = pytest.importorskip("transformers")
     pytest.importorskip("torchao.quantization")
@@ -361,13 +379,13 @@ def test_pruned_convrot_uses_custom_model_and_always_unloads(model, monkeypatch,
     class Pruned:
         @staticmethod
         def from_pretrained(path, **kwargs):
-            assert path == str(model / "transformer")
+            assert path == str(model / component)
             assert kwargs["local_files_only"] and kwargs["use_safetensors"]
             calls.append("pruned")
             return Component()
 
     class Pipe:
-        blocks = SimpleNamespace(expected_components=[SimpleNamespace(name="transformer")])
+        blocks = SimpleNamespace(expected_components=[SimpleNamespace(name=component)])
         vae = Component()
         audio_vae = Component()
 
@@ -389,8 +407,8 @@ def test_pruned_convrot_uses_custom_model_and_always_unloads(model, monkeypatch,
         result.model = Component()
         return result
 
-    monkeypatch.setattr(h3, "is_pruned", lambda root: True)
-    monkeypatch.setattr(h3, "model_class", lambda root: Pruned)
+    monkeypatch.setattr(h3, "is_pruned", lambda root, component="transformer": True)
+    monkeypatch.setattr(h3, "model_class", lambda root, component="transformer": Pruned)
     monkeypatch.setattr(diffusers.ModularPipeline, "from_pretrained", lambda *a, **kw: Pipe())
     monkeypatch.setattr(
         transformers.Qwen3VLForConditionalGeneration, "from_pretrained", text_loader
@@ -402,11 +420,110 @@ def test_pruned_convrot_uses_custom_model_and_always_unloads(model, monkeypatch,
     if fail_quantization:
         with (
             pytest.raises(RuntimeError, match="quantization failed"),
-            h3._pipeline(model, "t2va", h3.CONVROT_PROFILE, context()),
+            h3._pipeline(model, workflow, h3.CONVROT_PROFILE, context()),
         ):
             pytest.fail("failed quantization must not yield")
         assert calls == ["pruned", "convrot", "unload", "cache"]
     else:
-        with h3._pipeline(model, "t2va", h3.CONVROT_PROFILE, context()):
+        with h3._pipeline(model, workflow, h3.CONVROT_PROFILE, context()):
             assert calls == ["pruned", "convrot", "text", "components"]
         assert calls[-2:] == ["unload", "cache"]
+
+
+def test_reference_workflow_uses_separate_weights_and_order(model, fake_inference):
+    np = pytest.importorskip("numpy")
+    (model / "transformer_ref").mkdir()
+    result = h3.MiniMaxH3().run(
+        **arguments(
+            model,
+            reference_1=np.zeros((1, 32, 64, 3)),
+            reference_2=np.ones((1, 48, 32, 3)),
+            reference_short_edge=768,
+        )
+    )
+    assert not isinstance(result, Failure)
+    assert fake_inference["workflow"] == "ref2va"
+    assert fake_inference["config"] == {"reference_image_short_edge": 768}
+    refs = fake_inference["inputs"]["references"]
+    assert [ref.image.size for ref in refs] == [(64, 32), (32, 48)]
+    assert "image" not in fake_inference["inputs"]
+    assert fake_inference["released"]
+
+
+def test_reference_inputs_fail_before_model_load(model):
+    np = pytest.importorskip("numpy")
+    image = np.zeros((1, 32, 32, 3))
+    for updates, socket in [
+        ({"reference_2": image}, "reference_2"),
+        ({"reference_1": image, "first_frame": image}, "reference_1"),
+        ({"reference_1": image, "last_frame": image}, "reference_1"),
+        ({"reference_1": image}, "model_path"),
+        ({"reference_1": np.zeros((2, 32, 32, 3))}, "reference_1"),
+    ]:
+        result = h3.MiniMaxH3().run(**arguments(model, **updates))
+        assert isinstance(result, Failure)
+        assert result.socket == socket
+
+
+def test_first_and_last_are_both_forwarded(model, fake_inference):
+    np = pytest.importorskip("numpy")
+    image = np.zeros((1, 32, 32, 3))
+    result = h3.MiniMaxH3().run(**arguments(model, first_frame=image, last_frame=image))
+    assert not isinstance(result, Failure)
+    assert fake_inference["workflow"] == "fl2va"
+    assert "image" in fake_inference["inputs"]
+    assert "last_image" in fake_inference["inputs"]
+
+
+def test_reference_source_hash_is_validated_separately(model):
+    from nodal_nodes_diffusion import h3_pruned
+
+    (model / "transformer_ref").mkdir()
+    (model / "transformer_ref/config.json").write_text(
+        '{"_class_name":"MiniMaxH3PrunedTransformer3DModel"}'
+    )
+    (model / "transformer_ref" / h3_pruned.SOURCE_NAME).write_text("unreviewed")
+    with pytest.raises(ValueError, match="검토한 버전"):
+        h3.model_directory(str(model), "transformer_ref")
+
+
+@pytest.mark.parametrize("mode", ["anchor", "reference"])
+async def test_comparison_template_executes_real_image_links(
+    model, fake_inference, monkeypatch, mode
+):
+    from pathlib import Path
+
+    from PIL import Image
+
+    import nodal_nodes_image
+    from nodal import LRUCache, NullEventSink, execute
+    from nodal_server.templates import build_call_graph, load_catalog
+
+    monkeypatch.setenv("NODAL_H3_MODEL", str(model))
+    (model / "transformer_ref").mkdir()
+    # Keep model checks but bypass the selected precision profile for this wiring test.
+    monkeypatch.setattr(h3, "is_pruned", lambda *args: True)
+    monkeypatch.setattr(h3, "reviewed_source", lambda *args: b"")
+    source = model / "original.png"
+    Image.new("RGB", (1020, 1532), (20, 40, 60)).save(source)
+    catalog = load_catalog(Path(__file__).resolve().parents[3] / "examples/templates")
+    template = catalog.get(f"h3_compare_{mode}")
+    assert template is not None
+    graph = build_call_graph(template, {"source": str(source), "prompt": "Small head turn."})
+    await execute(
+        graph,
+        graph.outputs,
+        registry=registry(nodal_nodes_image.registry()),
+        cache=LRUCache(8),
+        events=NullEventSink(),
+        cancel_token=CancelToken(),
+        assets=AssetStore(),
+        models=context().models,
+    )
+    inputs = fake_inference["inputs"]
+    if mode == "anchor":
+        assert inputs["image"].size == inputs["last_image"].size == (1020, 1532)
+        assert inputs["image"].tobytes() == inputs["last_image"].tobytes()
+    else:
+        assert [ref.image.size for ref in inputs["references"]] == [(1020, 1532), (360, 340)]
+        assert fake_inference["config"] == {"reference_image_short_edge": 768}

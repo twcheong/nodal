@@ -21,31 +21,31 @@ CLASS_NAME = "MiniMaxH3PrunedTransformer3DModel"
 CONVROT_PROFILE = "pruned_convrot_int8_offload"
 
 
-def is_pruned(root: Path) -> bool:
-    config = root / "transformer" / "config.json"
+def is_pruned(root: Path, component: str = "transformer") -> bool:
+    config = root / component / "config.json"
     if not config.is_file():
         return False
     value = json.loads(config.read_text(encoding="utf-8"))
     return isinstance(value, dict) and value.get("_class_name") == CLASS_NAME
 
 
-def reviewed_source(root: Path) -> bytes:
+def reviewed_source(root: Path, component: str = "transformer") -> bytes:
     """Read and validate before importing torch or executing any model code."""
-    source = (root / "transformer" / SOURCE_NAME).read_bytes()
+    source = (root / component / SOURCE_NAME).read_bytes()
     if hashlib.sha256(source).hexdigest() != SOURCE_SHA256:
         raise ValueError(
             f"H3 Pruned 로더가 검토한 버전과 다르다. {REPOSITORY}@{REVISION}의 "
-            f"transformer/{SOURCE_NAME}이 필요하다. docs/minimax-h3.md 참고."
+            f"{component}/{SOURCE_NAME}이 필요하다. docs/minimax-h3.md 참고."
         )
     return source
 
 
-def model_class(root: Path) -> Any:
-    source = reviewed_source(root)
+def model_class(root: Path, component: str = "transformer") -> Any:
+    source = reviewed_source(root, component)
     name = f"_nodal_h3_pruned_{SOURCE_SHA256}"
     if name not in sys.modules:
         module = ModuleType(name)
-        module.__file__ = str(root / "transformer" / SOURCE_NAME)
+        module.__file__ = str(root / component / SOURCE_NAME)
         sys.modules[name] = module
         try:
             exec(compile(source, module.__file__, "exec"), module.__dict__)
