@@ -16,7 +16,15 @@ from .video import require_video_runtime
 def check(model_path: str) -> dict[str, Any]:
     """Inspect local files and runtime, without loading or downloading weights."""
     report: dict[str, Any] = {"checks_passed": False, "inference_verified": False, "errors": []}
-    for package in ("torch", "diffusers", "transformers", "accelerate", "torchao", "av"):
+    for package in (
+        "torch",
+        "torchvision",
+        "diffusers",
+        "transformers",
+        "accelerate",
+        "torchao",
+        "av",
+    ):
         try:
             report[package] = version(package)
         except PackageNotFoundError:
@@ -52,7 +60,12 @@ def check(model_path: str) -> dict[str, Any]:
         psutil = importlib.import_module("psutil")
         report["ram_available_gib"] = round(psutil.virtual_memory().available / 2**30, 2)
         report["ram_total_gib"] = round(psutil.virtual_memory().total / 2**30, 2)
-    except (ImportError, RuntimeError, AttributeError) as exc:
+        if "model_path" in report:
+            importlib.import_module("transformers").Qwen3VLProcessor.from_pretrained(
+                report["model_path"], subfolder="processor", local_files_only=True
+            )
+            report["processor_loaded"] = True
+    except (ImportError, RuntimeError, AttributeError, OSError, ValueError) as exc:
         report["errors"].append(str(exc))
     report["checks_passed"] = not report["errors"]
     report["note"] = (

@@ -1,0 +1,49 @@
+{
+  "nodal_version": "1",
+  "id": "01994a00-0000-7000-8000-000000000001",
+  "definitions": {
+    "h3_test_video": {
+      "doc": "Generate a short audio-video test with the locally installed MiniMax H3 Pruned model. Requires the server's NODAL_H3_MODEL and CUDA.",
+      "params": {
+        "prompt": { "type": "STRING", "doc": "Describe the scene, movement, and sound." },
+        "seed": { "type": "INT", "default": 7 },
+        "steps": { "type": "INT", "default": 10, "widget": { "min": 2, "max": 100 } },
+        "width": {
+          "type": "INT",
+          "default": 512,
+          "widget": { "min": 256, "max": 1920, "step": 32 }
+        },
+        "height": {
+          "type": "INT",
+          "default": 288,
+          "widget": { "min": 256, "max": 1920, "step": 32 }
+        }
+      },
+      "nodes": {
+        "generate": {
+          "type": "diffusion.MiniMaxH3",
+          "inputs": {
+            "model_path": "",
+            "prompt": { "$param": "prompt" },
+            "seed": { "$param": "seed" },
+            "steps": { "$param": "steps" },
+            "width": { "$param": "width" },
+            "height": { "$param": "height" },
+            "num_frames": 124,
+            "memory_profile": "pruned_convrot_int8_offload"
+          }
+        }
+      },
+      "returns": { "video": { "$link": ["generate", "video"] } }
+    }
+  },
+  "nodes": {
+    "01994a00-0000-7000-8000-000000000003": {
+      "type": "subgraph.h3_test_video",
+      "inputs": {
+        "prompt": "A ginger cat sitting on a sunlit wooden windowsill slowly turns its head toward the camera and blinks. A gentle breeze moves the white curtain. Quiet birdsong outside. Realistic cinematic video, continuous single shot."
+      }
+    }
+  },
+  "outputs": ["01994a00-0000-7000-8000-000000000003"]
+}

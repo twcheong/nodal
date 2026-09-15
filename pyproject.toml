@@ -23,7 +23,7 @@ dependencies = [
 # 에 나와야 프론트가 시드 위젯을 만들 수 있고, 스키마 노출에는 torch 도 diffusers
 # 도 필요 없다. 설치법은 아래 [tool.uv.sources] 주석.
 [project.optional-dependencies]
-cuda = ["nodal-nodes-diffusion[runtime]", "torch>=2.6", "accelerate>=1.0"]
+cuda = ["nodal-nodes-diffusion[runtime]", "torch>=2.6", "torchvision>=0.24", "accelerate>=1.0"]
 
 [tool.uv]
 package = false
@@ -67,6 +67,10 @@ torch = [
     { index = "pytorch-cpu", group = "diffusion" },
     { index = "pytorch-cuda", extra = "cuda" },
 ]
+torchvision = [
+    { index = "pytorch-cpu", group = "diffusion" },
+    { index = "pytorch-cuda", extra = "cuda" },
+]
 
 [dependency-groups]
 dev = [
@@ -79,9 +83,9 @@ dev = [
     "pyyaml>=6.0",
 ]
 # 기본 그룹이 **아니다** (`default-groups` 에 넣지 않았다). 켜야 들어온다.
-diffusion = ["nodal-nodes-diffusion[runtime]", "torch>=2.6", "accelerate>=1.0"]
+diffusion = ["nodal-nodes-diffusion[runtime]", "torch>=2.6", "torchvision>=0.24", "accelerate>=1.0"]
 # H3 옵션은 CPU/CUDA torch 선택을 바꾸지 않는다. GPU 서버: --extra cuda --group h3
-h3 = ["diffusers>=0.40,<0.41", "transformers>=5.15,<6", "torchao>=0.18,<0.19", "av>=16,<17"]
+h3 = ["diffusers>=0.40,<0.41", "transformers>=5.15,<6", "torchao>=0.18,<0.19", "torchvision>=0.24", "av>=16,<17"]
 
 # ---------------------------------------------------------------- ruff
 

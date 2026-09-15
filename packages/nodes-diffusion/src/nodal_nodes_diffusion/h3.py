@@ -311,7 +311,9 @@ class MiniMaxH3:
             pre_hook = pipe.transformer.register_forward_pre_hook(before_forward)
             post_hook = pipe.transformer.register_forward_hook(after_forward)
             try:
-                with torch.inference_mode():
+                # TorchAO Int8Tensor CPU/CUDA transfers need storage/view tracking.
+                # inference_mode breaks group offloading on torch 2.13 + torchao 0.18.
+                with torch.no_grad():
                     result = pipe(
                         prompt=prompt,
                         width=width,

@@ -117,6 +117,8 @@ def fake_inference(monkeypatch):
             self.transformer = torch.nn.Identity()
 
         def __call__(self, **kwargs):
+            calls["grad_enabled"] = torch.is_grad_enabled()
+            calls["inference_mode"] = torch.is_inference_mode_enabled()
             calls["inputs"] = kwargs
             for _ in range(kwargs["num_inference_steps"] - 1):
                 self.transformer(torch.zeros(1))
@@ -159,6 +161,8 @@ def test_generation_routes_inputs_and_stores_asset(model, fake_inference, keyfra
     assert fake_inference["inputs"]["generator"].initial_seed() == 7
     assert fake_inference["audio_shape"] == (2, 32000)
     assert fake_inference["released"]
+    assert not fake_inference["grad_enabled"]
+    assert not fake_inference["inference_mode"]
     assert not fake_inference["pipe"].transformer._forward_hooks
 
 

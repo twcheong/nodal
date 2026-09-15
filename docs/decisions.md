@@ -2471,3 +2471,12 @@ VP9/Opus WebM을 사용한다. 원격 장비·모델 형식 확인 전 실측 �
 Pruned 경로의 스트림 프리페치는 호스트 메모리 부담을 줄이기 위해 끈다. Windows GPU 검증 전
 자동 컴파일은 적용하지 않는다. ComfyUI INT8 단일 파일 직접 로딩·동일 메모리 사용량을
 지원한다고 표기하지 않는다. 고정 리비전 모델 준비 명령과 독립 Pruned 예제를 제공한다.
+
+### 2026-09-15: H3 실제 MCP 실행의 전처리기·INT8 오프로딩 보완
+
+RTX 5080에서 실제 MCP 실행 중 Qwen3VLProcessor의 torchvision 누락을 확인했다.
+torchvision을 torch와 같은 CPU/CUDA 인덱스에서 해석하고, H3 준비 점검은 로컬
+processor까지 로드한다. torch 2.13 / torchao 0.18의 INT8 CPU→CUDA 이동은
+inference_mode에서 실패하고 no_grad에서 성공함을 작은 모델로 재현했다.
+H3 호출은 no_grad를 사용해 그룹 오프로딩에 필요한 텐서 추적을 유지한다.
+모델 구현·공용 그래프 계약은 바꾸지 않는다.

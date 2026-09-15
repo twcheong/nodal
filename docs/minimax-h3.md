@@ -5,9 +5,10 @@
 다운로드한다. 기존 `Load Image` 또는 `Load Asset Image`의 출력을 `first_frame`에
 연결할 수 있다. 이미지 배치는 한 장만 받는다.
 
-**상태:** 로컬 어댑터와 영상 저장·재생 경로를 구현했다. H3 가중치를 사용한
-GPU 추론은 아직 검증하지 않았다. 2026-09-15 이 체크아웃의 Windows PC에서
-RTX 5080 16GB, RAM 63.61GiB, CUDA 인식과 작은 텐서의 INT8 연산을 확인했다.
+**상태:** 2026-09-15 Windows PC의 RTX 5080 16GB, RAM 63.61GiB에서
+Pruned ConvRot INT8의 실제 MCP 텍스트→영상 생성을 확인했다.
+512×288, 124프레임, 10스텝, seed 7의 한 실행에 대한 검증이며,
+960×544 및 시작/끝 이미지 입력의 실제 생성은 아직 검증하지 않았다.
 사용자의 기존 파일은 `C:\ComfyUI\models\diffusion_models\minimax_h3_fl2va_pruned_int8_convrot.safetensors`다.
 사용자는 Parsec으로 원격
 컴퓨터에 접속해 테스트한다. 아래 명령과 브라우저 조작은 모두 **Parsec 화면 안의
@@ -64,8 +65,10 @@ Hub 경로 대신 그 로컬 폴더만 사용한다. `transformer_ref`는 이번
 선택하면 시작/끝 이미지 입력을 사용할 수 있다.
 
 **메모리와 속도:** 저장된 BF16 모델을 먼저 읽고 양자화하므로 ComfyUI의 미리 양자화된
-파일과 로딩 중 RAM 사용량이 같지 않다. 16GB GPU에서의 성공과 필요한 호스트 RAM은
-실측 전이다. Pruned 경로는 호스트 메모리 부담을 줄이기 위해 비동기 스트림 프리페치를
+파일과 로딩 중 RAM 사용량이 같지 않다. 위 512×288 시험은 16GB GPU에서 성공했지만
+64GB RAM에서도 로딩 중 Windows 페이지 파일을 사용했다. 충분한 디스크 여유가
+필요하며 최소 RAM 요구량을 확정한 검증은 아니다.
+Pruned 경로는 호스트 메모리 부담을 줄이기 위해 비동기 스트림 프리페치를
 끄며, Windows 첫 호환성 검증을 위해 `torch.compile`도 적용하지 않는다. 제작자의
 H100 속도 수치를 이 경로의 예상 속도로 쓰지 않는다. 컴파일 없는 동적 INT8은 느릴 수 있다.
 `bf16_offload`로 같은 Pruned 모델을 비교할 수 있으나 더 많은 메모리가 필요하다.
@@ -142,6 +145,32 @@ uv run --no-sync nodal serve --host 127.0.0.1 --port 8188 --assets ./h3-results 
 2. 영상과 소리가 모두 재생되는지, 파일 저장 후 다시 재생되는지 확인한다.
 3. `examples/h3-image-to-video.nodal.json`의 이미지 경로를 원격 파일로 바꾸고 실행한다.
 4. 샘플링 중 취소 후 새 실행이 가능한지 확인하고, 서버 로그와 사용 메모리를 기록한다.
+
+### MCP 테스트
+
+`examples/templates/h3_test_video.nodal.json`을 사용자 홈의
+`.nodal/templates/h3_test_video.nodal.json`으로 복사하고 H3 서버를 시작한다.
+이미 서버가 실행 중이면 사용 중인 실행이 끝난 뒤 재시작해야 카탈로그에 반영된다.
+
+```powershell
+uv run --no-sync python tools/h3_mcp_test.py --list-only
+uv run --no-sync python tools/h3_mcp_test.py
+```
+
+클라이언트는 `/mcp`에 연결해 `run_template_h3_test_video`를 호출한 뒤
+`get_run`으로 완료를 기다린다. 기본값은 창가의 고양이, 512×288, 124프레임,
+10스텝, seed 7이다. 요청과 MCP 결과는 `outputs/h3/mcp-test/`에 기록한다.
+클라이언트 연결이 끊겨도 서버가 실행을 소유한다. 이미 받은 실행 ID가 있으면
+`--run-id ID`로 관찰을 재개하며 새 영상을 중복 생성하지 않는다.
+
+2026-09-15 실제 성공 실행은 `383399486b924ade8bfeeefafb29c4a8`이다.
+MCP 결과 에셋은 `70687f5f2f8b9ed17432ae2a6b266dc3` (179,044바이트)이며
+VP9 512×288/24fps/124프레임과 Opus 스테레오 48kHz를 다시 디코딩해 확인했다.
+창가의 고양이가 고개를 돌리고 커튼이 움직이는 장면을 첫·중간·마지막 프레임으로
+확인했다. 요청부터 파일 저장까지 약 7분 26초, 그중 샘플링 9회는 약 2분 21초였다.
+첫 샘플링은 약 70초, 이후에는 회당 약 9초였으며 반복 실행 속도의 보장은 아니다.
+로컬 결과는 `outputs/h3/h3-cat-mcp-test.webm`, MCP 수신 기록은
+`outputs/h3/mcp-test-03/`에 남긴다. 모델과 생성 영상은 Git에 포함하지 않는다.
 
 프레임 수는 124~345 사이에서 `17n+5`, 너비·높이는 32의 배수다. H3의 고정 24fps와
 프레임 정렬에 맞춘다. `steps`는 끝점 0을 포함한 sigma 지점 수이므로 모델 계산은

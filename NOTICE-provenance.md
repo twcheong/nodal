@@ -71,6 +71,16 @@ nodal 은 **Apache-2.0** 이다 (→ `docs/license.md`). GPL 코드가 한 줄�
 
 ## 사용 중인 서드파티 의존성
 
+### 2026-09-15 — H3 INT8 장치 이동 진단
+
+- PyTorch 이슈 [#170419](https://github.com/pytorch/pytorch/issues/170419)의
+  inference mode와 텐서 서브클래스 관련 보고를 읽었다. 보고된 오류와 이 장비의
+  오류는 같지 않으므로, 설치된 torch 2.13 / torchao 0.18에서 작은 INT8 텐서의
+  CPU→CUDA 이동을 독립적으로 재현했다. 일반 컨텍스트에서는 성공하고
+  `inference_mode`에서는 storage 장치 불일치로 실패했다.
+- 설치된 diffusers·transformers·torchao의 스택 트레이스와 관련 구현을 진단용으로
+  확인했다. H3 호출 컨텍스트를 `no_grad`로 바꿨으며 외부 코드 복사는 없다.
+
 ### 2026-09-03 — MiniMax H3 Pruned 외부 모델 어댑터
 
 - 출처: [multimodalart/MiniMax-H3-Pruned](https://huggingface.co/multimodalart/MiniMax-H3-Pruned),
