@@ -50,6 +50,7 @@ def test_pack_registers_without_torch():
         "diffusion.LoraLoader",
         "diffusion.VAEDecode",
         "diffusion.MiniMaxH3",
+        "diffusion.UpscaleVideo",
     }
     assert len(NODES) == len(ids)
 

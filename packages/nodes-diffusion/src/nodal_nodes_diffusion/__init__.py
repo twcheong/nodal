@@ -63,8 +63,9 @@ from .nodes import (
     VAEDecode,
 )
 from .scanner import MODELS_ENV_VAR, models_root, register_providers, scan, set_models_root
+from .upscale import UpscaleVideo
 
-NODES = (*IMAGE_NODES, MiniMaxH3)
+NODES = (*IMAGE_NODES, MiniMaxH3, UpscaleVideo)
 
 __all__ = [
     "BACKENDS",
@@ -92,6 +93,7 @@ __all__ = [
     "MiniMaxH3",
     "ModelHandle",
     "ModelManager",
+    "UpscaleVideo",
     "VAEDecode",
     "VaeHandle",
     "detect_kind",

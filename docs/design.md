@@ -1260,6 +1260,10 @@ python = ["opencv-python>=4.9"]  # 예약 형식. 현재 자동 설치 구현은
 
 **`diffusers`를 쓴다. 직접 구현하지 않는다.**
 
+2026-09-15 사용자 승인으로 비확산 초해상도 업스케일만 Spandrel 기본 패키지에
+위임한다. Diffusion 모델 경로·공용 계약은 유지한다. 범위는 `decisions.md`의
+같은 날짜 기록을 따른다.
+
 이 절은 M4 계약이다. `ModelStore` · `DevicePlan` · `Seed` 는 `packages/core` 에
 있고 구현은 `packages/nodes-diffusion` 에 있다.
 

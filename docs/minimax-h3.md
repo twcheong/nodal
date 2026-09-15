@@ -5,6 +5,9 @@
 다운로드한다. 기존 `Load Image` 또는 `Load Asset Image`의 출력을 `first_frame`에
 연결할 수 있다. 이미지 배치는 한 장만 받는다.
 
+생성 후 선명도와 출력 크기를 보강하려면 [AI 영상 업스케일](video-upscale.md)의
+`AI Upscale Video` 노드를 연결한다. 기존 저장 영상도 H3 재생성 없이 처리할 수 있다.
+
 **상태:** 2026-09-15 Windows PC의 RTX 5080 16GB, RAM 63.61GiB에서
 Pruned ConvRot INT8의 실제 MCP 텍스트→영상 및 시작 이미지→영상 생성을 확인했다.
 텍스트 입력은 512×288/10스텝, 시작 이미지 입력은 384×576/16스텝으로 각각

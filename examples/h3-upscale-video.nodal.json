@@ -1,0 +1,21 @@
+{
+  "nodal_version": "1",
+  "id": "01994b10-0000-7000-8000-000000000002",
+  "nodes": {
+    "01994b10-0000-7000-8000-000000000003": {
+      "type": "diffusion.UpscaleVideo",
+      "inputs": {
+        "source": "outputs/h3/won-walk/won-walking.webm",
+        "model_path": "models/upscale/RealESRGAN_x4plus.pth",
+        "short_edge": "720",
+        "tile_size": 256
+      },
+      "meta": {
+        "title": "AI 영상 선명도 · 짧은 변 720",
+        "notes": "source를 기존 H3 WebM 파일로 바꾸세요. H3 노드의 video를 연결할 때에는 source를 비웁니다. 모델과 원본은 별도로 준비합니다."
+      }
+    }
+  },
+  "outputs": ["01994b10-0000-7000-8000-000000000003"],
+  "ui": { "01994b10-0000-7000-8000-000000000003": { "pos": [400, 100] } }
+}

@@ -71,6 +71,18 @@ nodal 은 **Apache-2.0** 이다 (→ `docs/license.md`). GPL 코드가 한 줄�
 
 ## 사용 중인 서드파티 의존성
 
+### 2026-09-15 — Spandrel / Real-ESRGAN 영상 초해상도
+
+- [Spandrel](https://github.com/chaiNNer-org/spandrel) 기본 패키지(MIT)의 공개
+  ModelLoader/ImageModelDescriptor API에 모델 로드와 추론을 위임한다.
+  README, 의존성 선언, 설치된 로더의 안전한 가중치 로드 경로를 확인한다.
+  `spandrel_extra_arches` 및 ComfyUI 소스는 사용하지 않는다.
+- [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN)의 공식 모델 목록과
+  BSD-3-Clause LICENSE를 확인했다. nodal에 모델 구조나 추론 코드를 복사하지 않는다.
+  공식 릴리스 가중치는 별도 로컬 파일로 설치하며 Git/배포물에 포함하지 않는다.
+- 프레임 처리·타일 경계·WebM 패킷 연결은 nodal의 독립 어댑터이며,
+  모델 구현은 외부 라이브러리가 소유한다. PyAV의 공개 remux API를 사용한다.
+
 ### 2026-09-15 — H3 INT8 장치 이동 진단
 
 - PyTorch 이슈 [#170419](https://github.com/pytorch/pytorch/issues/170419)의
