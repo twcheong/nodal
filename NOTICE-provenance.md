@@ -131,3 +131,13 @@ M0 시점에 실제로 설치된 것:
 | `ajv`, `ajv-formats` | MIT | 프론트의 캐논 스키마 검증 |
 
 **GPL/AGPL 의존성을 추가하지 않는다.** 추가가 불가피하다면 먼저 소유자에게 확인할 것.
+
+## 2026-09-15 · 영상 내 캐릭터 일관성 조사
+
+- MiniMaxAI 공식 모델 카드와 기본/참조 프롬프트 가이드,
+  diffusers 0.40 H3 문서 및 설치된 H3 입력 처리 코드를 읽어
+  시작·끝 프레임과 Ref2VA 지원 경계를 확인했다.
+- 연구: Lai et al., *Learning Blind Video Temporal Consistency*, ECCV 2018,
+  <https://arxiv.org/abs/1808.00449> 초록의 독립 프레임 처리 한계를 참고했다.
+- 사용 범위: `docs/video-character-consistency.md`의 출처 있는 조사와 실험 제안.
+  외부 코드 복사·가중치 다운로드·의존성 추가는 없다. ComfyUI 코드는 열거나 가져오지 않았다.
