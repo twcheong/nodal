@@ -5,10 +5,11 @@
 다운로드한다. 기존 `Load Image` 또는 `Load Asset Image`의 출력을 `first_frame`에
 연결할 수 있다. 이미지 배치는 한 장만 받는다.
 
-**상태:** 로컬 어댑터와 영상 저장·재생 경로를 구현했다. H3 가중치를 사용한 원격
-GPU 추론은 아직 검증하지 않았다. 레포에는 RTX 5080 약 16GB 사용 기록이 있지만
+**상태:** 로컬 어댑터와 영상 저장·재생 경로를 구현했다. H3 가중치를 사용한
+GPU 추론은 아직 검증하지 않았다. 2026-09-15 이 체크아웃의 Windows PC에서
+RTX 5080 16GB, RAM 63.61GiB, CUDA 인식과 작은 텐서의 INT8 연산을 확인했다.
 사용자의 기존 파일은 `C:\ComfyUI\models\diffusion_models\minimax_h3_fl2va_pruned_int8_convrot.safetensors`다.
-원격 RAM 용량은 아직 확인하지 못했다. 사용자는 Parsec으로 원격
+사용자는 Parsec으로 원격
 컴퓨터에 접속해 테스트한다. 아래 명령과 브라우저 조작은 모두 **Parsec 화면 안의
 GPU 컴퓨터에서** 수행한다. SSH 주소나 SSH 터널은 필요하지 않다.
 
@@ -120,6 +121,23 @@ uv run --no-sync nodal serve --host 127.0.0.1 --port 8188 --assets ./h3-results 
 
 ## 첫 실행과 검증
 
+### Windows 전용 시작 명령
+
+설치·다운로드·웹 빌드를 끝낸 뒤 PowerShell에서 실행한다:
+
+```powershell
+.\tools\start-h3.ps1
+```
+
+기본 모델 폴더는 이 체크아웃의 `models/MiniMax-H3-Pruned`, 접속 주소는
+`http://127.0.0.1:8190`, 생성 결과는 `outputs/h3/assets`다. 다른 모델 폴더를
+준비했다면 `-ModelPath 'C:\nodal-models\MiniMax-H3-Pruned'`를 붙인다.
+`-CheckOnly`는 점검만 수행한다. 이 명령은 H3 의존성을 유지하도록
+`uv run --no-sync`를 사용한다. 기본 런처로 의존성을 다시 동기화한 경우에는
+먼저 `uv sync --locked --extra cuda --group h3`를 실행한다.
+
+### 생성 확인
+
 1. 텍스트 예제의 기본값 960×544, 124프레임(약 5.17초), 고정 seed로 한 번 실행한다.
 2. 영상과 소리가 모두 재생되는지, 파일 저장 후 다시 재생되는지 확인한다.
 3. `examples/h3-image-to-video.nodal.json`의 이미지 경로를 원격 파일로 바꾸고 실행한다.
@@ -151,7 +169,6 @@ uv run --no-sync pytest packages/nodes-diffusion/tests/test_h3.py
 ```
 
 PyAV는 선택적 의존성이다. 인코더는 VP9/Opus를 사용하며 libx264를 호출하지 않는다.
-
 
 2026-09-03 브라우저 검사에서는 별도 검증 서버의 합성 영상으로 H3 노드 실행 → 영상
 에셋 → 플레이어 표시 → 끝까지 재생을 확인했다(브라우저 디코딩 오류 없음). 이 검증용

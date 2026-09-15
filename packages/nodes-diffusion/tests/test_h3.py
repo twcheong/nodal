@@ -305,6 +305,9 @@ def test_weight_only_keeps_full_model_quantization_and_pruned_precision(model, m
     class Pipe:
         blocks = SimpleNamespace(expected_components=[])
 
+        def update_components(self, **components):
+            pytest.fail("the test loader must stop before component registration")
+
         def unload_components(self, names):
             pass
 
