@@ -71,6 +71,45 @@ nodal 은 **Apache-2.0** 이다 (→ `docs/license.md`). GPL 코드가 한 줄�
 
 ## 사용 중인 서드파티 의존성
 
+### 2026-09-15 — Spandrel / Real-ESRGAN 영상 초해상도
+
+- [Spandrel](https://github.com/chaiNNer-org/spandrel) 기본 패키지(MIT)의 공개
+  ModelLoader/ImageModelDescriptor API에 모델 로드와 추론을 위임한다.
+  README, 의존성 선언, 설치된 로더의 안전한 가중치 로드 경로를 확인한다.
+  `spandrel_extra_arches` 및 ComfyUI 소스는 사용하지 않는다.
+- [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN)의 공식 모델 목록과
+  BSD-3-Clause LICENSE를 확인했다. nodal에 모델 구조나 추론 코드를 복사하지 않는다.
+  공식 릴리스 가중치는 별도 로컬 파일로 설치하며 Git/배포물에 포함하지 않는다.
+- 프레임 처리·타일 경계·WebM 패킷 연결은 nodal의 독립 어댑터이며,
+  모델 구현은 외부 라이브러리가 소유한다. PyAV의 공개 remux API를 사용한다.
+
+### 2026-09-15 — H3 INT8 장치 이동 진단
+
+- PyTorch 이슈 [#170419](https://github.com/pytorch/pytorch/issues/170419)의
+  inference mode와 텐서 서브클래스 관련 보고를 읽었다. 보고된 오류와 이 장비의
+  오류는 같지 않으므로, 설치된 torch 2.13 / torchao 0.18에서 작은 INT8 텐서의
+  CPU→CUDA 이동을 독립적으로 재현했다. 일반 컨텍스트에서는 성공하고
+  `inference_mode`에서는 storage 장치 불일치로 실패했다.
+- 설치된 diffusers·transformers·torchao의 스택 트레이스와 관련 구현을 진단용으로
+  확인했다. H3 호출 컨텍스트를 `no_grad`로 바꿨으며 외부 코드 복사는 없다.
+
+### 2026-09-03 — MiniMax H3 Pruned 외부 모델 어댑터
+
+- 출처: [multimodalart/MiniMax-H3-Pruned](https://huggingface.co/multimodalart/MiniMax-H3-Pruned),
+  revision `1a0ef5e65b639e84af81d883817968532180e9c7`.
+- 검토: 모델 카드, `modular_model_index.json`, `transformer/config.json`,
+  `transformer/modeling_minimax_h3_pruned.py` 전체. 소스 헤더는 Apache-2.0,
+  Copyright 2025 The MiniMax Team and The HuggingFace Team이다.
+- 모델 카드가 Pruned 좌표의 체크포인트 유래와 stock torchao 기반 ConvRot 재구현을
+  명시한다. ComfyUI 또는 Wan2GP 저장소 코드는 가져오거나 참조하지 않았다.
+- 사용: 외부 모델 클래스를 diffusers ModularPipeline에 주입하고 공개 `quantize_8bit`
+  메서드를 호출한다. 모델/denoise 구현은 nodal에 추가하지 않는다. 외부 코드 복사 없음.
+- 모델 폴더의 소스 SHA-256
+  `fe56b6b6b43d18ef4c46d98f5aa5b5bcac99be5412bbfa25a6bbfed1348ada47`을 검사한다.
+  다른 리비전의 코드는 재검토 없이 실행하지 않는다. 소스와 가중치는 배포물에 포함하지
+  않으며 가중치에는 MiniMax H3 Community License Agreement가 별도로 적용된다.
+- 코드 검증: 작은 임의 모델의 CPU 저장·재로딩과 ConvRot INT8 연산. 실제 GPU 영상은 미검증.
+
 허용적 라이선스만 사용한다 — 전부 Apache-2.0 배포물에 포함 가능하다. 상세 목록은 `docs/license.md` 참조.
 
 계획된 것 (M3~M4 에서 실제로 추가된다):
@@ -92,3 +131,24 @@ M0 시점에 실제로 설치된 것:
 | `ajv`, `ajv-formats` | MIT | 프론트의 캐논 스키마 검증 |
 
 **GPL/AGPL 의존성을 추가하지 않는다.** 추가가 불가피하다면 먼저 소유자에게 확인할 것.
+
+## 2026-09-15 · 영상 내 캐릭터 일관성 조사
+
+- MiniMaxAI 공식 모델 카드와 기본/참조 프롬프트 가이드,
+  diffusers 0.40 H3 문서 및 설치된 H3 입력 처리 코드를 읽어
+  시작·끝 프레임과 Ref2VA 지원 경계를 확인했다.
+- 연구: Lai et al., *Learning Blind Video Temporal Consistency*, ECCV 2018,
+  <https://arxiv.org/abs/1808.00449> 초록의 독립 프레임 처리 한계를 참고했다.
+- 사용 범위: `docs/video-character-consistency.md`의 출처 있는 조사와 실험 제안.
+  외부 코드 복사·가중치 다운로드·의존성 추가는 없다. ComfyUI 코드는 열거나 가져오지 않았다.
+
+## 2026-09-15 · 사용자 승인 Ref2VA 비교 연결
+
+- 동일 Pruned revision `1a0ef5e65b639e84af81d883817968532180e9c7`의
+  `transformer_ref/`를 추가 다운로드했다. 해당 폴더의 모델 소스 SHA-256은
+  기존 검토 소스와 같은 `fe56b6b6b43d18ef4c46d98f5aa5b5bcac99be5412bbfa25a6bbfed1348ada47`이다.
+  별도 무검증 코드 실행을 허용하지 않는다. 모델 라이선스는 기존 H3 조건을 따른다.
+- 설치된 diffusers의 `MiniMaxH3ImageReference`, Ref2VA 전처리 및
+  `ModularPipeline.update_components` 공개 설정 경로를 읽어 어댑터를 연결했다.
+  모델 연산 코드를 복사하지 않았으며 새 의존성을 추가하지 않았다.
+- 준비 이미지는 사용자 원본과 nodal `image.Crop`만 사용한다. 외부 이미지 생성 없음.

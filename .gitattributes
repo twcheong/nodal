@@ -1,0 +1,6 @@
+# Keep source and generated text stable across Windows, macOS, and Linux.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.png binary
+*.jpg binary
+*.jpeg binary

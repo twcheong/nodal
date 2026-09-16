@@ -31,6 +31,7 @@ from __future__ import annotations
 from nodal import NodeRegistry, register_preview_encoder
 
 from .devices import BACKENDS, DEVICE_ENV_VAR, Backend, DevicePolicy, detect_kind, resolve_plan
+from .h3 import MiniMaxH3
 from .handles import (
     Checkpoint,
     ClipHandle,
@@ -48,8 +49,8 @@ from .latent import (
     latent_size,
 )
 from .manager import ModelManager
+from .nodes import NODES as IMAGE_NODES
 from .nodes import (
-    NODES,
     SAMPLERS,
     SCHEDULERS,
     CLIPTextEncode,
@@ -64,6 +65,9 @@ from .nodes import (
     ZImageLoader,
 )
 from .scanner import MODELS_ENV_VAR, models_root, register_providers, scan, set_models_root
+from .upscale import UpscaleVideo
+
+NODES = (*IMAGE_NODES, MiniMaxH3, UpscaleVideo)
 
 __all__ = [
     "BACKENDS",
@@ -88,8 +92,10 @@ __all__ = [
     "LatentTensor",
     "LoadCheckpoint",
     "LoraLoader",
+    "MiniMaxH3",
     "ModelHandle",
     "ModelManager",
+    "UpscaleVideo",
     "VAEDecode",
     "VaeHandle",
     "ZImageImg2Img",

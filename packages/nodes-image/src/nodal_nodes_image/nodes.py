@@ -166,8 +166,16 @@ class SaveImage:
 
     returns = {"asset": Image}
 
-    def run(self, image: Any, embed_workflow: bool, ctx: NodeContext) -> NodeResult:
+    def run(self, image: Any, embed_workflow: bool, ctx: NodeContext) -> NodeResult | Failure:
         array = to_float32(image)
+        if array.shape[0] != 1:
+            return Failure(
+                ValueError(
+                    f"Save Image는 한 장만 저장할 수 있다. 받은 이미지: {array.shape[0]}장. "
+                    "여러 장을 저장하는 출력은 아직 지원하지 않는다. batch_size=1을 사용하라."
+                ),
+                socket="image",
+            )
         workflow = ctx.graph_json() if embed_workflow else None
         version = ctx.graph_version() if workflow is not None else None
         data = encode_png(array, workflow=workflow, nodal_version=version)

@@ -51,6 +51,8 @@ def test_pack_registers_without_torch():
         "diffusion.VAEDecode",
         "diffusion.ZImageImg2Img",
         "diffusion.ZImageLoader",
+        "diffusion.MiniMaxH3",
+        "diffusion.UpscaleVideo",
     }
     assert len(NODES) == len(ids)
 

@@ -1,0 +1,134 @@
+{
+  "nodal_version": "1",
+  "id": "01994c00-0000-7000-8000-000000000002",
+  "definitions": {
+    "h3_compare_reference": {
+      "doc": "Ref2VA comparison: original full image plus its nodal face crop. Crop defaults fit Won original (16), not arbitrary images. Reference encoding is explicitly reduced to 768 for 16GB GPU.",
+      "params": {
+        "source": {
+          "type": "Image",
+          "doc": "Original character image path or asset:<hash>."
+        },
+        "prompt": {
+          "type": "STRING"
+        },
+        "seed": {
+          "type": "INT",
+          "default": 7
+        },
+        "steps": {
+          "type": "INT",
+          "default": 16,
+          "widget": {
+            "min": 2,
+            "max": 100
+          }
+        },
+        "width": {
+          "type": "INT",
+          "default": 768,
+          "widget": {
+            "min": 256,
+            "max": 1920,
+            "step": 32
+          }
+        },
+        "height": {
+          "type": "INT",
+          "default": 1152,
+          "widget": {
+            "min": 256,
+            "max": 1920,
+            "step": 32
+          }
+        },
+        "reference_short_edge": {
+          "type": "INT",
+          "default": 768,
+          "widget": {
+            "min": 256,
+            "max": 2048,
+            "step": 32
+          }
+        },
+        "face_x": {
+          "type": "INT",
+          "default": 380
+        },
+        "face_y": {
+          "type": "INT",
+          "default": 10
+        },
+        "face_width": {
+          "type": "INT",
+          "default": 360
+        },
+        "face_height": {
+          "type": "INT",
+          "default": 340
+        }
+      },
+      "nodes": {
+        "face": {
+          "type": "image.Crop",
+          "inputs": {
+            "image": {
+              "$param": "source"
+            },
+            "x": {
+              "$param": "face_x"
+            },
+            "y": {
+              "$param": "face_y"
+            },
+            "width": {
+              "$param": "face_width"
+            },
+            "height": {
+              "$param": "face_height"
+            }
+          }
+        },
+        "generate": {
+          "type": "diffusion.MiniMaxH3",
+          "inputs": {
+            "model_path": "",
+            "prompt": {
+              "$param": "prompt"
+            },
+            "seed": {
+              "$param": "seed"
+            },
+            "steps": {
+              "$param": "steps"
+            },
+            "width": {
+              "$param": "width"
+            },
+            "height": {
+              "$param": "height"
+            },
+            "num_frames": 124,
+            "memory_profile": "pruned_convrot_int8_offload",
+            "reference_1": {
+              "$param": "source"
+            },
+            "reference_2": {
+              "$link": ["face", "image"]
+            },
+            "reference_short_edge": {
+              "$param": "reference_short_edge"
+            }
+          }
+        }
+      },
+      "returns": {
+        "video": {
+          "$link": ["generate", "video"]
+        }
+      }
+    }
+  },
+  "nodes": {},
+  "outputs": []
+}

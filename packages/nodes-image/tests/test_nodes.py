@@ -20,6 +20,7 @@ from nodal_nodes_image import (
     LoadImage,
     MaskFromImage,
     ResizeImage,
+    SaveImage,
 )
 from nodal_server.assets import AssetStore
 
@@ -27,6 +28,15 @@ from nodal_server.assets import AssetStore
 def solid(value: float, size: tuple[int, int] = (4, 4), channels: int = 3) -> np.ndarray:
     height, width = size
     return np.full((1, height, width, channels), value, dtype=np.float32)
+
+
+def test_save_rejects_batch_without_silently_dropping_images() -> None:
+    images = np.concatenate([solid(0.0), solid(1.0)], axis=0)
+    # No context access is allowed before detecting the unsupported batch.
+    result = SaveImage().run(images, False, None)
+    assert isinstance(result, Failure)
+    assert result.socket == "image"
+    assert "2장" in str(result.error)
 
 
 # ------------------------------------------------------------------ Load

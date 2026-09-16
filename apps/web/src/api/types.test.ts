@@ -18,6 +18,7 @@ import {
   assetSrc,
   isEvent,
   isImageAsset,
+  isVideoAsset,
   previewSize,
   previewSrc,
   runIdOf,
@@ -192,5 +193,15 @@ describe("계약 형태", () => {
 
     const restored = { graph: { nodal_version: "1" } } satisfies GraphFromPngResponse;
     expect(restored.graph.nodal_version).toBe("1");
+  });
+});
+
+describe("영상 에셋", () => {
+  it("이미지와 영상의 재생 경로를 구분한다", () => {
+    const video = { hash: "abc", media_type: "video/webm", size_bytes: 100 };
+    expect(isVideoAsset(video)).toBe(true);
+    expect(isImageAsset(video)).toBe(false);
+    expect(isVideoAsset({ ...video, media_type: "image/png" })).toBe(false);
+    expect(isVideoAsset(null)).toBe(false);
   });
 });

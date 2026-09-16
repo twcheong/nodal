@@ -168,6 +168,17 @@ async def test_txt2img_runs_end_to_end(repo, tiny_sd, tiny_sdxl):
     assert set(result.executed) == {"ckpt", "pos", "neg", "empty", "sample", "decode"}
 
 
+@pytest.mark.parametrize("repo", [TINY_SD, TINY_SDXL])
+async def test_latent_batch_generates_every_image(repo, tiny_sd, tiny_sdxl):
+    graph = _graph(repo, size=64, steps=2)
+    graph["nodes"]["empty"]["inputs"]["batch_size"] = 2
+    result = await _run(graph)
+    images = result.outputs["decode"]["image"]
+    assert images.shape[0] == 2
+    assert np.isfinite(images).all()
+    assert not np.allclose(images[0], images[1])
+
+
 async def test_same_seed_gives_the_same_image(tiny_sd):
     """시드가 재현성을 준다 — 이것이 깨지면 시드 위젯이 의미를 잃는다."""
     first = await _run(_graph(TINY_SD, seed=1234))

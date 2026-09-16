@@ -1,0 +1,45 @@
+{
+  "nodal_version": "1",
+  "id": "01990000-0000-7000-8000-000000000004",
+  "nodes": {
+    "01990000-0000-7000-8000-000000000001": {
+      "type": "diffusion.MiniMaxH3",
+      "inputs": {
+        "model_path": "",
+        "prompt": "A cat looks out of a sunlit window. Slow camera push in. Quiet birdsong.",
+        "width": 960,
+        "height": 544,
+        "num_frames": 124,
+        "steps": 30,
+        "seed": 7,
+        "memory_profile": "int8_offload",
+        "first_frame": {
+          "$link": ["01990000-0000-7000-8000-000000000002", "image"]
+        }
+      },
+      "meta": {
+        "title": "MiniMax H3 영상",
+        "notes": "원격 서버의 NODAL_H3_MODEL을 지정한다. 124프레임, 약 5.17초. docs/minimax-h3.md 참고."
+      }
+    },
+    "01990000-0000-7000-8000-000000000002": {
+      "type": "image.Load",
+      "inputs": {
+        "path": "/absolute/path/to/first-frame.png"
+      },
+      "meta": {
+        "title": "시작 이미지",
+        "notes": "GPU 서버에서 읽을 수 있는 이미지 경로로 바꾼다."
+      }
+    }
+  },
+  "outputs": ["01990000-0000-7000-8000-000000000001"],
+  "ui": {
+    "01990000-0000-7000-8000-000000000001": {
+      "pos": [400, 80]
+    },
+    "01990000-0000-7000-8000-000000000002": {
+      "pos": [40, 80]
+    }
+  }
+}

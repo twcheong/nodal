@@ -26,14 +26,27 @@ workflow=".github/workflows/ci.yml"
 
 # GitHub 의 잡은 각각 새 러너에서 시작한다. 로컬에서도 uv 환경을 잡별로 나누지
 # 않으면 다른 잡이나 이전 실행이 설치한 torch가 현재 잡의 실제 조건을 가린다.
-ci_env_root=$(mktemp -d "${TMPDIR:-/tmp}/nodal-ci-local.XXXXXX") || exit 1
+ci_temp_root=$(cd "${TMPDIR:-/tmp}" && pwd -P) || exit 1
+ci_env_root=$(mktemp -d "$ci_temp_root/nodal-ci-local.XXXXXX") || exit 1
 cleanup() {
-  rm -rf -- "$ci_env_root"
+  # Delete only the verified temporary directory created for this invocation.
+  local resolved
+  resolved=$(cd "$ci_env_root" && pwd -P) || return
+  if [[ "$resolved" == "$ci_temp_root"/nodal-ci-local.* ]]; then
+    rm -rf -- "$resolved"
+  fi
 }
 trap cleanup EXIT
 
+# Parsing the workflow must not sync (and remove diffusion from) the app's venv.
+export UV_PROJECT_ENVIRONMENT="$ci_env_root/plan"
+if command -v cygpath >/dev/null 2>&1; then
+  UV_PROJECT_ENVIRONMENT=$(cygpath -m "$UV_PROJECT_ENVIRONMENT")
+fi
+
 report_optional_dependencies() {
   local python="$UV_PROJECT_ENVIRONMENT/bin/python"
+  [ -x "$python" ] || python="$UV_PROJECT_ENVIRONMENT/Scripts/python.exe"
   [ -x "$python" ] || return
   "$python" - <<'PY'
 import importlib.util
@@ -115,6 +128,9 @@ while IFS= read -r -d "$RS" record || [ -n "$record" ]; do
   if [ "$job" != "$current_job" ]; then
     printf '\n== job: %s ==\n' "$job"
     export UV_PROJECT_ENVIRONMENT="$ci_env_root/$job"
+    if command -v cygpath >/dev/null 2>&1; then
+      UV_PROJECT_ENVIRONMENT=$(cygpath -m "$UV_PROJECT_ENVIRONMENT")
+    fi
     printf '      uv 환경: %s\n' "$UV_PROJECT_ENVIRONMENT"
     current_job="$job"
   fi
