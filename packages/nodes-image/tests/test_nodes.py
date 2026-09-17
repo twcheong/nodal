@@ -19,6 +19,7 @@ from nodal_nodes_image import (
     LoadAssetImage,
     LoadImage,
     MaskFromImage,
+    MultiReferenceImage,
     ResizeImage,
     SaveImage,
 )
@@ -118,6 +119,106 @@ def test_resize_handles_batches() -> None:
     out = ResizeImage().run(batch, 2, 2, "nearest").values[0]
 
     assert out.shape == (2, 2, 2, 3)
+
+
+# ------------------------------------------------------ Multi-reference
+
+
+def test_multi_reference_median_uses_every_connected_image() -> None:
+    out = (
+        MultiReferenceImage()
+        .run(
+            solid(0.1),
+            solid(0.5),
+            solid(0.9),
+            None,
+            None,
+            None,
+            None,
+            None,
+            4,
+            4,
+            "median",
+            0.0,
+        )
+        .values[0]
+    )
+
+    assert out.shape == (1, 4, 4, 3)
+    assert out.dtype == np.float32
+    assert out[0, 0, 0, 0] == pytest.approx(0.5)
+
+
+def test_multi_reference_mean_accepts_mixed_sizes_and_batches() -> None:
+    batch = np.concatenate([solid(0.2, (3, 5)), solid(0.8, (3, 5))], axis=0)
+    out = (
+        MultiReferenceImage()
+        .run(
+            batch,
+            solid(0.5, (7, 3)),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            6,
+            8,
+            "mean",
+            0.0,
+        )
+        .values[0]
+    )
+
+    assert out.shape == (1, 8, 6, 3)
+    assert out[0, 0, 0, 0] == pytest.approx(0.5, abs=1e-5)
+
+
+def test_multi_reference_composites_rgba_on_white() -> None:
+    transparent = np.zeros((1, 2, 2, 4), dtype=np.float32)
+    out = (
+        MultiReferenceImage()
+        .run(
+            transparent,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            2,
+            2,
+            "median",
+            0.7,
+        )
+        .values[0]
+    )
+
+    assert np.all(out == pytest.approx(1.0))
+
+
+def test_multi_reference_anchor_weight_preserves_first_reference() -> None:
+    out = (
+        MultiReferenceImage()
+        .run(
+            solid(0.2),
+            solid(0.8),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            4,
+            4,
+            "mean",
+            0.75,
+        )
+        .values[0]
+    )
+
+    assert out[0, 0, 0, 0] == pytest.approx(0.275)
 
 
 # ------------------------------------------------------------------ Crop

@@ -9,7 +9,7 @@ import pytest
 
 from nodal.models import CPU, DevicePlan
 from nodal_nodes_diffusion.handles import Checkpoint, ModelHandle
-from nodal_nodes_diffusion.nodes import ZImageImg2Img, ZImageLoader
+from nodal_nodes_diffusion.nodes import ZImageImg2Img, ZImageLoader, ZImageLoraLoader
 
 pytest.importorskip("torch")
 np = pytest.importorskip("numpy")
@@ -18,9 +18,26 @@ np = pytest.importorskip("numpy")
 class _FakePipe:
     def __init__(self) -> None:
         self.kwargs: dict[str, Any] = {}
+        self.loaded: list[tuple[str, str]] = []
+        self.active: tuple[list[str], list[float]] | None = None
+        self.active_at_call: tuple[list[str], list[float]] | None = None
+
+    def load_lora_weights(self, target: str, *, adapter_name: str) -> None:
+        self.loaded.append((target, adapter_name))
+        self.active = ([adapter_name], [1.0])
+
+    def set_adapters(self, names: list[str], *, adapter_weights: list[float]) -> None:
+        self.active = (names, adapter_weights)
+
+    def enable_lora(self) -> None:
+        return None
+
+    def disable_lora(self) -> None:
+        self.active = None
 
     def __call__(self, **kwargs: Any) -> Any:
         self.kwargs = kwargs
+        self.active_at_call = self.active
         callback = kwargs["callback_on_step_end"]
         callback(self, 0, None, {})
         callback(self, 1, None, {})
@@ -95,6 +112,44 @@ def test_img2img_rejects_an_ordinary_checkpoint() -> None:
             seed=0,
             ctx=_Context(),  # type: ignore[arg-type]
         )
+
+
+def test_zimage_lora_is_active_only_during_img2img(tmp_path, monkeypatch) -> None:
+    from nodal_nodes_diffusion import scanner
+
+    monkeypatch.setattr(scanner, "_root", tmp_path)
+    lora_dir = tmp_path / "loras"
+    lora_dir.mkdir()
+    lora_path = lora_dir / "identity.safetensors"
+    lora_path.write_bytes(b"weights")
+
+    pipe = _FakePipe()
+    loaded = ZImageLoraLoader().run(
+        model=_model(pipe),
+        lora_name=lora_path.name,
+        strength=0.85,
+        ctx=_Context(),  # type: ignore[arg-type]
+    )
+    model = loaded.values[0]
+
+    assert isinstance(model, ModelHandle)
+    assert pipe.loaded == [(str(lora_path), "identity_safetensors")]
+    assert pipe.active is None
+
+    ZImageImg2Img().run(
+        model=model,
+        image=np.zeros((1, 8, 8, 3), dtype=np.float32),
+        prompt="hwiwon character",
+        negative_prompt="",
+        strength=0.5,
+        steps=4,
+        guidance_scale=1.0,
+        seed=7,
+        ctx=_Context(),  # type: ignore[arg-type]
+    )
+
+    assert pipe.active_at_call == (["identity_safetensors"], [0.85])
+    assert pipe.active is None
 
 
 def test_loader_resolves_all_three_local_components(tmp_path, monkeypatch) -> None:

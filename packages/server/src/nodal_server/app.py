@@ -110,12 +110,10 @@ def _http_error(
 
 
 def _web_media_type(path: FsPath) -> str:
-    """확장 `web/` 자산의 Content-Type. `.js`·`.mjs` 는 항상 강제한다.
+    """확장과 빌드 웹 자산의 Content-Type. `.js`·`.mjs` 는 항상 강제한다.
 
-    `mimetypes` 가 플랫폼 등록에 따라 `.js` 를 `text/javascript` 대신
-    `application/javascript` 로 줄 수 있다 — 그러면 브라우저가 ESM 으로
-    실행하지 않고 조용히 죽는다 (design.md §8). 그 외 파일은 표준 추측에
-    맡긴다.
+    플랫폼 MIME 등록과 Python 버전에 상관없이 JavaScript 응답 타입을
+    동일하게 유지한다. 그 외 파일은 표준 추측에 맡긴다.
     """
     if path.suffix in (".js", ".mjs"):
         return "text/javascript"
@@ -624,6 +622,6 @@ def create_app(
                     "web_asset_not_found",
                     f"프론트 빌드에 {file_path!r} 이 없다",
                 )
-            return FileResponse(target)
+            return FileResponse(target, media_type=_web_media_type(target))
 
     return app

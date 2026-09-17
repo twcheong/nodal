@@ -39,8 +39,9 @@ diffusers 공개 `update_components(reference_image_short_edge=...)`에 전달�
 Pruned ConvRot INT8의 실제 MCP 텍스트→영상 및 시작 이미지→영상 생성을 확인했다.
 텍스트 입력은 512×288/10스텝, 시작 이미지 입력은 384×576/16스텝 및
 768×1152/16스텝으로 각각 124프레임, seed 7의 한 실행을 검증했다.
-768×1152 실행은 약 38분 4초가 걸렸다. 960×544 및 끝 이미지 입력의 실제
-생성은 아직 검증하지 않았다.
+768×1152 실행은 약 38분 4초가 걸렸다. 이후 같은 원본의 시작/끝 입력 FL2VA 3편과
+전신/얼굴 참조 Ref2VA 3편도 완료했다. [비교 기록](won-method-comparison.md)에
+실행 ID와 품질 경계를 남겼다. 960×544 생성은 아직 검증하지 않았다.
 사용자의 기존 파일은 `C:\ComfyUI\models\diffusion_models\minimax_h3_fl2va_pruned_int8_convrot.safetensors`다.
 사용자는 Parsec으로 원격
 컴퓨터에 접속해 테스트한다. 아래 명령과 브라우저 조작은 모두 **Parsec 화면 안의

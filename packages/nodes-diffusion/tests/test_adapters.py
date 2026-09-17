@@ -222,6 +222,7 @@ def test_adapter_nodes_are_registered():
     ids = {s.id for s in registry(NodeRegistry())}
     assert {
         "diffusion.LoraLoader",
+        "diffusion.ZImageLoraLoader",
         "diffusion.ControlNetLoader",
         "diffusion.ControlNetApply",
     } <= ids

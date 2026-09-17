@@ -25,6 +25,22 @@ def test_built_web_is_served_without_hiding_api(tmp_path: Path) -> None:
     assert nodes.json()["nodes"] == []
 
 
+@pytest.mark.parametrize("suffix", [".js", ".mjs"])
+def test_built_web_javascript_ignores_platform_mime(tmp_path: Path, monkeypatch, suffix) -> None:
+    (tmp_path / "index.html").write_text("nodal", encoding="utf-8")
+    (tmp_path / f"app{suffix}").write_text("export const ready = true;", encoding="utf-8")
+    monkeypatch.setattr(
+        "nodal_server.app.mimetypes.guess_type", lambda *args, **kwargs: ("text/plain", None)
+    )
+
+    with TestClient(create_app(NodeRegistry(), web_root=tmp_path)) as client:
+        response = client.get(f"/app{suffix}")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/javascript")
+    assert response.text == "export const ready = true;"
+
+
 def test_built_web_rejects_missing_files_and_path_escape(tmp_path: Path) -> None:
     web = tmp_path / "web"
     web.mkdir()

@@ -58,6 +58,7 @@ from nodal import (
     NodeContext,
     NodeResult,
     Seed,
+    Socket,
     Str,
     node,
 )
@@ -88,12 +89,15 @@ __all__ = [
     "ControlNetApply",
     "ControlNetLoader",
     "EmptyLatent",
+    "Flux2KleinLoader",
+    "Flux2KleinMultiReference",
     "KSampler",
     "LoadCheckpoint",
     "LoraLoader",
     "VAEDecode",
     "ZImageImg2Img",
     "ZImageLoader",
+    "ZImageLoraLoader",
 ]
 
 #: 샘플러 이름 → `diffusers` 스케줄러 클래스.
@@ -249,6 +253,63 @@ class ZImageLoader:
 
 
 @node(
+    id="diffusion.Flux2KleinLoader",
+    title="Load FLUX.2 Klein",
+    category="diffusion/loaders",
+    aliases=["FLUX.2 Klein", "플럭스 2", "다중 레퍼런스 모델"],
+    cacheable=False,
+)
+class Flux2KleinLoader:
+    """분리된 로컬 FLUX.2 Klein 컴포넌트를 공식 파이프라인으로 조립한다."""
+
+    transformer: Combo = Combo.from_provider(
+        "diffusion_models",
+        doc="models/diffusion_models의 FLUX.2 Klein transformer safetensors.",
+    )
+    text_encoder: Combo = Combo.from_provider(
+        "text_encoders",
+        doc="models/text_encoders의 Qwen3 4B text encoder safetensors.",
+    )
+    vae: Combo = Combo.from_provider("vae", doc="models/vae의 FLUX.2 VAE safetensors.")
+    config_repo: Str = Str(
+        "black-forest-labs/FLUX.2-klein-4B",
+        doc="가중치가 아닌 config/tokenizer/scheduler 메타데이터 출처.",
+    )
+
+    returns = {"model": Model}
+
+    def run(
+        self,
+        transformer: str,
+        text_encoder: str,
+        vae: str,
+        config_repo: str,
+        ctx: NodeContext,
+    ) -> NodeResult:
+        _require_torch()
+        from .manager import ModelManager
+
+        store = _store(ctx)
+        if not isinstance(store, ModelManager):
+            raise RuntimeError(
+                "FLUX.2 Klein 로딩에는 ModelManager가 필요하다. 이 실행의 ctx.models는 "
+                f"{type(store).__name__}다 — 서버로 실행하거나 ModelManager를 주입하라."
+            )
+
+        return NodeResult(
+            store.flux2_klein(
+                transformer_ref=transformer,
+                transformer_target=_component_target("diffusion_models", transformer),
+                text_encoder_ref=text_encoder,
+                text_encoder_target=_component_target("text_encoders", text_encoder),
+                vae_ref=vae,
+                vae_target=_component_target("vae", vae),
+                config_repo=config_repo,
+            )
+        )
+
+
+@node(
     id="diffusion.LoraLoader",
     title="Load LoRA",
     category="diffusion/loaders",
@@ -284,34 +345,52 @@ class LoraLoader:
         strength: float,
         ctx: NodeContext,
     ) -> NodeResult:
-        _require_torch()
-        from .scanner import resolve
-
-        checkpoint = model.checkpoint
-        path = resolve("loras", lora_name)
-        target = str(path) if path is not None else lora_name
-        adapter = _adapter_name(lora_name)
-
-        with checkpoint.lock:
-            if adapter not in checkpoint.loaded:
-                try:
-                    checkpoint.pipe.load_lora_weights(target, adapter_name=adapter)
-                except Exception as exc:
-                    raise RuntimeError(
-                        f"LoRA 를 얹지 못했다: {lora_name!r} ({target}). "
-                        f"체크포인트 아키텍처는 {checkpoint.architecture} 다 — "
-                        f"LoRA 가 같은 계열용인지 확인하라. 원인: {exc}"
-                    ) from exc
-                checkpoint.loaded.add(adapter)
-                # `load_lora_weights` 는 방금 얹은 어댑터를 켜 둔 채로 돌아온다.
-                # 그대로 두면 이 노드를 거치지 않은 분기도 LoRA 를 쓰게 된다.
-                _deactivate(checkpoint)
-
-        adapters = with_adapter(model.adapters, adapter, strength)
+        loaded = _load_lora_model(model, lora_name, strength)
         return NodeResult(
-            ModelHandle(checkpoint, adapters=adapters),
-            ClipHandle(checkpoint, adapters=adapters, clip_skip=clip.clip_skip),
+            loaded,
+            ClipHandle(
+                loaded.checkpoint,
+                adapters=loaded.adapters,
+                clip_skip=clip.clip_skip,
+            ),
         )
+
+
+@node(
+    id="diffusion.ZImageLoraLoader",
+    title="Load Z-Image LoRA",
+    category="diffusion/loaders",
+    aliases=["Z-Image 로라", "zimage lora", "캐릭터 LoRA"],
+    cacheable=False,
+)
+class ZImageLoraLoader:
+    """Z-Image 전용 LoRA를 모델 핸들에 붙인다.
+
+    여러 레퍼런스로 학습한 캐릭터 LoRA가 정체성과 화풍을 담당하고, 실행 시
+    프롬프트와 img2img 입력은 포즈·구도를 담당한다. 일반 `LoraLoader`와 같은
+    분기 격리 규칙을 쓰되 Z-Image에는 별도 CLIP 소켓이 없어 Model만 돌려준다.
+    """
+
+    model: Model
+    lora_name: Combo = Combo.from_provider("loras", doc="models/loras의 Z-Image LoRA.")
+    strength: Float = Float(1.0, min=-4.0, max=4.0, step=0.05, doc="어댑터 세기.")
+
+    returns = {"model": Model}
+
+    def run(
+        self,
+        model: ModelHandle,
+        lora_name: str,
+        strength: float,
+        ctx: NodeContext,
+    ) -> NodeResult:
+        del ctx
+        if model.checkpoint.architecture != "ZImageImg2ImgPipeline":
+            raise ValueError(
+                "ZImageLoraLoader에는 ZImageLoader 출력만 연결할 수 있다. "
+                f"받은 모델은 {model.checkpoint.architecture} 다."
+            )
+        return NodeResult(_load_lora_model(model, lora_name, strength))
 
 
 @node(
@@ -688,7 +767,7 @@ class ZImageImg2Img:
             ctx.progress(index + 1, effective_steps)
             return kwargs
 
-        with checkpoint.lock:
+        with _adapters_applied(checkpoint, model.adapters):
             result = checkpoint.pipe(
                 prompt=prompt,
                 negative_prompt=negative_prompt,
@@ -701,6 +780,105 @@ class ZImageImg2Img:
                 callback_on_step_end=on_step,
             )
 
+        output = np.asarray(result.images, dtype=np.float32)
+        if output.ndim == 3:
+            output = output[None, ...]
+        return NodeResult(output, preview=output)
+
+
+@node(
+    id="diffusion.Flux2KleinMultiReference",
+    title="FLUX.2 Klein Multi-Reference",
+    category="diffusion/sampling",
+    aliases=["FLUX.2 다중 레퍼런스", "여러 이미지 생성", "캐릭터 일관성"],
+    cacheable=True,
+)
+class Flux2KleinMultiReference:
+    """최대 네 레퍼런스를 독립 조건 토큰으로 넣어 새 이미지를 생성한다.
+
+    픽셀을 평균하거나 한 캔버스로 합치지 않는다. 각 이미지가 별도 VAE 토큰으로
+    transformer에 들어가므로 프롬프트에서 image 1..4의 역할을 지시할 수 있다.
+    """
+
+    model: Model
+    reference_1: Socket = Socket(Image, doc="주 정체성/얼굴 레퍼런스.")
+    reference_2: Socket = Socket(Image, None, doc="선택 레퍼런스 2.")
+    reference_3: Socket = Socket(Image, None, doc="선택 레퍼런스 3.")
+    reference_4: Socket = Socket(Image, None, doc="선택 레퍼런스 4.")
+    prompt: Str = Str("", multiline=True, placeholder="Use the exact character from image 1...")
+    width: Int = Int(768, min=256, max=2048, step=16)
+    height: Int = Int(1024, min=256, max=2048, step=16)
+    steps: Int = Int(4, min=1, max=50, doc="증류 Klein 모델은 4스텝 권장.")
+    seed: Seed = Seed(0, doc="같은 시드·같은 레퍼런스면 같은 결과가 나온다.")
+
+    returns = {"image": Image}
+
+    def run(
+        self,
+        model: ModelHandle,
+        reference_1: Any,
+        reference_2: Any | None,
+        reference_3: Any | None,
+        reference_4: Any | None,
+        prompt: str,
+        width: int,
+        height: int,
+        steps: int,
+        seed: int,
+        ctx: NodeContext,
+    ) -> NodeResult:
+        torch = _require_torch()
+        import numpy as np
+        from PIL import Image as PILImage
+
+        checkpoint = model.checkpoint
+        if checkpoint.architecture != "Flux2KleinPipeline":
+            raise ValueError(
+                "Flux2KleinMultiReference에는 Flux2KleinLoader 출력만 연결할 수 있다. "
+                f"받은 모델은 {checkpoint.architecture}다."
+            )
+
+        references = [
+            reference
+            for reference in (reference_1, reference_2, reference_3, reference_4)
+            if reference is not None
+        ]
+        images: list[PILImage.Image] = []
+        for index, reference in enumerate(references, start=1):
+            array = np.asarray(reference, dtype=np.float32)
+            if array.ndim != 4 or array.shape[-1] not in (3, 4) or array.shape[0] < 1:
+                raise ValueError(
+                    f"레퍼런스 {index}는 (B,H,W,C) 이미지여야 한다. 받은 shape={array.shape!r}."
+                )
+            frame = np.clip(array[0], 0.0, 1.0)
+            if frame.shape[-1] == 4:
+                alpha = frame[..., 3:4]
+                frame = frame[..., :3] * alpha + (1.0 - alpha)
+            images.append(PILImage.fromarray(np.rint(frame * 255.0).astype(np.uint8), mode="RGB"))
+
+        generator = torch.Generator("cpu").manual_seed(int(seed))
+
+        def on_step(
+            _pipe: Any,
+            index: int,
+            _timestep: Any,
+            kwargs: dict[str, Any],
+        ) -> dict[str, Any]:
+            ctx.raise_if_cancelled()
+            ctx.progress(index + 1, steps)
+            return kwargs
+
+        result = checkpoint.pipe(
+            image=images,
+            prompt=prompt,
+            height=height,
+            width=width,
+            num_inference_steps=steps,
+            guidance_scale=1.0 if checkpoint.pipe.config.is_distilled else 4.0,
+            generator=generator,
+            output_type="np",
+            callback_on_step_end=on_step,
+        )
         output = np.asarray(result.images, dtype=np.float32)
         if output.ndim == 3:
             output = output[None, ...]
@@ -790,6 +968,35 @@ def _component_target(provider: str, name: str) -> str:
 def _adapter_name(lora_name: str) -> str:
     """어댑터 이름. `diffusers` 가 식별자로 쓰므로 경로 문자를 뺀다."""
     return "".join(c if c.isalnum() else "_" for c in lora_name)
+
+
+def _load_lora_model(model: ModelHandle, lora_name: str, strength: float) -> ModelHandle:
+    """LoRA 가중치를 한 번 올리고 적용 상태는 새 Model 핸들에만 기록한다."""
+    _require_torch()
+    from .scanner import resolve
+
+    checkpoint = model.checkpoint
+    path = resolve("loras", lora_name)
+    target = str(path) if path is not None else lora_name
+    adapter = _adapter_name(lora_name)
+
+    with checkpoint.lock:
+        if adapter not in checkpoint.loaded:
+            try:
+                checkpoint.pipe.load_lora_weights(target, adapter_name=adapter)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"LoRA 를 얹지 못했다: {lora_name!r} ({target}). "
+                    f"체크포인트 아키텍처는 {checkpoint.architecture} 다 — "
+                    f"LoRA 가 같은 계열용인지 확인하라. 원인: {exc}"
+                ) from exc
+            checkpoint.loaded.add(adapter)
+            # load_lora_weights는 새 어댑터를 켜 둔다. 핸들 분기를 오염시키지 않게
+            # 실제 샘플링 전까지 다시 끈다.
+            _deactivate(checkpoint)
+
+    adapters = with_adapter(model.adapters, adapter, strength)
+    return ModelHandle(checkpoint, adapters=adapters)
 
 
 def _adapter_tag(adapters: tuple[Adapter, ...]) -> str:
@@ -1052,12 +1259,15 @@ def _add_noise(pipe: Any, latents: Any, generator: Any, steps: int, start: int) 
 NODES = (
     LoadCheckpoint,
     ZImageLoader,
+    Flux2KleinLoader,
     LoraLoader,
+    ZImageLoraLoader,
     ControlNetLoader,
     ControlNetApply,
     CLIPTextEncode,
     EmptyLatent,
     KSampler,
     ZImageImg2Img,
+    Flux2KleinMultiReference,
     VAEDecode,
 )

@@ -1,4 +1,4 @@
-"""nodal 이미지 노드 팩 (roadmap M3).
+"""nodal 이미지 노드 팩 (roadmap M3 · M7).
 
 **import 하는 것만으로 프리뷰 인코더가 등록된다.** core 는 numpy 를 모르므로
 `ndarray → PNG` 를 할 수 없고, `server` 도 `core` 만 의존하므로 마찬가지다.
@@ -6,7 +6,7 @@
 `register_combo_provider()` 와 같은 패턴이다.
 
     import nodal_nodes_image            # 인코더 등록됨
-    reg = nodal_nodes_image.registry()  # 노드 8종이 든 레지스트리
+    reg = nodal_nodes_image.registry()  # 노드 9종이 든 레지스트리
 """
 
 from __future__ import annotations
@@ -26,6 +26,7 @@ from .nodes import (
     LoadAssetImage,
     LoadImage,
     MaskFromImage,
+    MultiReferenceImage,
     ResizeImage,
     SaveImage,
 )
@@ -43,6 +44,7 @@ __all__ = [
     "LoadImage",
     "MaskArray",
     "MaskFromImage",
+    "MultiReferenceImage",
     "ResizeImage",
     "SaveImage",
     "encode_mask_preview",

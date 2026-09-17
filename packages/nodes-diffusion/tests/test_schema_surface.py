@@ -45,6 +45,8 @@ def test_pack_registers_without_torch():
         "diffusion.ControlNetApply",
         "diffusion.ControlNetLoader",
         "diffusion.EmptyLatent",
+        "diffusion.Flux2KleinLoader",
+        "diffusion.Flux2KleinMultiReference",
         "diffusion.KSampler",
         "diffusion.LoadCheckpoint",
         "diffusion.LoraLoader",
@@ -53,6 +55,7 @@ def test_pack_registers_without_torch():
         "diffusion.ZImageLoader",
         "diffusion.MiniMaxH3",
         "diffusion.UpscaleVideo",
+        "diffusion.ZImageLoraLoader",
     }
     assert len(NODES) == len(ids)
 
@@ -89,6 +92,13 @@ def test_seed_is_optional_with_a_default():
 
 def test_zimage_seed_uses_the_same_widget_contract():
     seed = _inputs("diffusion.ZImageImg2Img")["seed"]
+    assert seed["type"] == "INT"
+    assert seed["widget"]["seed"] is True
+    assert seed["widget"]["control"] in Seed.CONTROLS
+
+
+def test_flux2_multi_reference_seed_uses_the_same_widget_contract():
+    seed = _inputs("diffusion.Flux2KleinMultiReference")["seed"]
     assert seed["type"] == "INT"
     assert seed["widget"]["seed"] is True
     assert seed["widget"]["control"] in Seed.CONTROLS

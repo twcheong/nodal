@@ -1,0 +1,203 @@
+{
+  "nodal_version": "1",
+  "id": "018f2c00-0000-7000-8000-0000000e0006",
+
+  "definitions": {
+    "zimage_multi_reference": {
+      "doc": "8장의 인물 레퍼런스를 같은 캔버스에 맞춰 한 장의 대표 초기 이미지로 융합한 뒤 로컬 Z-Image로 생성한다. 비슷한 구도와 정렬의 레퍼런스에 가장 잘 맞으며 얼굴 임베딩 어댑터는 아니다.",
+      "params": {
+        "reference_1": {
+          "type": "Image",
+          "doc": "인물 레퍼런스 1. 파일 경로 또는 asset:<hash>."
+        },
+        "reference_2": {
+          "type": "Image",
+          "doc": "인물 레퍼런스 2. 파일 경로 또는 asset:<hash>."
+        },
+        "reference_3": {
+          "type": "Image",
+          "doc": "인물 레퍼런스 3. 파일 경로 또는 asset:<hash>."
+        },
+        "reference_4": {
+          "type": "Image",
+          "doc": "인물 레퍼런스 4. 파일 경로 또는 asset:<hash>."
+        },
+        "reference_5": {
+          "type": "Image",
+          "doc": "인물 레퍼런스 5. 파일 경로 또는 asset:<hash>."
+        },
+        "reference_6": {
+          "type": "Image",
+          "doc": "인물 레퍼런스 6. 파일 경로 또는 asset:<hash>."
+        },
+        "reference_7": {
+          "type": "Image",
+          "doc": "인물 레퍼런스 7. 파일 경로 또는 asset:<hash>."
+        },
+        "reference_8": {
+          "type": "Image",
+          "doc": "인물 레퍼런스 8. 파일 경로 또는 asset:<hash>."
+        },
+        "prompt": {
+          "type": "STRING",
+          "doc": "생성할 인물과 장면을 설명하는 프롬프트."
+        },
+        "negative_prompt": {
+          "type": "STRING",
+          "default": "",
+          "doc": "피할 요소. guidance_scale이 1 이하이면 모델이 무시할 수 있다."
+        },
+        "transformer": {
+          "type": "STRING",
+          "doc": "models/diffusion_models의 Z-Image transformer 파일명."
+        },
+        "text_encoder": {
+          "type": "STRING",
+          "doc": "models/text_encoders의 Qwen3 encoder 파일명."
+        },
+        "vae": {
+          "type": "STRING",
+          "doc": "models/vae의 Z-Image VAE 파일명."
+        },
+        "config_repo": {
+          "type": "STRING",
+          "default": "Tongyi-MAI/Z-Image",
+          "doc": "config/tokenizer/scheduler 메타데이터 출처."
+        },
+        "width": {
+          "type": "INT",
+          "default": 512,
+          "widget": { "min": 256, "max": 2048, "step": 16 }
+        },
+        "height": {
+          "type": "INT",
+          "default": 512,
+          "widget": { "min": 256, "max": 2048, "step": 16 }
+        },
+        "fusion_mode": {
+          "type": "STRING",
+          "default": "median",
+          "doc": "median은 배경·조명 이상치에 강하고 mean은 모든 픽셀을 평균낸다.",
+          "widget": { "options": ["median", "mean"] }
+        },
+        "anchor_weight": {
+          "type": "FLOAT",
+          "default": 0.7,
+          "doc": "첫 번째 레퍼런스의 그림체·얼굴·의상을 보존하는 비율.",
+          "widget": { "min": 0.0, "max": 1.0, "step": 0.05 }
+        },
+        "strength": {
+          "type": "FLOAT",
+          "default": 0.45,
+          "doc": "낮을수록 앵커의 그림체와 정체성을 보존하고, 높을수록 프롬프트의 포즈·장면을 따른다.",
+          "widget": { "min": 0.0, "max": 1.0, "step": 0.05 }
+        },
+        "steps": {
+          "type": "INT",
+          "default": 30,
+          "widget": { "min": 1, "max": 150, "step": 1 }
+        },
+        "guidance_scale": {
+          "type": "FLOAT",
+          "default": 5.0,
+          "widget": { "min": 0.0, "max": 20.0, "step": 0.1 }
+        },
+        "seed": {
+          "type": "INT",
+          "default": 0,
+          "doc": "같은 시드·같은 입력이면 같은 결과가 나온다.",
+          "widget": { "seed": true, "control": "randomize", "min": 0, "max": 9007199254740991, "step": 1 }
+        }
+      },
+      "nodes": {
+        "fuse": {
+          "type": "image.MultiReference",
+          "inputs": {
+            "reference_1": { "$param": "reference_1" },
+            "reference_2": { "$param": "reference_2" },
+            "reference_3": { "$param": "reference_3" },
+            "reference_4": { "$param": "reference_4" },
+            "reference_5": { "$param": "reference_5" },
+            "reference_6": { "$param": "reference_6" },
+            "reference_7": { "$param": "reference_7" },
+            "reference_8": { "$param": "reference_8" },
+            "width": { "$param": "width" },
+            "height": { "$param": "height" },
+            "mode": { "$param": "fusion_mode" },
+            "anchor_weight": { "$param": "anchor_weight" }
+          }
+        },
+        "load": {
+          "type": "diffusion.ZImageLoader",
+          "inputs": {
+            "transformer": { "$param": "transformer" },
+            "text_encoder": { "$param": "text_encoder" },
+            "vae": { "$param": "vae" },
+            "config_repo": { "$param": "config_repo" }
+          }
+        },
+        "generate": {
+          "type": "diffusion.ZImageImg2Img",
+          "inputs": {
+            "model": { "$link": ["load", "model"] },
+            "image": { "$link": ["fuse", "image"] },
+            "prompt": { "$param": "prompt" },
+            "negative_prompt": { "$param": "negative_prompt" },
+            "strength": { "$param": "strength" },
+            "steps": { "$param": "steps" },
+            "guidance_scale": { "$param": "guidance_scale" },
+            "seed": { "$param": "seed" }
+          }
+        },
+        "save": {
+          "type": "image.Save",
+          "inputs": {
+            "image": { "$link": ["generate", "image"] },
+            "embed_workflow": true
+          }
+        }
+      },
+      "returns": {
+        "image": { "$link": ["save", "asset"] }
+      }
+    }
+  },
+
+  "nodes": {
+    "source_1": { "type": "image.Load", "inputs": { "path": "examples/sample.png" } },
+    "source_2": { "type": "image.Load", "inputs": { "path": "examples/sample.png" } },
+    "source_3": { "type": "image.Load", "inputs": { "path": "examples/sample.png" } },
+    "source_4": { "type": "image.Load", "inputs": { "path": "examples/sample.png" } },
+    "source_5": { "type": "image.Load", "inputs": { "path": "examples/sample.png" } },
+    "source_6": { "type": "image.Load", "inputs": { "path": "examples/sample.png" } },
+    "source_7": { "type": "image.Load", "inputs": { "path": "examples/sample.png" } },
+    "source_8": { "type": "image.Load", "inputs": { "path": "examples/sample.png" } },
+    "call": {
+      "type": "subgraph.zimage_multi_reference",
+      "inputs": {
+        "reference_1": { "$link": ["source_1", "image"] },
+        "reference_2": { "$link": ["source_2", "image"] },
+        "reference_3": { "$link": ["source_3", "image"] },
+        "reference_4": { "$link": ["source_4", "image"] },
+        "reference_5": { "$link": ["source_5", "image"] },
+        "reference_6": { "$link": ["source_6", "image"] },
+        "reference_7": { "$link": ["source_7", "image"] },
+        "reference_8": { "$link": ["source_8", "image"] },
+        "prompt": "cinematic portrait photograph, natural skin texture, detailed eyes",
+        "transformer": "z_image_bf16.safetensors",
+        "text_encoder": "qwen_3_4b.safetensors",
+        "vae": "ae.safetensors",
+        "fusion_mode": "median",
+        "anchor_weight": 0.7,
+        "strength": 0.45,
+        "steps": 12,
+        "guidance_scale": 4.0,
+        "seed": 8272026
+      }
+    }
+  },
+  "outputs": ["call"],
+  "ui": {
+    "$comment": "Eight explicit Image params keep graph links and MCP asset routing type-safe."
+  }
+}

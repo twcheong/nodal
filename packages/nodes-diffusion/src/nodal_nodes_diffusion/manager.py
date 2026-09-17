@@ -41,7 +41,13 @@ from nodal.models import DevicePlan, ModelLoadError
 from .devices import DevicePolicy, empty_cache, free_memory, resolve_plan, to_torch_dtype
 from .handles import Checkpoint, ClipHandle, ControlNetHandle, ModelHandle, VaeHandle
 
-__all__ = ["DEFAULT_CAPACITY", "LOADERS", "ZIMAGE_LOADER", "ModelManager"]
+__all__ = [
+    "DEFAULT_CAPACITY",
+    "FLUX2_KLEIN_LOADER",
+    "LOADERS",
+    "ZIMAGE_LOADER",
+    "ModelManager",
+]
 
 _log = logging.getLogger("nodal.diffusion.models")
 
@@ -62,6 +68,10 @@ CONTROLNET_LOADER = "diffusers.controlnet"
 #: diffusers 파이프라인으로 조립하는 로더. 일반 `load()` 는 참조 하나를 받지만
 #: 이 로더는 컴포넌트 셋이 필요하므로 `ModelManager.zimage()` 로만 들어온다.
 ZIMAGE_LOADER = "diffusers.zimage_components"
+
+#: 분리된 FLUX.2 Klein transformer · Qwen3 text encoder · FLUX.2 VAE를
+#: 공식 다중 레퍼런스 파이프라인으로 조립하는 로더.
+FLUX2_KLEIN_LOADER = "diffusers.flux2_klein_components"
 
 #: 단일 파일 체크포인트의 확장자.
 SINGLE_FILE_SUFFIXES = (".safetensors", ".ckpt")
@@ -173,6 +183,34 @@ class ModelManager:
         checkpoint = self._entry(
             _key(ref, ZIMAGE_LOADER),
             lambda: self._load_zimage(
+                ref=ref,
+                transformer_target=transformer_target,
+                text_encoder_target=text_encoder_target,
+                vae_target=vae_target,
+                config_repo=config_repo,
+            ),
+        )
+        assert isinstance(checkpoint, Checkpoint)
+        return self._track(ModelHandle(checkpoint))
+
+    # ------------------------------------------------------ FLUX.2 Klein
+
+    def flux2_klein(
+        self,
+        *,
+        transformer_ref: str,
+        transformer_target: str,
+        text_encoder_ref: str,
+        text_encoder_target: str,
+        vae_ref: str,
+        vae_target: str,
+        config_repo: str,
+    ) -> ModelHandle:
+        """로컬 컴포넌트를 FLUX.2 Klein 다중 레퍼런스 파이프라인으로 조립한다."""
+        ref = "|".join((transformer_ref, text_encoder_ref, vae_ref, config_repo))
+        checkpoint = self._entry(
+            _key(ref, FLUX2_KLEIN_LOADER),
+            lambda: self._load_flux2_klein(
                 ref=ref,
                 transformer_target=transformer_target,
                 text_encoder_target=text_encoder_target,
@@ -335,6 +373,51 @@ class ModelManager:
         return Checkpoint(
             ref=ref,
             loader=ZIMAGE_LOADER,
+            pipe=pipe,
+            plan=plan,
+            architecture=architecture,
+        )
+
+    def _load_flux2_klein(
+        self,
+        *,
+        ref: str,
+        transformer_target: str,
+        text_encoder_target: str,
+        vae_target: str,
+        config_repo: str,
+    ) -> Checkpoint:
+        plan = self.plan
+        torch_dtype = to_torch_dtype(plan.dtype)
+        try:
+            pipe = _load_flux2_klein_pipeline(
+                transformer_target=transformer_target,
+                text_encoder_target=text_encoder_target,
+                vae_target=vae_target,
+                config_repo=config_repo,
+                torch_dtype=torch_dtype,
+            )
+        except Exception as exc:
+            raise ModelLoadError(
+                ref,
+                loader=FLUX2_KLEIN_LOADER,
+                reason=str(exc),
+                expected=("Flux2KleinPipeline",),
+                evidence=(
+                    f"transformer: {transformer_target}",
+                    f"text_encoder: {text_encoder_target}",
+                    f"vae: {vae_target}",
+                    f"config: {config_repo}",
+                ),
+            ) from exc
+
+        pipe.set_progress_bar_config(disable=True)
+        architecture = type(pipe).__name__
+        self._place(pipe, plan)
+        _log.info("로드: FLUX.2 Klein %s → %s", ref, plan.compute)
+        return Checkpoint(
+            ref=ref,
+            loader=FLUX2_KLEIN_LOADER,
             pipe=pipe,
             plan=plan,
             architecture=architecture,
@@ -553,6 +636,79 @@ def _load_zimage_pipeline(
         text_encoder=text_encoder,
         tokenizer=tokenizer,
         transformer=transformer,
+    )
+
+
+def _load_flux2_klein_pipeline(
+    *,
+    transformer_target: str,
+    text_encoder_target: str,
+    vae_target: str,
+    config_repo: str,
+    torch_dtype: Any,
+) -> Any:
+    """로컬 가중치로 공식 FLUX.2 Klein 다중 레퍼런스 파이프라인을 조립한다."""
+    from diffusers import (
+        AutoencoderKLFlux2,
+        FlowMatchEulerDiscreteScheduler,
+        Flux2KleinPipeline,
+        Flux2Transformer2DModel,
+    )
+    from transformers import AutoConfig, AutoTokenizer, GenerationConfig, Qwen3ForCausalLM
+
+    pipeline_config = Flux2KleinPipeline.load_config(config_repo)
+    is_distilled = pipeline_config.get("is_distilled", False)
+    if not isinstance(is_distilled, bool):
+        raise ValueError("FLUX.2 config의 is_distilled는 boolean이어야 한다.")
+
+    transformer_path = Path(transformer_target)
+    if transformer_path.is_dir():
+        transformer = Flux2Transformer2DModel.from_pretrained(  # type: ignore[no-untyped-call]
+            str(transformer_path),
+            torch_dtype=torch_dtype,
+        )
+    else:
+        transformer = Flux2Transformer2DModel.from_single_file(
+            transformer_target,
+            config=config_repo,
+            subfolder="transformer",
+            torch_dtype=torch_dtype,
+        )
+    text_config = AutoConfig.from_pretrained(config_repo, subfolder="text_encoder")
+    text_path = Path(text_encoder_target)
+    text_config.transformers_weights = text_path.name
+    text_encoder = Qwen3ForCausalLM.from_pretrained(
+        str(text_path.parent),
+        config=text_config,
+        generation_config=GenerationConfig.from_model_config(text_config),
+        torch_dtype=torch_dtype,
+        use_safetensors=True,
+    )
+    tokenizer = AutoTokenizer.from_pretrained(config_repo, subfolder="tokenizer")
+    vae_path = Path(vae_target)
+    if vae_path.is_dir():
+        vae = AutoencoderKLFlux2.from_pretrained(  # type: ignore[no-untyped-call]
+            str(vae_path),
+            torch_dtype=torch_dtype,
+        )
+    else:
+        vae = AutoencoderKLFlux2.from_single_file(
+            vae_target,
+            config=config_repo,
+            subfolder="vae",
+            torch_dtype=torch_dtype,
+        )
+    scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(  # type: ignore[no-untyped-call]
+        config_repo,
+        subfolder="scheduler",
+    )
+    return Flux2KleinPipeline(  # type: ignore[no-untyped-call]
+        scheduler=scheduler,
+        vae=vae,
+        text_encoder=text_encoder,
+        tokenizer=tokenizer,
+        transformer=transformer,
+        is_distilled=is_distilled,
     )
 
 

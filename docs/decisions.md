@@ -34,6 +34,19 @@
 
 ## 기록
 
+### 2026-09-17 · Codex · 사용자 승인 테스터용 main 통합
+
+- **결정**: 로컬 main의 Z-Image/MCP 캐시 계측을 보존하고 `codex/image-video-review`와
+  `codex/flux2-base-test`의 등록된 실행 기능을 main에 병합한다. 후자는
+  `codex/zimage-img2img`를 포함한다. 원본 작업 폴더와 stash는 변경하지 않는다.
+- **이유**: 테스터가 기능 브랜치를 직접 조립하지 않고 한 main 체크아웃에서 UI·MCP와
+  선택적 이미지/영상 런타임을 사용할 수 있어야 한다.
+- **영향 범위**: 기존 기능 통합·테스터 안내·모델 없는 MCP 스모크 검사·영상 비교 기록.
+  개인 실험 에셋 중심 `codex/hwiwon-stool-portrait`, 미등록 연구 코드가 있는
+  `codex/identity-retest`는 별도로 남긴다. 원격 Claude 브랜치들은 이미 main에 포함된다.
+  기존 main에 있던 결과물은 삭제하지 않고 새 모델 가중치/영상은 추가하지 않는다.
+- **되돌릴 수 있나**: 예 — merge 커밋 단위로 추적한다. 강제 push나 기존 변경 덮어쓰기 없음.
+
 ### 2026-09-15 · Codex · 사용자 승인 H3 Ref2VA 비교 입력
 
 - **결정**: 기존 H3 노드에 선택적인 참조 이미지 3개와 참조 인코딩 크기를 추가하고,
@@ -223,6 +236,69 @@
   §8
 - **되돌릴 수 있나**: 예 — 다만 `web_entry_url` 을 배포한 뒤 필드를 빼거나
   모양을 바꾸면 이미 그 값을 저장/캐시한 프론트 코드가 깨진다
+### 2026-08-28 · Codex · 직접 다중 레퍼런스는 FLUX.2 Klein 조건 토큰으로 실행
+
+- **결정**: 서로 다른 캐릭터 레퍼런스를 픽셀 평균이나 LoRA 학습으로 요약하지 않고,
+  Apache-2.0 FLUX.2 Klein 4B 파이프라인의 독립 이미지 조건 토큰으로 최대 네 장
+  전달한다. `diffusion.Flux2KleinMultiReference`는 각 입력을 별도 이미지로 유지한다
+- **이유**: Z-Image의 공개 체크포인트에는 Omni용 SigLIP 계층과 가중치가 없고,
+  일반 img2img의 이미지 목록은 독립 생성 배치다. FLUX.2 Klein은 공개 가중치가
+  실제 다중 레퍼런스 편집으로 학습됐고 16GB 소비자 GPU 범위에 맞는다
+- **영향 범위**: `packages/nodes-diffusion`,
+  `examples/templates/flux2_klein_multi_reference.nodal.json`
+- **되돌릴 수 있나**: 예 — 공식 Z-Image Omni 체크포인트가 배포되면 같은 네 Image
+  입력 표면 뒤에 별도 로더·샘플러를 추가해 두 경로를 병행할 수 있다
+
+### 2026-08-28 · Codex · Z-Image 다중 레퍼런스 일관성은 전용 LoRA 학습으로 고정
+
+- **결정**: 정렬되지 않은 여러 캐릭터 이미지를 런타임에 픽셀 융합하지 않고,
+  전체 레퍼런스로 Z-Image DreamBooth LoRA를 학습한다. 실행 그래프에서는
+  `diffusion.ZImageLoraLoader`가 정체성·화풍을 모델 핸들에 붙이고,
+  `ZImageImg2Img`의 한 장 입력과 프롬프트가 포즈·구도를 담당한다
+- **이유**: 공식 `ZImageImg2ImgPipeline`은 초기 이미지 한 장만 받고 IP-Adapter
+  같은 다중 이미지 임베딩 입력을 제공하지 않는다. 정렬되지 않은 8장을 median이나
+  mean으로 섞은 GPU 실측에서는 얼굴과 화풍이 무너졌다. 반면 공식 Diffusers는
+  Z-Image용 DreamBooth LoRA 학습과 `load_lora_weights` 추론을 지원하므로, 여러 장의
+  공통 정체성을 모델 파라미터로 학습하는 것이 지원되는 경로다
+- **영향 범위**: `packages/nodes-diffusion`,
+  `examples/templates/zimage_character_lora.nodal.json`
+- **되돌릴 수 있나**: 예 — 추후 Z-Image용 다중 이미지 어댑터가 공식 지원되면
+  별도 로더 노드를 추가하고 기존 LoRA 경로는 그대로 병행할 수 있다
+
+### 2026-08-28 · Codex · 다중 레퍼런스 융합은 첫 이미지를 스타일·정체성 앵커로 보존
+
+- **결정**: `image.MultiReference` v2에 `anchor_weight`를 추가한다. 전체
+  레퍼런스의 median/mean을 계산한 뒤 첫 이미지를 지정 비율만큼 다시 섞으며 기본은
+  0.7이다. MCP 템플릿의 기본 img2img `strength`는 0.6에서 0.45로 낮춘다
+- **이유**: 8장을 동등하게 융합하고 높은 디노이즈를 적용한 첫 GPU 실측에서 포즈는
+  나왔지만 원본의 3D 게임 캐릭터 그림체와 얼굴이 함께 바뀌었다. 사용자는 같은
+  포즈여도 일관성이 우선이라고 판정했다. 첫 이미지를 명시적 앵커로 삼으면 어떤
+  레퍼런스가 스타일 기준인지 결정적이고, 낮은 디노이즈는 파이프라인이 그 기준을
+  다시 그리는 폭을 줄인다
+- **영향 범위**: `packages/nodes-image`,
+  `examples/templates/zimage_multi_reference.nodal.json`
+- **되돌릴 수 있나**: 예 — `anchor_weight=0`이면 v1의 동등 융합과 같고,
+  템플릿 호출자가 `strength`를 높이면 이전 생성 폭으로 돌아간다
+
+### 2026-08-28 · Codex · 다중 레퍼런스는 고정 소켓 융합 노드와 8장 MCP 템플릿으로 제공
+
+- **결정**: `image.MultiReference`는 첫 Image 소켓 하나와 선택 Image 소켓 7개를
+  받아 중앙 크롭·리사이즈 후 픽셀 공간의 median/mean으로 대표 초기 이미지 한 장을
+  만든다. MCP 카탈로그에는 8개의 `Image` 파라미터를 각각 노출하는
+  `zimage_multi_reference` 템플릿을 추가하고 그 출력을 기존
+  `diffusion.ZImageImg2Img`에 연결한다. 기존 단일 이미지 노드와 템플릿은 유지한다
+- **이유**: 현재 캐논 그래프의 입력 링크는 소켓 값 바로 아래에만 존재하고,
+  `List[Image]` 안의 링크는 리터럴이라 실행 의존성으로 해석되지 않는다. MCP의
+  `asset:` 라우팅도 의도적으로 Image 문자열 하나만 받는다. 목록 링크라는 새 그래프
+  계약을 만들지 않고도 여러 이미지가 각각 독립된 타입 검사·캐시 무효화·에셋
+  라우팅을 거치게 하려면 고정 소켓이 가장 작은 인터페이스다. 또한 현재 로컬
+  Z-Image 파이프라인에는 얼굴 임베딩/IP-Adapter가 없으므로 이 기능을 그런
+  어댑터로 오인시키지 않고 픽셀 기반 초기 이미지 융합으로 명시한다
+- **영향 범위**: `packages/nodes-image`,
+  `examples/templates/zimage_multi_reference.nodal.json`
+- **되돌릴 수 있나**: 예 — 추후 캐논 그래프가 목록 안 링크를 정식 지원하거나
+  허용적 라이선스의 다중 이미지 어댑터가 들어오면 템플릿 내부 구현을 교체할 수 있다
+
 ### 2026-08-27 · Codex · Z-Image img2img는 공식 Diffusers 전용 파이프라인 노드로 시작
 
 - **결정**: ComfyUI 스타일 split 파일(transformer · Qwen3 text encoder · VAE)을
@@ -238,6 +314,7 @@
 - **영향 범위**: `packages/nodes-diffusion`, `examples/templates/zimage_i2i.nodal.json`
 - **되돌릴 수 있나**: 예 — 나중에 공통 sampler 계약이 Z-Image까지 표현할 수 있게
   넓어지면 두 노드 내부를 더 작은 노드로 분해할 수 있다
+
 ### 2026-08-27 · Claude Code + Codex · M7.2 확장 API 버전과 범위 문법 (사용자 승인)
 
 - **결정**: 공개 계약을 사용자 확인 후 다음으로 확정했다:

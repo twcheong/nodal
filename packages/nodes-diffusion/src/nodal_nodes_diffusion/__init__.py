@@ -57,12 +57,15 @@ from .nodes import (
     ControlNetApply,
     ControlNetLoader,
     EmptyLatent,
+    Flux2KleinLoader,
+    Flux2KleinMultiReference,
     KSampler,
     LoadCheckpoint,
     LoraLoader,
     VAEDecode,
     ZImageImg2Img,
     ZImageLoader,
+    ZImageLoraLoader,
 )
 from .scanner import MODELS_ENV_VAR, models_root, register_providers, scan, set_models_root
 from .upscale import UpscaleVideo
@@ -88,6 +91,8 @@ __all__ = [
     "ControlNetLoader",
     "DevicePolicy",
     "EmptyLatent",
+    "Flux2KleinLoader",
+    "Flux2KleinMultiReference",
     "KSampler",
     "LatentTensor",
     "LoadCheckpoint",
@@ -100,6 +105,7 @@ __all__ = [
     "VaeHandle",
     "ZImageImg2Img",
     "ZImageLoader",
+    "ZImageLoraLoader",
     "detect_kind",
     "encode_latent_preview",
     "latent_preview",
