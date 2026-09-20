@@ -18,10 +18,10 @@
 
 ## 재현 기록
 
-실행 ID: `e24745af6c2048a9952ec0e88820a4c3`  
-에셋: `8ff9e10d004c1b44209a6bf352d2ff6a`  
-모델: FLUX.2 Klein Base 4B / 28 steps / seed 920271  
-노드 팩 소스: 기존 `codex/flux2-base-test`, `5758ea2eefba20de97c02487dd6ec1b2eaa5f57b`
+- 실행 ID: `e24745af6c2048a9952ec0e88820a4c3`
+- 에셋: `8ff9e10d004c1b44209a6bf352d2ff6a`
+- 모델: FLUX.2 Klein Base 4B / 28 steps / seed 920271
+- 노드 팩 소스: 기존 `codex/flux2-base-test`, `5758ea2eefba20de97c02487dd6ec1b2eaa5f57b`
 
 프롬프트·모델 경로·기준 이미지·실행 결과·출력 SHA-256은 동봉한 JSON에 보존한다.
 크롭 범위와 노드 연결은 `templates/flux2_klein_multi_reference.nodal.json`에 있다.
