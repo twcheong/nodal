@@ -1,0 +1,1 @@
+{"tool":"cancel_run","arguments":{"run_id":"0f3b0403228a446b93a9f7bfe7c13a4f"},"reason":"1536x864 step measured at 322.68 seconds, approximately two-hour draft inference. Preserve high-resolution image anchors and retry video at 1024x576 with 1080p nodal restoration."}

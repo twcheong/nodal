@@ -1,0 +1,157 @@
+{
+  "nodal_version": "1",
+  "id": "018f2c00-0000-7000-8000-0000000e0002",
+
+  "definitions": {
+    "ad_backdrop": {
+      "doc": "텍스트 설명만으로 브랜드 배경/백드롭 이미지를 생성한다. 제품 사진 없이, 나중에 손으로 합성할 재료를 만들 때 쓴다.",
+      "params": {
+        "prompt": {
+          "type": "STRING",
+          "doc": "생성할 배경 장면 설명 (예: 대리석 테이블 위 스튜디오 조명)."
+        },
+        "negative_prompt": {
+          "type": "STRING",
+          "default": "",
+          "doc": "배경에서 피할 요소."
+        },
+        "width": {
+          "type": "INT",
+          "default": 1024,
+          "doc": "캔버스 가로 픽셀. 8의 배수.",
+          "widget": { "min": 512, "max": 2048, "step": 8 }
+        },
+        "height": {
+          "type": "INT",
+          "default": 1024,
+          "doc": "캔버스 세로 픽셀. 8의 배수.",
+          "widget": { "min": 512, "max": 2048, "step": 8 }
+        },
+        "ckpt": {
+          "type": "STRING",
+          "doc": "사용할 체크포인트 — models/checkpoints 스캔 결과의 파일명이거나 HF 모델 ID.",
+          "widget": { "provider": "checkpoints" }
+        },
+        "steps": {
+          "type": "INT",
+          "default": 30,
+          "doc": "디노이즈 스텝 수.",
+          "widget": { "min": 1, "max": 150 }
+        },
+        "cfg": {
+          "type": "FLOAT",
+          "default": 7.0,
+          "doc": "조건 강도 (CFG).",
+          "widget": { "min": 0.0, "max": 20.0, "step": 0.1 }
+        },
+        "sampler_name": {
+          "type": "STRING",
+          "default": "euler",
+          "widget": {
+            "options": ["euler", "euler_ancestral", "heun", "dpmpp_2m", "dpmpp_2m_sde", "ddim"]
+          }
+        },
+        "scheduler": {
+          "type": "STRING",
+          "default": "normal",
+          "widget": { "options": ["normal", "karras", "exponential", "simple"] }
+        },
+        "seed": {
+          "type": "INT",
+          "default": 0,
+          "doc": "같은 시드·같은 입력이면 같은 배경이 나온다."
+        }
+      },
+      "nodes": {
+        "load": {
+          "type": "diffusion.LoadCheckpoint",
+          "inputs": { "ckpt": { "$param": "ckpt" } },
+          "meta": { "title": "체크포인트" }
+        },
+        "positive": {
+          "type": "diffusion.CLIPTextEncode",
+          "inputs": {
+            "clip": { "$link": ["load", "clip"] },
+            "text": { "$param": "prompt" }
+          },
+          "meta": { "title": "긍정 프롬프트" }
+        },
+        "negative": {
+          "type": "diffusion.CLIPTextEncode",
+          "inputs": {
+            "clip": { "$link": ["load", "clip"] },
+            "text": { "$param": "negative_prompt" }
+          },
+          "meta": { "title": "부정 프롬프트" }
+        },
+        "canvas": {
+          "type": "diffusion.EmptyLatent",
+          "inputs": {
+            "width": { "$param": "width" },
+            "height": { "$param": "height" },
+            "batch_size": 1
+          },
+          "meta": { "title": "빈 잠재" }
+        },
+        "sample": {
+          "type": "diffusion.KSampler",
+          "inputs": {
+            "model": { "$link": ["load", "model"] },
+            "positive": { "$link": ["positive", "conditioning"] },
+            "negative": { "$link": ["negative", "conditioning"] },
+            "latent": { "$link": ["canvas", "latent"] },
+            "seed": { "$param": "seed" },
+            "steps": { "$param": "steps" },
+            "cfg": { "$param": "cfg" },
+            "sampler_name": { "$param": "sampler_name" },
+            "scheduler": { "$param": "scheduler" },
+            "denoise": 1.0
+          },
+          "meta": { "title": "샘플러" }
+        },
+        "decode": {
+          "type": "diffusion.VAEDecode",
+          "inputs": {
+            "vae": { "$link": ["load", "vae"] },
+            "latent": { "$link": ["sample", "latent"] }
+          },
+          "meta": { "title": "이미지로 디코드" }
+        },
+        "save": {
+          "type": "image.Save",
+          "inputs": {
+            "image": { "$link": ["decode", "image"] },
+            "embed_workflow": true
+          },
+          "meta": { "title": "에셋으로 저장" }
+        }
+      },
+      "returns": {
+        "image": { "$link": ["save", "asset"] }
+      }
+    }
+  },
+
+  "nodes": {
+    "call": {
+      "type": "subgraph.ad_backdrop",
+      "inputs": {
+        "prompt": "warm marble tabletop under soft studio light, shallow depth of field",
+        "ckpt": "hf-internal-testing/tiny-sd-pipe",
+        "width": 512,
+        "height": 512,
+        "steps": 4
+      },
+      "meta": {
+        "title": "저작용 하네스",
+        "notes": "MCP 표면은 최상위 nodes 를 읽지 않는다. `hf-internal-testing/tiny-sd-pipe` 는 CPU 에서 도는 tiny 픽스처라 그림은 노이즈다 — 배선이 도는지만 확인하는 용도다 (examples/txt2img.nodal.json 과 같은 픽스처)"
+      }
+    }
+  },
+
+  "outputs": ["call"],
+
+  "ui": {
+    "$comment": "M6.2a 템플릿 1/3. 축: 이미지 입력 없음 · diffusion 있음 · 중첩 없음(평면 그래프). 텍스트만으로 배경을 만든다 — 완성된 광고가 아니라 다른 템플릿의 재료다."
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "tool": "run_template_ad_backdrop",
+  "arguments": {
+    "prompt": "Cinematic photograph, medium wide shot of a Korean young adult couple relaxing in a bright modern apartment living room. Woman at left, long straight black hair, oval face, cream ribbed cardigan, blue jeans, standing looking toward her boyfriend. Man seated on right on a burnt orange sofa, short black hair, round thin metal glasses, navy crewneck sweater, beige trousers. Large white framed window at left, warm ivory walls, green plant, oak coffee table, cream rug, natural daylight. Realistic faces, finely detailed skin, editorial photography, sharp focus, eye level, 35mm lens.",
+    "negative_prompt": "text, subtitles, captions, watermark, logo, illustration, cartoon, blurred, low quality, deformed, extra people, duplicate, extra limbs, bad hands",
+    "ckpt": "C:/Users/nexta/.nodal/models/checkpoints/sd_xl_base_1.0.safetensors",
+    "width": 1344,
+    "height": 768,
+    "steps": 32,
+    "cfg": 6.5,
+    "sampler_name": "dpmpp_2m",
+    "scheduler": "karras",
+    "seed": 920261
+  },
+  "provenance": {"generation": "New text-to-image; no reference-video pixels", "purpose": "Original cast and living room master candidate"}
+}

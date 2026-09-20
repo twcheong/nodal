@@ -1,0 +1,35 @@
+{
+  "run_id": "941b758d59e041129f29def2ba2873e4",
+  "status": "succeeded",
+  "outputs": {
+    "call:generate": [
+      {
+        "socket": "video",
+        "type": {
+          "opaque": "MiniMaxH3Video",
+          "capabilities": []
+        },
+        "inline": null,
+        "asset": {
+          "hash": "7d7342d1d4a9669a947b60cd5d21ae5a",
+          "media_type": "video/webm",
+          "size_bytes": 1151468,
+          "width": null,
+          "height": null
+        }
+      }
+    ]
+  },
+  "executed": [
+    "call:generate"
+  ],
+  "cached": [
+    "input:source"
+  ],
+  "blocked": [],
+  "elapsed_ms": 1144519,
+  "created_at": "2026-09-20T14:21:28.485435Z",
+  "started_at": "2026-09-20T14:22:24.04074Z",
+  "finished_at": "2026-09-20T14:41:28.579638Z",
+  "error": null
+}

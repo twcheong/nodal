@@ -1,0 +1,80 @@
+{
+  "nodal_version": "1",
+  "id": "01994b10-0000-7000-8000-000000000001",
+  "definitions": {
+    "upscale_video": {
+      "doc": "AI restore a saved H3 VP9/Opus WebM with a local Spandrel model. Preserve aspect ratio, video timing and original Opus packets.",
+      "params": {
+        "source": {
+          "type": "STRING",
+          "doc": "Server-local WebM path. MCP asset: inputs remain Image-only."
+        },
+        "model_path": {
+          "type": "STRING",
+          "doc": "Local 2x/4x weights. Empty uses NODAL_UPSCALE_MODEL.",
+          "default": ""
+        },
+        "short_edge": {
+          "type": "STRING",
+          "default": "720",
+          "widget": {
+            "options": [
+              "720",
+              "1080"
+            ]
+          }
+        },
+        "tile_size": {
+          "type": "INT",
+          "default": 256,
+          "widget": {
+            "min": 64,
+            "max": 512,
+            "step": 32
+          }
+        }
+      },
+      "nodes": {
+        "upscale": {
+          "type": "diffusion.UpscaleVideo",
+          "inputs": {
+            "source": {
+              "$param": "source"
+            },
+            "model_path": {
+              "$param": "model_path"
+            },
+            "short_edge": {
+              "$param": "short_edge"
+            },
+            "tile_size": {
+              "$param": "tile_size"
+            }
+          }
+        }
+      },
+      "returns": {
+        "video": {
+          "$link": [
+            "upscale",
+            "video"
+          ]
+        }
+      }
+    }
+  },
+  "nodes": {
+    "call": {
+      "type": "subgraph.upscale_video",
+      "inputs": {
+        "source": "C:/Users/nexta/Desktop/nodal/output/original-couple-draft/05-woman-video.webm",
+        "model_path": "C:/Users/nexta/Desktop/nodal/models/upscale/RealESRGAN_x4plus.pth",
+        "short_edge": "1080",
+        "tile_size": 256
+      }
+    }
+  },
+  "outputs": [
+    "call"
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "reference_video_pixels_used": false,
+  "generation": "nodal local SDXL, FLUX.2 Klein Base 4B, MiniMax H3 Pruned, RealESRGAN x4plus",
+  "image_anchor": "01-cast-room.png",
+  "image_size": [
+    1536,
+    864
+  ],
+  "native_video": {
+    "width": 1024,
+    "height": 576,
+    "fps": "24",
+    "video_codec": "vp9",
+    "audio_streams": 1,
+    "frame_count": 124,
+    "video_duration_seconds": 5.166666666666667,
+    "audio_codec": "opus",
+    "audio_duration_seconds": 5.1666875,
+    "audio_rms": 0.07382723858838242,
+    "visual_identity_verified": false,
+    "speech_accuracy_verified": false
+  },
+  "restored_video": {
+    "width": 1920,
+    "height": 1080,
+    "fps": "24",
+    "video_codec": "vp9",
+    "audio_streams": 1,
+    "frame_count": 124,
+    "video_duration_seconds": 5.166666666666667,
+    "audio_codec": "opus",
+    "audio_duration_seconds": 5.1666875,
+    "audio_rms": 0.07382723858838242,
+    "visual_identity_verified": false,
+    "speech_accuracy_verified": false
+  },
+  "audio_preserved": true,
+  "audio_sha256": "A543FD37B08D5F20FF7C43F708C5E263A80C33CDDC4611E4D6E3E0EC67A01683",
+  "visual_review": {
+    "method": "22 sampled frames, plus full-size midpoint and final frame",
+    "character_clothing_room": "Acceptable consistency for draft",
+    "captions": "None observed in sampled frames"
+  },
+  "speech_review": {
+    "expected": "내일 우리 놀러 갈 때 입을 옷. 어때?",
+    "recognized": "내일 우리 놀러 갈 때 입으로 어때?",
+    "exact_match_verified": false,
+    "note": "ASR mismatch; listening review required; do not claim exact dialogue"
+  },
+  "full_story_edited": false
+}

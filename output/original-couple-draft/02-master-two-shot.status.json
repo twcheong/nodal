@@ -1,0 +1,38 @@
+{
+  "meta": null,
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"run_id\": \"6cf8218fa2014859be6b60dccacbe0e2\", \"status\": \"succeeded\", \"progress\": {\"completed_nodes\": 4, \"total_nodes\": 4, \"node_id\": null, \"step\": null, \"total_steps\": null}, \"results\": {\"image\": {\"socket\": \"asset\", \"type\": \"Image\", \"inline\": null, \"asset\": {\"hash\": \"75671ee2d65c7bd674bc3838b88b47d2\", \"media_type\": \"image/png\", \"size_bytes\": 2005004, \"width\": 1536, \"height\": 864}}}}",
+      "annotations": null,
+      "meta": null
+    }
+  ],
+  "structured_content": {
+    "run_id": "6cf8218fa2014859be6b60dccacbe0e2",
+    "status": "succeeded",
+    "progress": {
+      "completed_nodes": 4,
+      "total_nodes": 4,
+      "node_id": null,
+      "step": null,
+      "total_steps": null
+    },
+    "results": {
+      "image": {
+        "socket": "asset",
+        "type": "Image",
+        "inline": null,
+        "asset": {
+          "hash": "75671ee2d65c7bd674bc3838b88b47d2",
+          "media_type": "image/png",
+          "size_bytes": 2005004,
+          "width": 1536,
+          "height": 864
+        }
+      }
+    }
+  },
+  "is_error": false,
+  "result_type": "complete"
+}

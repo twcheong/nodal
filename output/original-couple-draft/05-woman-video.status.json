@@ -1,0 +1,25 @@
+{
+  "meta": null,
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"run_id\": \"0f3b0403228a446b93a9f7bfe7c13a4f\", \"status\": \"cancelled\", \"progress\": {\"completed_nodes\": 1, \"total_nodes\": 2, \"node_id\": \"call:generate\", \"step\": null, \"total_steps\": null}, \"results\": {}}",
+      "annotations": null,
+      "meta": null
+    }
+  ],
+  "structured_content": {
+    "run_id": "0f3b0403228a446b93a9f7bfe7c13a4f",
+    "status": "cancelled",
+    "progress": {
+      "completed_nodes": 1,
+      "total_nodes": 2,
+      "node_id": "call:generate",
+      "step": null,
+      "total_steps": null
+    },
+    "results": {}
+  },
+  "is_error": false,
+  "result_type": "complete"
+}

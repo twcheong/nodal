@@ -1,0 +1,112 @@
+{
+  "nodal_version": "1",
+  "id": "01994b00-0000-7000-8000-000000000001",
+  "definitions": {
+    "h3_image_video": {
+      "doc": "Animate a supplied first-frame image with the locally installed MiniMax H3 Pruned model. Source accepts a server-local image path or asset reference.",
+      "params": {
+        "source": {
+          "type": "Image",
+          "doc": "First-frame image path or asset:<hash>."
+        },
+        "prompt": {
+          "type": "STRING",
+          "doc": "Describe the subject motion, camera and sound."
+        },
+        "seed": {
+          "type": "INT",
+          "default": 7
+        },
+        "steps": {
+          "type": "INT",
+          "default": 16,
+          "widget": {
+            "min": 2,
+            "max": 100
+          }
+        },
+        "width": {
+          "type": "INT",
+          "default": 384,
+          "widget": {
+            "min": 256,
+            "max": 1920,
+            "step": 32
+          }
+        },
+        "height": {
+          "type": "INT",
+          "default": 576,
+          "widget": {
+            "min": 256,
+            "max": 1920,
+            "step": 32
+          }
+        }
+      },
+      "nodes": {
+        "generate": {
+          "type": "diffusion.MiniMaxH3",
+          "inputs": {
+            "model_path": "",
+            "first_frame": {
+              "$param": "source"
+            },
+            "prompt": {
+              "$param": "prompt"
+            },
+            "seed": {
+              "$param": "seed"
+            },
+            "steps": {
+              "$param": "steps"
+            },
+            "width": {
+              "$param": "width"
+            },
+            "height": {
+              "$param": "height"
+            },
+            "num_frames": 124,
+            "memory_profile": "pruned_convrot_int8_offload"
+          }
+        }
+      },
+      "returns": {
+        "video": {
+          "$link": [
+            "generate",
+            "video"
+          ]
+        }
+      }
+    }
+  },
+  "nodes": {
+    "input:source": {
+      "type": "image.Load",
+      "inputs": {
+        "path": "C:/Users/nexta/Desktop/nodal/output/original-couple-draft/03-woman-medium.png"
+      }
+    },
+    "call": {
+      "type": "subgraph.h3_image_video",
+      "inputs": {
+        "source": {
+          "$link": [
+            "input:source",
+            "image"
+          ]
+        },
+        "prompt": "A photorealistic Korean romantic comedy, one continuous five-second medium shot. Preserve the exact adult Korean woman, facial identity, shoulder-length black hair, ivory ribbed V-neck cardigan and blue jeans from the first frame. Preserve the same grey wall, oak bookshelf and burnt orange sofa, warm soft daylight from the right. Keep the camera fixed at eye level, no zoom and no cuts. She looks slightly to camera-right at her boyfriend off-screen, briefly glances down at her clothes, then looks back and smiles expectantly. Minimal natural body motion, subtle breathing and a small head tilt. In a clear natural warm young adult female Korean voice, she says exactly: '내일 우리 놀러 갈 때 입을 옷. 어때?' Accurate synchronized Korean lip movements, calm conversational pace, the sentence finishes before the end, short quiet pause afterward. Only one female speaker, quiet apartment room ambience, no music. Sharp facial detail and stable fine knit texture throughout. No subtitles, no captions, no text, no logos, no watermarks anywhere in any frame. Do not introduce a second person, do not change the outfit or furniture.",
+        "seed": 920265,
+        "steps": 20,
+        "width": 1024,
+        "height": 576
+      }
+    }
+  },
+  "outputs": [
+    "call"
+  ]
+}

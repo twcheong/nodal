@@ -50,7 +50,8 @@ def encode_webm(
         video = container.add_stream("libvpx-vp9", rate=24)
         video.width, video.height = width, height
         video.pix_fmt = "yuv420p"
-        video.options = {"crf": "30", "b": "0", "deadline": "good", "cpu-used": "4"}
+        # Preserve faces, fine hair and knit textures before any downstream restoration.
+        video.options = {"crf": "18", "b": "0", "deadline": "good", "cpu-used": "4"}
         sound = container.add_stream("libopus", rate=48000)
         sound.layout = "stereo"
         sound.format = "flt"
