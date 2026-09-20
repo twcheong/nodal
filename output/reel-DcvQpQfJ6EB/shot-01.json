@@ -1,0 +1,22 @@
+{
+  "tool": "run_template_h3_image_video",
+  "arguments": {
+    "source": "C:/Users/nexta/Desktop/nodal/output/reel-DcvQpQfJ6EB/frame-004.0.png",
+    "prompt": "Photorealistic Korean romantic comedy, one continuous medium shot lasting five seconds. Preserve exactly the adult woman in the first frame: the same short dark bob with soft light brown ends, face, tattoos, fitted white short-sleeve blouse, dark jeans and belt. Preserve the sunlit wooden room, large left window, wooden cabinet and warm backlight. Static camera at the same position. She looks toward her boyfriend just to the left of the camera, lightly adjusts the waistband and shows her outfit, smiling expectantly. She speaks naturally in Korean, with accurate synchronized mouth movements, in this exact order: '내일 우리 놀러갈때 입을 옷. 어떤게 나은지 봐줘! 어때?' A casual bright young adult female Korean voice, quiet room ambience, no music, no male speech. Keep her identity and clothing stable throughout. The entire picture is completely free of subtitles, captions, titles, text overlays, logos, watermarks and credits. Do not cut to another person.",
+    "seed": 92001,
+    "steps": 16,
+    "width": 768,
+    "height": 448
+  },
+  "provenance": {
+    "source_url": "https://www.instagram.com/reel/DcvQpQfJ6EB/",
+    "reference_frame_seconds": 4.0,
+    "reference_has_subtitles": false,
+    "model": "MiniMax-H3-Pruned",
+    "revision": "1a0ef5e65b639e84af81d883817968532180e9c7",
+    "memory_profile": "pruned_convrot_int8_offload",
+    "num_frames": 124,
+    "fps": 24,
+    "purpose": "First-shot feasibility check; not a verified full remake"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "width": 1916,
+  "height": 1078,
+  "fps": "30",
+  "last_sample_seconds": 33.0,
+  "duration_seconds": 33.83333333333333,
+  "frame_count": 1015,
+  "hard_cut_candidates": [
+    {
+      "time": 4.066666666666666,
+      "mean_difference": 94.12821197509766
+    },
+    {
+      "time": 5.1,
+      "mean_difference": 84.11863708496094
+    },
+    {
+      "time": 7.6,
+      "mean_difference": 83.2575912475586
+    },
+    {
+      "time": 9.633333333333333,
+      "mean_difference": 57.15142822265625
+    },
+    {
+      "time": 11.8,
+      "mean_difference": 65.64840698242188
+    },
+    {
+      "time": 13.733333333333333,
+      "mean_difference": 67.27745819091797
+    },
+    {
+      "time": 15.7,
+      "mean_difference": 65.93569946289062
+    },
+    {
+      "time": 17.0,
+      "mean_difference": 88.59239959716797
+    },
+    {
+      "time": 19.866666666666667,
+      "mean_difference": 90.79828643798828
+    },
+    {
+      "time": 24.3,
+      "mean_difference": 50.48951721191406
+    }
+  ]
+}

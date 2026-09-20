@@ -1,0 +1,23 @@
+{
+  "source_url": "https://www.instagram.com/reel/DcvQpQfJ6EB/",
+  "source_duration_seconds": 33.83333333333333,
+  "source_fps": 30,
+  "source_dimensions": [1916, 1078],
+  "method": "Original video decoded locally; dialogue read from burned-in subtitles; hard-cut candidates measured between adjacent decoded frames and checked against source frames.",
+  "requirements": {"generation_backend": "nodal only", "subtitles": false, "title_overlay": false, "external_image_or_video_generation": false},
+  "shots": [
+    {"id": 1, "start": 0, "end": 4.0666666667, "reference_seconds": 4, "clean_reference": true, "scene": "Woman shows fitted white blouse and dark jeans beside the bright window; medium shot.", "dialogue": [{"speaker": "woman", "text": "내일 우리 놀러갈때 입을 옷. 어떤게 나은지 봐줘! 어때?"}]},
+    {"id": 2, "start": 4.0666666667, "end": 5.1, "reference_seconds": null, "clean_reference": null, "scene": "Reverse medium shot: tattooed man in navy polo on green sofa, woman out of focus foreground right.", "dialogue": [{"speaker": "man", "text": "오 귀여워"}]},
+    {"id": 3, "start": 5.1, "end": 7.6, "reference_seconds": 6, "clean_reference": true, "scene": "Woman wears dark long-sleeve wrap crop top, one hand behind head, other on hip; same window angle.", "dialogue": [{"speaker": "woman", "text": "이건 어때?!"}]},
+    {"id": 4, "start": 7.6, "end": 9.6333333333, "reference_seconds": 8, "clean_reference": true, "scene": "Man holding yellow mug on sofa; responds with an admiring expression.", "dialogue": [{"speaker": "man", "text": "귀여워.."}]},
+    {"id": 5, "start": 9.6333333333, "end": 11.8, "reference_seconds": 10, "clean_reference": true, "scene": "Comic fisheye extreme close-up of woman in white polka-dot halter, leaning toward lens.", "dialogue": [{"speaker": "woman", "text": "이건 어떤데?"}]},
+    {"id": 6, "start": 11.8, "end": 13.7333333333, "reference_seconds": 12, "clean_reference": true, "scene": "Matching fisheye extreme close-up of man looking up.", "dialogue": [{"speaker": "man", "text": "귀여워.."}]},
+    {"id": 7, "start": 13.7333333333, "end": 15.7, "reference_seconds": 14, "clean_reference": true, "scene": "Wide-angle woman presenting white camisole, lace ruffle at waist and dark wide trousers in warm backlight.", "dialogue": [{"speaker": "woman", "text": "이건 어때?!"}]},
+    {"id": 8, "start": 15.7, "end": 17, "reference_seconds": 16, "clean_reference": true, "scene": "Man grins with eyes nearly closed and gives two thumbs up.", "dialogue": []},
+    {"id": 9, "start": 17, "end": 19.8666666667, "reference_seconds": 17, "clean_reference": true, "scene": "Woman white camisole close-up, sunny window behind; playfully exasperated complaint.", "dialogue": [{"speaker": "woman", "text": "아이씨 귀여워말고 다른 표현 없어!?"}]},
+    {"id": 10, "start": 19.8666666667, "end": 24.3, "reference_seconds": 20, "clean_reference": true, "scene": "Slow push-in on man's face, awkward comic pause then short reply.", "dialogue": [{"speaker": "man", "text": "이뻐..", "near_end": true}]},
+    {"id": 11, "start": 24.3, "end": 33.8333333333, "reference_seconds": null, "clean_reference": false, "scene": "Wide two-shot: man seated left on green sofa, woman standing right in camisole and ruffle, low carved table between, huge window behind. Camera slowly pulls back. Original central title and all bottom captions must be absent.", "dialogue": [{"speaker": "woman", "text": "아니 뭐 컬러가 이쁘다. 이런 표현 있잖아!"}, {"speaker": "man", "text": "컬러가 귀여워."}, {"speaker": "woman", "text": "컬러 조합이 어떻다. 이런거!"}, {"speaker": "man", "text": "조합이 귀여워."}, {"speaker": "woman", "text": "아이씨 그거 말고!"}]}
+  ],
+  "verification": {"source_audio_listened": false, "dialogue_source": "visible subtitles", "generated_speech_accuracy": "pending", "generated_identity_consistency": "pending"},
+  "known_constraints": ["Current H3 node accepts text and image references, not source-video motion or source-audio reference.", "H3 template currently generates 124 frames at 24 fps (5.167 seconds); original cuts require different durations.", "Final wide shot has persistent text in the source, requiring a clean nodal-generated reference or Ref2VA reconstruction.", "A successful generation is not proof of accurate Korean speech or exact reconstruction."]
+}
