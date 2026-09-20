@@ -1,0 +1,17 @@
+{
+  "meta": null,
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"run_id\": \"f4b0cc65ae414e2eb92b056127b4ea1e\", \"status\": \"queued\"}",
+      "annotations": null,
+      "meta": null
+    }
+  ],
+  "structured_content": {
+    "run_id": "f4b0cc65ae414e2eb92b056127b4ea1e",
+    "status": "queued"
+  },
+  "is_error": false,
+  "result_type": "complete"
+}

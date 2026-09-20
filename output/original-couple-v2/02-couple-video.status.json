@@ -1,0 +1,41 @@
+{
+  "meta": null,
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"run_id\": \"50aacccff3364b829f9d79858d63a9a1\", \"status\": \"succeeded\", \"progress\": {\"completed_nodes\": 2, \"total_nodes\": 2, \"node_id\": null, \"step\": null, \"total_steps\": null}, \"results\": {\"video\": {\"socket\": \"video\", \"type\": {\"opaque\": \"MiniMaxH3Video\", \"capabilities\": []}, \"inline\": null, \"asset\": {\"hash\": \"47924abbc86cff98021f137972867209\", \"media_type\": \"video/webm\", \"size_bytes\": 672676, \"width\": null, \"height\": null}}}}",
+      "annotations": null,
+      "meta": null
+    }
+  ],
+  "structured_content": {
+    "run_id": "50aacccff3364b829f9d79858d63a9a1",
+    "status": "succeeded",
+    "progress": {
+      "completed_nodes": 2,
+      "total_nodes": 2,
+      "node_id": null,
+      "step": null,
+      "total_steps": null
+    },
+    "results": {
+      "video": {
+        "socket": "video",
+        "type": {
+          "opaque": "MiniMaxH3Video",
+          "capabilities": []
+        },
+        "inline": null,
+        "asset": {
+          "hash": "47924abbc86cff98021f137972867209",
+          "media_type": "video/webm",
+          "size_bytes": 672676,
+          "width": null,
+          "height": null
+        }
+      }
+    }
+  },
+  "is_error": false,
+  "result_type": "complete"
+}

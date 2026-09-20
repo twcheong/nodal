@@ -1,0 +1,48 @@
+{
+  "source": "01-corrected-wide.png",
+  "source_sha256": "8a2aeac7ffb2251dc0f9aaae2c5781bcddf79aea2f4d2447ccc2f2ad55d8aee3",
+  "native_file": "02-couple-video.webm",
+  "native_sha256": "f9b03876c9d1f92703683ad37dae0c50aec5182a3a2f3dcebfe39b6d34fbc88a",
+  "restored_file": "03-couple-video-1080p.webm",
+  "restored_sha256": "afd149118c3b330e9b3ce7aae9fccd974216f175894bd6572e56965e8f9c11b7",
+  "native_run": "50aacccff3364b829f9d79858d63a9a1",
+  "restored_run": "f4b0cc65ae414e2eb92b056127b4ea1e",
+  "restored_asset": "e402185f48afc7062fd26200285082cf",
+  "native_resolution": [
+    1024,
+    576
+  ],
+  "restored_resolution": [
+    1920,
+    1080
+  ],
+  "frame_count": 124,
+  "fps": 24,
+  "duration_seconds": 5.166666666666667,
+  "audio_pcm_sha256": "9023ced3888bd291151c2c67980b2e92c94519f050c042c2fc5d687ace241ee2",
+  "restored_audio_pcm_sha256": "9023ced3888bd291151c2c67980b2e92c94519f050c042c2fc5d687ace241ee2",
+  "decoded_audio_identical": true,
+  "visual_review": {
+    "sampled_frames_per_video": 22,
+    "full_size_frames_reviewed": [
+      84
+    ],
+    "layout_and_relative_scale": "Consistent across sampled frames: seated man left, standing woman right, central table, rear window, feet on floor",
+    "visible_captions": "None in sampled frames",
+    "limitations": "Sampled visual review; small generated texture and facial changes remain; no pixel-perfect camera lock asserted"
+  },
+  "speech_review": {
+    "method": "Local faster-whisper small CPU int8",
+    "transcript": [
+      "이건 어때?",
+      "귀여워"
+    ],
+    "dialogue_matches_requested_text": true,
+    "language": "ko",
+    "human_listening_verified": false,
+    "speaker_gender_and_lip_sync_verified": false
+  },
+  "backend": "nodal local MCP / MiniMax-H3-Pruned / RealESRGAN_x4plus",
+  "original_reference_video_pixels_used": false,
+  "deliverable_scope": "5.17 second two-shot video draft, not the entire reference reel"
+}
