@@ -1,0 +1,25 @@
+{
+  "tool": "run_template_flux2_klein_multi_reference",
+  "arguments": {
+    "reference_1": "C:/Users/nexta/Desktop/nodal/output/original-couple-v3/02-vintage-wide.png",
+    "prompt": "Edit this film still. Keep the same beautiful vintage wood room, olive sofa, burgundy rug, furniture, window, camera framing, body positions and correct adult relative body sizes. The woman stays standing RIGHT, the man stays seated LEFT. Change the CASTING, HAIR, EXPRESSIONS and BLOUSE decisively; do not preserve the old faces.\nRecast the man as a charismatic handsome Korean actor age 28, angular clean jaw, expressive visible eyes and eyebrows, slightly wavy tousled black hair swept BACK exposing most of his forehead. REMOVE HIS EYEGLASSES ENTIRELY: bare face, no spectacles, no frames. Slim athletic build in the same navy polo. He looks directly up at her with a relaxed affectionate half-smile, slightly leaning forward, forearms resting on thighs.\nRecast the woman as a striking stylish Korean actress age 27, large expressive almond eyes, delicate defined nose, natural luminous skin. Replace the smooth office bob with an airy shaggy layered chin-length haircut, wispy separated forehead bangs and textured flipped-out tips. Replace the plain shirt with a tailored fitted ivory blouse, short puff cap sleeves, small stand collar, delicate buttons, curved fitted waist, cropped shaped hem just above her jeans. Small silver hoops and oxblood shoulder bag. Turn her head LEFT and slightly DOWN so she clearly makes eye contact with the seated man, with a subtle mischievous CLOSED-MOUTH smile, not a posed toothy catalog grin. Slight relaxed weight shift, elegant natural posture, both feet grounded. Dark straight jeans and flats remain.\nMake this feel like a candid romantic cinema moment: golden sunlight catching individual hair strands, warm bounce on faces, rich brown shadows, fine natural skin texture, deep olive and burgundy accents. No beauty-filter plastic skin. One coherent realistic photograph. Preserve normal head sizes and full-body framing. No writing or captions.",
+    "transformer": "C:/Users/nexta/Desktop/nodal/models/FLUX.2-klein-base-4B/transformer",
+    "text_encoder": "C:/Users/nexta/.nodal/models/text_encoders/qwen_3_4b.safetensors",
+    "vae": "C:/Users/nexta/Desktop/nodal/models/FLUX.2-klein-base-4B/vae",
+    "config_repo": "C:/Users/nexta/Desktop/nodal/models/FLUX.2-klein-base-4B",
+    "width": 1536,
+    "height": 864,
+    "steps": 32,
+    "seed": 921303
+  },
+  "provenance": {
+    "purpose": "Targeted recasting, no glasses, textured hair and candid mutual eyeline after intermediate QA",
+    "composition_anchor": "v3/02-vintage-wide.png reviewed intermediate for room and scale only; not approved identity master",
+    "source_reference": "Original reel frames 0 and 27 visually inspected; pixels never supplied to generator",
+    "reference_video_pixels_used": false,
+    "model": "FLUX.2 Klein Base 4B",
+    "seed": 921303,
+    "steps": 32,
+    "no_external_generation": true
+  }
+}

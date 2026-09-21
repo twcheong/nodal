@@ -1,0 +1,147 @@
+{
+  "nodal_version": "1",
+  "id": "49e69a51-b369-49da-8e74-e4d7e929f9a4",
+  "definitions": {
+    "flux2_klein_multi_reference": {
+      "doc": "Restyle the accepted composition into an original cinematic cast and vintage interior, using only the nodal-generated geometry reference.",
+      "params": {
+        "reference_1": {
+          "type": "Image",
+          "doc": "주 얼굴과 정체성 레퍼런스. 파일 경로 또는 asset:<hash>."
+        },
+        "prompt": {
+          "type": "STRING",
+          "doc": "image 1..4에서 무엇을 보존하고 어떤 포즈·장면을 만들지 명시한다."
+        },
+        "transformer": {
+          "type": "STRING",
+          "doc": "models/diffusion_models의 FLUX.2 Klein transformer 파일명."
+        },
+        "text_encoder": {
+          "type": "STRING",
+          "doc": "models/text_encoders의 Qwen3 4B encoder 파일명."
+        },
+        "vae": {
+          "type": "STRING",
+          "doc": "models/vae의 FLUX.2 VAE 파일명."
+        },
+        "config_repo": {
+          "type": "STRING",
+          "default": "black-forest-labs/FLUX.2-klein-4B",
+          "doc": "config/tokenizer/scheduler 메타데이터 출처."
+        },
+        "width": {
+          "type": "INT",
+          "default": 608,
+          "widget": {
+            "min": 256,
+            "max": 2048,
+            "step": 16
+          }
+        },
+        "height": {
+          "type": "INT",
+          "default": 1120,
+          "widget": {
+            "min": 256,
+            "max": 2048,
+            "step": 16
+          }
+        },
+        "steps": {
+          "type": "INT",
+          "default": 4,
+          "widget": {
+            "min": 1,
+            "max": 50,
+            "step": 1
+          }
+        },
+        "seed": {
+          "type": "INT",
+          "default": 0,
+          "widget": {
+            "seed": true,
+            "control": "randomize",
+            "min": 0,
+            "max": 9007199254740991,
+            "step": 1
+          }
+        }
+      },
+      "nodes": {
+        "load": {
+          "type": "diffusion.Flux2KleinLoader",
+          "inputs": {
+            "transformer": {
+              "$param": "transformer"
+            },
+            "text_encoder": {
+              "$param": "text_encoder"
+            },
+            "vae": {
+              "$param": "vae"
+            },
+            "config_repo": {
+              "$param": "config_repo"
+            }
+          }
+        },
+        "generate": {
+          "type": "diffusion.Flux2KleinMultiReference",
+          "inputs": {
+            "model": {
+              "$link": [
+                "load",
+                "model"
+              ]
+            },
+            "reference_1": {
+              "$param": "reference_1"
+            },
+            "prompt": {
+              "$param": "prompt"
+            },
+            "width": {
+              "$param": "width"
+            },
+            "height": {
+              "$param": "height"
+            },
+            "steps": {
+              "$param": "steps"
+            },
+            "seed": {
+              "$param": "seed"
+            }
+          }
+        },
+        "save": {
+          "type": "image.Save",
+          "inputs": {
+            "image": {
+              "$link": [
+                "generate",
+                "image"
+              ]
+            },
+            "embed_workflow": true
+          }
+        }
+      },
+      "returns": {
+        "image": {
+          "$link": [
+            "save",
+            "asset"
+          ]
+        }
+      }
+    }
+  },
+  "nodes": {},
+  "outputs": [],
+  "ui": {
+    "description": "v3 art direction: composition-only reference, new casting and set styling requested by user."
+  }
+}

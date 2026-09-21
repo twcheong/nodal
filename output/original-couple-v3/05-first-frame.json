@@ -1,0 +1,25 @@
+{
+  "tool": "run_template_flux2_klein_multi_reference",
+  "arguments": {
+    "reference_1": "C:/Users/nexta/Desktop/nodal/output/original-couple-v3/03-cinematic-first-frame.png",
+    "prompt": "Make precisely two styling changes to the woman in this photograph, and preserve everything else.\n1. Replace her brown curly hair with sleek BLACK CHIN-LENGTH layered hair and airy wispy fringe across her forehead, lightly flipped tips, no large curls.\n2. Replace her beige collared shirt with a fitted ivory SLEEVELESS lace-trimmed top, delicate embroidered neckline, sculpted waist and a short softly ruffled peplum hem. Keep the dark jeans, belt, shoes, bag and earrings.\nPRESERVE her exact existing face, head orientation, smile, standing pose, body size and exact original ARM POSITIONS. Both arms remain relaxed straight DOWN along her sides just as in the source. Do not raise either hand, do not add a gesture. She has precisely TWO arms and TWO hands, one natural arm from each shoulder, no other limbs or hands. Keep her gaze toward the seated man. Preserve the man's face, hair, clothes, seated pose and hands completely. Preserve the entire vintage walnut room, olive sofa, rug, table, window, sideboard, plants, props, golden lighting and camera framing. Same photorealistic romantic film still, fine skin texture, no text or captions.",
+    "transformer": "C:/Users/nexta/Desktop/nodal/models/FLUX.2-klein-base-4B/transformer",
+    "text_encoder": "C:/Users/nexta/.nodal/models/text_encoders/qwen_3_4b.safetensors",
+    "vae": "C:/Users/nexta/Desktop/nodal/models/FLUX.2-klein-base-4B/vae",
+    "config_repo": "C:/Users/nexta/Desktop/nodal/models/FLUX.2-klein-base-4B",
+    "width": 1536,
+    "height": 864,
+    "steps": 32,
+    "seed": 921305
+  },
+  "provenance": {
+    "purpose": "Recover from duplicated-arm failure by changing only hair and top on normal-pose candidate 03",
+    "composition_anchor": "v3/03-cinematic-first-frame.png with normal arm anatomy; do not reuse rejected 04 anatomy",
+    "source_reference": "Original reel frames 0 and 27 visually inspected; pixels never supplied to generator",
+    "reference_video_pixels_used": false,
+    "model": "FLUX.2 Klein Base 4B",
+    "seed": 921305,
+    "steps": 32,
+    "no_external_generation": true
+  }
+}

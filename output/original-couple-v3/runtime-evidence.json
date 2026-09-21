@@ -1,0 +1,256 @@
+{
+  "nodal_source_commit": "5758ea2eefba20de97c02487dd6ec1b2eaa5f57b",
+  "port": 8200,
+  "relevant_registered_nodes": [
+    {
+      "id": "diffusion.Flux2KleinLoader",
+      "title": "Load FLUX.2 Klein",
+      "category": "diffusion/loaders",
+      "aliases": [
+        "FLUX.2 Klein",
+        "플럭스 2",
+        "다중 레퍼런스 모델"
+      ],
+      "version": "1",
+      "output_node": false,
+      "cacheable": false,
+      "doc": "분리된 로컬 FLUX.2 Klein 컴포넌트를 공식 파이프라인으로 조립한다.",
+      "inputs": [
+        {
+          "name": "transformer",
+          "type": "STRING",
+          "required": true,
+          "default": null,
+          "lazy": false,
+          "doc": "models/diffusion_models의 FLUX.2 Klein transformer safetensors.",
+          "widget": {
+            "provider": "diffusion_models",
+            "options": [
+              "z_image_bf16.safetensors"
+            ]
+          }
+        },
+        {
+          "name": "text_encoder",
+          "type": "STRING",
+          "required": true,
+          "default": null,
+          "lazy": false,
+          "doc": "models/text_encoders의 Qwen3 4B text encoder safetensors.",
+          "widget": {
+            "provider": "text_encoders",
+            "options": [
+              "qwen_3_4b.safetensors"
+            ]
+          }
+        },
+        {
+          "name": "vae",
+          "type": "STRING",
+          "required": true,
+          "default": null,
+          "lazy": false,
+          "doc": "models/vae의 FLUX.2 VAE safetensors.",
+          "widget": {
+            "provider": "vae",
+            "options": [
+              "ae.safetensors"
+            ]
+          }
+        },
+        {
+          "name": "config_repo",
+          "type": "STRING",
+          "required": false,
+          "default": "black-forest-labs/FLUX.2-klein-4B",
+          "lazy": false,
+          "doc": "가중치가 아닌 config/tokenizer/scheduler 메타데이터 출처.",
+          "widget": {}
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "Model",
+          "doc": ""
+        }
+      ]
+    },
+    {
+      "id": "diffusion.Flux2KleinMultiReference",
+      "title": "FLUX.2 Klein Multi-Reference",
+      "category": "diffusion/sampling",
+      "aliases": [
+        "FLUX.2 다중 레퍼런스",
+        "여러 이미지 생성",
+        "캐릭터 일관성"
+      ],
+      "version": "1",
+      "output_node": false,
+      "cacheable": true,
+      "doc": "최대 네 레퍼런스를 독립 조건 토큰으로 넣어 새 이미지를 생성한다.\n\n픽셀을 평균하거나 한 캔버스로 합치지 않는다. 각 이미지가 별도 VAE 토큰으로\ntransformer에 들어가므로 프롬프트에서 image 1..4의 역할을 지시할 수 있다.",
+      "inputs": [
+        {
+          "name": "model",
+          "type": "Model",
+          "required": true,
+          "default": null,
+          "lazy": false,
+          "doc": "",
+          "widget": {}
+        },
+        {
+          "name": "reference_1",
+          "type": "Image",
+          "required": true,
+          "default": null,
+          "lazy": false,
+          "doc": "주 정체성/얼굴 레퍼런스.",
+          "widget": {}
+        },
+        {
+          "name": "reference_2",
+          "type": "Image",
+          "required": false,
+          "default": null,
+          "lazy": false,
+          "doc": "선택 레퍼런스 2.",
+          "widget": {}
+        },
+        {
+          "name": "reference_3",
+          "type": "Image",
+          "required": false,
+          "default": null,
+          "lazy": false,
+          "doc": "선택 레퍼런스 3.",
+          "widget": {}
+        },
+        {
+          "name": "reference_4",
+          "type": "Image",
+          "required": false,
+          "default": null,
+          "lazy": false,
+          "doc": "선택 레퍼런스 4.",
+          "widget": {}
+        },
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "required": false,
+          "default": "",
+          "lazy": false,
+          "doc": "",
+          "widget": {
+            "multiline": true,
+            "placeholder": "Use the exact character from image 1..."
+          }
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "required": false,
+          "default": 768,
+          "lazy": false,
+          "doc": "",
+          "widget": {
+            "min": 256,
+            "max": 2048,
+            "step": 16
+          }
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "required": false,
+          "default": 1024,
+          "lazy": false,
+          "doc": "",
+          "widget": {
+            "min": 256,
+            "max": 2048,
+            "step": 16
+          }
+        },
+        {
+          "name": "steps",
+          "type": "INT",
+          "required": false,
+          "default": 4,
+          "lazy": false,
+          "doc": "증류 Klein 모델은 4스텝 권장.",
+          "widget": {
+            "min": 1,
+            "max": 50,
+            "step": 1
+          }
+        },
+        {
+          "name": "seed",
+          "type": "INT",
+          "required": false,
+          "default": 0,
+          "lazy": false,
+          "doc": "같은 시드·같은 레퍼런스면 같은 결과가 나온다.",
+          "widget": {
+            "seed": true,
+            "control": "randomize",
+            "min": 0,
+            "max": 9007199254740991,
+            "step": 1
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "Image",
+          "doc": ""
+        }
+      ]
+    },
+    {
+      "id": "image.Save",
+      "title": "Save Image",
+      "category": "image/io",
+      "aliases": [
+        "저장",
+        "save",
+        "출력"
+      ],
+      "version": "1",
+      "output_node": true,
+      "cacheable": false,
+      "doc": "이미지를 PNG 로 인코딩해 `AssetStore` 에 넣는다.\n\n`embed_workflow` 가 켜져 있으면 캐논 그래프를 `iTXt` 로 심는다 — 그러면 이미지\n파일 자체가 재현 가능한 레시피가 된다 (design.md §1.2).\n\n출력 노드이고 캐시하지 않는다. 저장은 부수효과라 \"이미 같은 입력으로 돌렸으니\n건너뛴다\" 가 사용자 기대와 어긋난다.",
+      "inputs": [
+        {
+          "name": "image",
+          "type": "Image",
+          "required": true,
+          "default": null,
+          "lazy": false,
+          "doc": "",
+          "widget": {}
+        },
+        {
+          "name": "embed_workflow",
+          "type": "BOOL",
+          "required": false,
+          "default": true,
+          "lazy": false,
+          "doc": "",
+          "widget": {}
+        }
+      ],
+      "outputs": [
+        {
+          "name": "asset",
+          "type": "Image",
+          "doc": ""
+        }
+      ]
+    }
+  ],
+  "inspection_log": "inspection.log"
+}

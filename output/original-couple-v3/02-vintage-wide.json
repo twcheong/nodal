@@ -1,0 +1,25 @@
+{
+  "tool": "run_template_flux2_klein_multi_reference",
+  "arguments": {
+    "reference_1": "C:/Users/nexta/Desktop/nodal/output/original-couple-v2/01-corrected-wide.png",
+    "prompt": "Cinematic Korean indie romance film still, horizontal 16:9. Use the reference ONLY for realistic adult body proportions and exact seated-man-left, standing-woman-right, table-between composition. Redesign faces, fashion and the entire room.\nBeautiful atmospheric vintage Seoul living room: dark honey-walnut paneled walls, olive velvet sofa, carved walnut coffee table, faded burgundy Persian rug, antique sideboard with ceramics, art books and amber lamp, antique mirror, trailing plants and framed art. Large timber-framed rear window shows green trees and tiled rooftops. Golden afternoon side-backlight outlines hair, soft bounce lights faces, deep brown shadows, tactile wood and fabric, rich film colors. Layered lived-in interior, not an empty beige catalog.\nTwo charismatic attractive Korean adults age 28. Woman stands RIGHT facing him, face turned slightly toward camera: expressive eyes, delicate defined features, luminous natural skin, playful subtle smile; airy layered short black bob, wispy bangs and flipped ends. Fitted ivory short-sleeve collared blouse with tiny buttons and sculpted waist, dark indigo straight jeans, narrow brown belt, black Mary Jane flats, silver earrings, small oxblood shoulder bag; hand lightly on its strap.\nHandsome man sits LEFT, looking warmly up at her: defined jaw, expressive eyes, tousled black hair, NO glasses. Fitted navy short-sleeve knitted polo, faded blue jeans, dark loafers, forearms on thighs.\nKeep both bodies at SAME camera distance, natural adult head sizes, slim normal anatomy, both feet visible on the same floor. His seated head is below her shoulder; she is clearly taller while standing. Preserve reference camera framing and person scale. Full-body wide side-on two-shot, 50mm lens, crisp faces, natural pores, romantic chemistry. No text, captions, logos or extra people.",
+    "transformer": "C:/Users/nexta/Desktop/nodal/models/FLUX.2-klein-base-4B/transformer",
+    "text_encoder": "C:/Users/nexta/.nodal/models/text_encoders/qwen_3_4b.safetensors",
+    "vae": "C:/Users/nexta/Desktop/nodal/models/FLUX.2-klein-base-4B/vae",
+    "config_repo": "C:/Users/nexta/Desktop/nodal/models/FLUX.2-klein-base-4B",
+    "width": 1536,
+    "height": 864,
+    "steps": 32,
+    "seed": 921302
+  },
+  "provenance": {
+    "purpose": "Concise production prompt within local FLUX token limit; preserve ratio, redesign casting and vintage set",
+    "composition_anchor": "original-couple-v2/01-corrected-wide.png; geometry only, not face identity",
+    "source_reference": "Original reel frames 0 and 27 visually inspected; pixels never supplied to generator",
+    "reference_video_pixels_used": false,
+    "model": "FLUX.2 Klein Base 4B",
+    "seed": 921302,
+    "steps": 32,
+    "no_external_generation": true
+  }
+}

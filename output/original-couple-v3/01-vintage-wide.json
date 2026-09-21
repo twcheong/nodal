@@ -1,0 +1,25 @@
+{
+  "tool": "run_template_flux2_klein_multi_reference",
+  "arguments": {
+    "reference_1": "C:/Users/nexta/Desktop/nodal/output/original-couple-v2/01-corrected-wide.png",
+    "prompt": "Reimagine this blocking reference as a visually arresting Korean independent romance film still. Use image 1 ONLY for the camera framing, realistic relative adult body sizes and seated-left / standing-right blocking. Entirely NEW attractive adult faces, hair, clothing and decorated interior. No glasses. Horizontal 16:9 cinematic photograph with two charismatic Korean adults in their late twenties, subtle flirtatious chemistry, an intimate lived-in vintage wood-paneled Seoul loft.\nThe beautiful woman stands at the RIGHT looking left toward him, three-quarter face visible, delicate defined facial features, expressive almond eyes, luminous natural skin with fine pores, softly smiling. Airy short layered black bob with wispy bangs, slightly flipped ends catching sunlight, not a blunt heavy bob. She wears an elegant fitted ivory short-sleeve cotton blouse with a pointed collar, delicate fabric-covered buttons, sculpted waist and a slightly cropped hem, dark indigo straight-leg jeans, narrow espresso belt, black leather Mary Jane flats, small silver earrings and a compact oxblood shoulder bag. One hand lightly holds the bag strap, the other relaxed. Polished distinctive styling, relaxed confident pose, full body with feet visible.\nThe handsome man sits on the LEFT on a low olive-green velvet sofa with narrow dark carved wooden arms. Defined jaw, lively eyes, no glasses, textured tousled black hair softly swept off his forehead, warm half-smile looking up at her. Slim athletic build, fitted midnight-navy short-sleeve fine-knit polo with an open collar, washed medium-blue straight jeans and dark loafers, forearms resting naturally on his thighs. Full seated body and feet visible. Both people are at the same camera distance, normal realistic adult anatomy, similar actual head sizes. Standing woman about 168cm and seated man about 178cm if standing. His seated head reaches her upper chest. Never enlarge him relative to her.\nReplace the empty modern room with a richly layered but believable vintage interior: deep honey-walnut vertical wood paneling, one enormous back picture window framed in old timber, leafy trees and a softly recognizable tiled roof outside, not a blank white window. A low richly grained carved walnut coffee table between the couple on a faded burgundy Persian rug. A vintage walnut sideboard at far right with ceramic vases, a small bronze sculpture, two stacked art books and an amber glass table lamp; an antique framed mirror above it catching a sliver of the room. A trailing pothos and small framed botanical art on the left wall. Two tasteful patterned cushions on the olive sofa. Objects have varied silhouettes and materials, curated cinematic set dressing, not clutter. Maintain generous clean space between faces and readable subject silhouettes.\nLate afternoon sun comes from the large back-left window, visible golden rim light in her hair and on his cheek, soft warm bounce lighting on both faces, subtle leaf-shaped sunlight on the wooden floor. Deep warm brown shadows, olive upholstery, wine-red rug and bag, ivory blouse, navy polo. Natural skin colors, richly graded filmic contrast, dimensional light, tactile fine fabric and wood detail, 50mm lens, eye-level side-on two-shot, entire room and both faces in readable focus. Emotionally engaging magazine-quality cinema still, not a beige catalog room. No subtitles, captions, typography, watermarks, logo or additional people. Preserve the accepted normal body scale and left-right composition while fully changing the casting and art direction.",
+    "transformer": "C:/Users/nexta/Desktop/nodal/models/FLUX.2-klein-base-4B/transformer",
+    "text_encoder": "C:/Users/nexta/.nodal/models/text_encoders/qwen_3_4b.safetensors",
+    "vae": "C:/Users/nexta/Desktop/nodal/models/FLUX.2-klein-base-4B/vae",
+    "config_repo": "C:/Users/nexta/Desktop/nodal/models/FLUX.2-klein-base-4B",
+    "width": 1536,
+    "height": 864,
+    "steps": 32,
+    "seed": 921301
+  },
+  "provenance": {
+    "purpose": "Rebuild first-frame casting, fashion and interior after user rejected bland v2 look",
+    "composition_anchor": "original-couple-v2/01-corrected-wide.png; geometry only, not face identity",
+    "source_reference": "Original reel frames 0 and 27 visually inspected; pixels never supplied to generator",
+    "reference_video_pixels_used": false,
+    "model": "FLUX.2 Klein Base 4B",
+    "seed": 921301,
+    "steps": 32,
+    "no_external_generation": true
+  }
+}
