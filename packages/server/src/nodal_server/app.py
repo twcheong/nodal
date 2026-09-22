@@ -624,6 +624,6 @@ def create_app(
                     "web_asset_not_found",
                     f"프론트 빌드에 {file_path!r} 이 없다",
                 )
-            return FileResponse(target)
+            return FileResponse(target, media_type=_web_media_type(target))
 
     return app

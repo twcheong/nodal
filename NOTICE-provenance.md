@@ -1,5 +1,16 @@
 # 외부 프로젝트 참조 기록 (Provenance)
 
+## 2026-09-23 · Qwen-Image-2.1 로컬 연결
+
+- 공식 Qwen 모델 카드·LICENSE·model_index와 Hugging Face Diffusers의
+  `pipeline_qwenimage21.py`, 해당 파이프라인 문서를 확인했다.
+- 모델 revision `790c92633540aa0cb11d9abf19eb46d861714758`;
+  Diffusers revision `8b3c707ebd3ec4881f4190cf42931da07eaf3b65`.
+- nodal은 Apache-2.0 Diffusers의 공개 파이프라인·오프로딩 API만 호출한다.
+  모델 연산 구현을 복사하지 않았다. ComfyUI 소스는 조회하거나 가져오지 않았다.
+- Qwen Research License 가중치는 사용자 요청에 따라 로컬 연구·평가용으로
+  별도 다운로드했다. nodal 배포물에 포함하거나 Apache-2.0으로 재허가하지 않는다.
+
 이 파일의 목적은 **"nodal은 아키텍처를 참조했을 뿐 코드를 이식하지 않았다"를 스스로 증명할 수 있게** 하는 것이다.
 nodal 은 **Apache-2.0** 이다 (→ `docs/license.md`). GPL 코드가 한 줄이라도 섞였다면 그 배포는
 자기 `LICENSE` 와 모순된다. 이 기록이 그런 일이 없었음을 보이는 근거다.
