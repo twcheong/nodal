@@ -1,0 +1,20 @@
+{
+  "detected_language": "ko",
+  "language_probability": 0.9500901103019714,
+  "segments": [
+    {
+      "start": 2.7600000000000002,
+      "end": 4.16,
+      "text": " 이뻐",
+      "avg_logprob": -0.7323119163513183,
+      "no_speech_prob": 0.025618797168135643,
+      "words": [
+        {
+          "word": " 이뻐",
+          "start": 2.7600000000000002,
+          "end": 4.16
+        }
+      ]
+    }
+  ]
+}

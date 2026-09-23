@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent.parent
 QA_PYTHON = REPO / ".venv/Scripts/python.exe"
 ASR_PYTHON = Path("C:/Users/nexta/miniconda3/envs/GPTSoVits/python.exe")
+ASR_LARGE = REPO / "models/asr/whisper-large-v3-turbo"
 ASR_MODEL = (
     REPO
     / "output/reel-DcvQpQfJ6EB/qa-model-cache"
@@ -75,6 +76,18 @@ def collect(number: int) -> None:
                 str(ASR_MODEL),
                 "--output",
                 str(transcript),
+            ]
+        )
+    large_transcript = output / "large-transcript.json"
+    if (ASR_LARGE / "model.bin").exists() and not large_transcript.exists():
+        run(
+            [
+                str(ASR_PYTHON),
+                str(ROOT / "verify_speech.py"),
+                str(output / "generated-audio.wav"),
+                str(large_transcript),
+                "--model",
+                str(ASR_LARGE),
             ]
         )
 

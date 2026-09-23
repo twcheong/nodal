@@ -1,0 +1,14 @@
+{
+  "width": 1024,
+  "height": 576,
+  "fps": "30",
+  "video_codec": "vp9",
+  "audio_streams": 1,
+  "frame_count": 133,
+  "video_duration_seconds": 4.433333333333334,
+  "audio_codec": "opus",
+  "audio_duration_seconds": 4.4333125,
+  "audio_rms": 0.024896610724426872,
+  "visual_identity_verified": false,
+  "speech_accuracy_verified": false
+}

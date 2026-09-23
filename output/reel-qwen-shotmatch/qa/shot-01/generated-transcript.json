@@ -1,0 +1,70 @@
+{
+  "detected_language": "ko",
+  "language_probability": 0.9990781545639038,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 4.84,
+      "text": " 내일 우리 놀러 갈 때 입으로 어떤 게 나은지 봐줘, 어때?",
+      "avg_logprob": -0.3348246074858166,
+      "no_speech_prob": 0.00870912242680788,
+      "words": [
+        {
+          "word": " 내일",
+          "start": 0.0,
+          "end": 1.1
+        },
+        {
+          "word": " 우리",
+          "start": 1.1,
+          "end": 1.4
+        },
+        {
+          "word": " 놀러",
+          "start": 1.4,
+          "end": 1.72
+        },
+        {
+          "word": " 갈",
+          "start": 1.72,
+          "end": 1.86
+        },
+        {
+          "word": " 때",
+          "start": 1.86,
+          "end": 2.0
+        },
+        {
+          "word": " 입으로",
+          "start": 2.0,
+          "end": 2.34
+        },
+        {
+          "word": " 어떤",
+          "start": 2.34,
+          "end": 3.16
+        },
+        {
+          "word": " 게",
+          "start": 3.16,
+          "end": 3.3
+        },
+        {
+          "word": " 나은지",
+          "start": 3.3,
+          "end": 3.6
+        },
+        {
+          "word": " 봐줘,",
+          "start": 3.6,
+          "end": 3.96
+        },
+        {
+          "word": " 어때?",
+          "start": 4.1,
+          "end": 4.84
+        }
+      ]
+    }
+  ]
+}

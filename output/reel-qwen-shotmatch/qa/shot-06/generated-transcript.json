@@ -1,0 +1,20 @@
+{
+  "detected_language": "ko",
+  "language_probability": 0.9493420124053955,
+  "segments": [
+    {
+      "start": 2.1,
+      "end": 3.5,
+      "text": " 귀여워.",
+      "avg_logprob": -0.436410258213679,
+      "no_speech_prob": 0.018679266795516014,
+      "words": [
+        {
+          "word": " 귀여워.",
+          "start": 2.1,
+          "end": 3.5
+        }
+      ]
+    }
+  ]
+}

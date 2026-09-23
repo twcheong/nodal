@@ -8,6 +8,7 @@ from pathlib import Path
 
 import av
 import numpy as np
+from PIL import Image
 
 RATE = 48000
 FPS = 30
@@ -98,6 +99,12 @@ def assemble(edit_path: Path, destination: Path) -> dict:
             pcm = read_audio(path)[:, round(start * RATE) : round(end * RATE)]
             speed = (end - start) / (count / FPS)
             pcm = tempo(pcm, speed)
+            gain_db = float(shot.get("gain_db", 0.0))
+            if not -12 <= gain_db <= 12:
+                raise ValueError(f"Unreviewed audio gain: {gain_db} dB for {path}")
+            pcm *= 10 ** (gain_db / 20)
+            if np.max(np.abs(pcm)) > 0.98:
+                raise ValueError(f"Audio gain would clip: {path}")
             desired = count * (RATE // FPS)
             padding = max(0, desired - pcm.shape[1])
             if padding > RATE // 10:
@@ -107,11 +114,30 @@ def assemble(edit_path: Path, destination: Path) -> dict:
             pcm[:, :fade] *= np.linspace(0, 1, fade)
             pcm[:, -fade:] *= np.linspace(1, 0, fade)
             chosen = []
+            crop_boxes = []
             for index in range(count):
                 second = start + (index / count) * (end - start)
                 source_index = min(round(second * source_fps), len(pictures) - 1)
                 chosen.append(source_index)
-                picture = av.VideoFrame.from_image(pictures[source_index].convert("RGB"))
+                source_picture = pictures[source_index].convert("RGB")
+                framing = shot.get("framing")
+                if framing:
+                    fraction = index / max(1, count - 1)
+                    first, last = framing["start"], framing["end"]
+                    zoom, cx, cy = [
+                        a + (b - a) * fraction for a, b in zip(first, last, strict=True)
+                    ]
+                    if not 1 <= zoom <= 2:
+                        raise ValueError(f"Unreviewed video zoom: {zoom}")
+                    width, height = 1024 / zoom, 576 / zoom
+                    left = min(max(1024 * cx - width / 2, 0), 1024 - width)
+                    top = min(max(576 * cy - height / 2, 0), 576 - height)
+                    box = (left, top, left + width, top + height)
+                    crop_boxes.append(box)
+                    source_picture = source_picture.resize(
+                        (1024, 576), Image.Resampling.LANCZOS, box=box
+                    )
+                picture = av.VideoFrame.from_image(source_picture)
                 picture.pts, picture.time_base = frame_cursor + index, Fraction(1, FPS)
                 for packet in video.encode(picture):
                     target.mux(packet)
@@ -134,8 +160,11 @@ def assemble(edit_path: Path, destination: Path) -> dict:
                     "source_start": start,
                     "source_end": end,
                     "tempo": speed,
+                    "gain_db": gain_db,
                     "padding_samples": padding,
                     "source_frame_indices": chosen,
+                    "video_framing": shot.get("framing"),
+                    "video_crop_boxes": crop_boxes,
                     "source_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
                 }
             )

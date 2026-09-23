@@ -1,0 +1,35 @@
+{
+  "detected_language": "ko",
+  "language_probability": 0.9430928230285645,
+  "segments": [
+    {
+      "start": 0.96,
+      "end": 4.2,
+      "text": " 척옥 증두가 제야 존합니다.",
+      "avg_logprob": -0.8041292078354779,
+      "no_speech_prob": 0.028857212513685226,
+      "words": [
+        {
+          "word": " 척옥",
+          "start": 0.96,
+          "end": 1.88
+        },
+        {
+          "word": " 증두가",
+          "start": 1.88,
+          "end": 2.34
+        },
+        {
+          "word": " 제야",
+          "start": 2.34,
+          "end": 2.78
+        },
+        {
+          "word": " 존합니다.",
+          "start": 2.78,
+          "end": 4.2
+        }
+      ]
+    }
+  ]
+}

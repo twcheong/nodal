@@ -1,0 +1,128 @@
+{
+  "fps": 30,
+  "purpose": "Final 11-cut recreation matched to source 1015-frame edit",
+  "shots": [
+    {
+      "shot": 1,
+      "status": "accepted",
+      "file": "videos/shot-01-raw.webm",
+      "frames": 122,
+      "source_start": 0.25,
+      "source_end": 5.05,
+      "notes": "Stable female medium single with consistent face and blouse, no cut/text/extra people in reviewed frames. Large ASR confirms complete original first line including 입을 옷 and 어때; small ASR misrecognized 입을 옷. Selected window includes speech onset/tail and uses pitch-preserving retiming to fit 122 frames.",
+      "gain_db": 3.49
+    },
+    {
+      "shot": 2,
+      "status": "accepted",
+      "file": "videos/shot-02-raw.webm",
+      "frames": 31,
+      "source_start": 0.2,
+      "source_end": 1.45,
+      "notes": "Stable male reverse medium, female shoulder right foreground. Both ASR models confirm 오 귀여워. 50ms RMS confirms audible voice from about 0.25 to 1.40s; selected 0.20–1.45s preserves words and tail, retimed 1.21x to original short cut.",
+      "gain_db": -0.72
+    },
+    {
+      "shot": 3,
+      "status": "accepted",
+      "file": "videos/shot-03-raw.webm",
+      "frames": 75,
+      "source_start": 0.0,
+      "source_end": 2.5,
+      "notes": "Female black wrap-top medium single, source hand-behind-head/hand-on-hip pose retained. Small natural turn without reframing/cut. Both ASR models confirm 이건 어때; large ASR locates speech at 1.17–2.03s inside selected interval.",
+      "gain_db": 11.61
+    },
+    {
+      "shot": 4,
+      "status": "accepted",
+      "file": "videos/shot-04-raw.webm",
+      "frames": 61,
+      "source_start": 0.0,
+      "source_end": 2.033333333333333,
+      "notes": "Male mug reaction remains a single; clean hands and plain yellow mug retained, no cuts/text. Both ASR models confirm 귀여워, with large model timing 0.75–1.53 seconds inside the selected cut.",
+      "gain_db": 10.47
+    },
+    {
+      "shot": 5,
+      "status": "accepted",
+      "file": "videos/shot-05-raw.webm",
+      "frames": 65,
+      "source_start": 2.75,
+      "source_end": 4.916666666666666,
+      "notes": "Extreme female fisheye retained, natural lean-in without cut; approved hairstyle and polka-dot top maintained. Both ASR models confirm 이건 어떤데; speech occurs late at 3.22–4.40s, so selected 2.75–4.9167s instead of cutting the first two seconds.",
+      "gain_db": 9.34
+    },
+    {
+      "shot": 6,
+      "status": "accepted",
+      "file": "videos/shot-06-raw.webm",
+      "frames": 58,
+      "source_start": 1.75,
+      "source_end": 3.6833333333333336,
+      "notes": "Male extreme fisheye stays locked; no cuts or extra people, approved hair and navy polo maintained. Both ASR models confirm 귀여워, with small timing 2.10–3.50s and large timing 2.13–3.05s. Selected 1.75–3.6833s contains both timing estimates.",
+      "gain_db": 4.77
+    },
+    {
+      "shot": 7,
+      "status": "accepted",
+      "file": "videos/shot-07-raw.webm",
+      "frames": 59,
+      "source_start": 0.0,
+      "source_end": 1.9666666666666666,
+      "gain_db": 0.77,
+      "notes": "Source-like wide-angle female single with window/table left and mirror right. Both peplum sides held with natural sway; approved face, hair and outfit retained in sampled frames. Large ASR confirms 이건 어때 at 0.50–1.44s, entirely inside selected interval."
+    },
+    {
+      "shot": 8,
+      "status": "accepted_trimmed",
+      "file": "videos/shot-08-raw.webm",
+      "frames": 39,
+      "source_start": 0.0,
+      "source_end": 1.3,
+      "gain_db": 0,
+      "notes": "Stable male medium single with two thumbs and small upward bounce. First 1.3s has closed-mouth smile and low-level room audio; unwanted generated speech/talking occurs later in raw clip and is excluded. ASR start is imprecise; 50ms RMS and selected-audio.json verify low level throughout kept interval."
+    },
+    {
+      "shot": 9,
+      "status": "accepted",
+      "file": "videos/shot-09-raw.webm",
+      "frames": 86,
+      "source_start": 1.9,
+      "source_end": 4.766666666666667,
+      "gain_db": 1.55,
+      "notes": "Female close single remains fixed with approved face, hair and ivory lace outfit. Exasperated eye-close/head movement precedes complaint. Both ASR models confirm 아이씨 귀여워 말고 다른 표현 없어, at 2.12–4.34s (small) and 2.49–4.39s (large). Selected 1.90–4.7667s includes expression and complete line without retiming."
+    },
+    {
+      "shot": 10,
+      "status": "accepted_with_video_framing",
+      "file": "videos/shot-10-raw.webm",
+      "frames": 133,
+      "source_start": 0.0,
+      "source_end": 4.433333333333334,
+      "gain_db": 4.8,
+      "framing": {
+        "start": [
+          1.2,
+          0.51,
+          0.45
+        ],
+        "end": [
+          1.55,
+          0.53,
+          0.4
+        ]
+      },
+      "notes": "Approved male face and long silent pause retained; large ASR confirms 이뻐 at 3.44–4.18s. Generated push-in is weaker than source, so final video applies a linear non-generative crop/scale from 1.20x to 1.55x. Center shifts toward eyes/nose to match original close-up ending; no source image or identity master is edited."
+    },
+    {
+      "shot": 11,
+      "status": "accepted",
+      "file": "videos/shot-11-raw.webm",
+      "frames": 286,
+      "source_start": 0.0,
+      "source_end": 10.125,
+      "gain_db": 4.2,
+      "notes": "Continuous pull-back from man-left/woman-right two-shot to supplied wide room end composition. Reviewed every sixth frame and end: no internal cuts, extra people or text; natural woman hand gestures and seated male responses. Both ASR models confirm all five alternating lines, final utterance ends by 9.38s. Whole 10.125s used with 1.0621x pitch-preserving retiming to preserve first/last composition and all dialogue."
+    }
+  ]
+}

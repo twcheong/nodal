@@ -1,0 +1,70 @@
+{
+  "method": "Korean forced, beam 10, VAD; no expected text or initial prompt",
+  "audio": "output\\reel-qwen-shotmatch\\qa\\shot-01\\generated-audio.wav",
+  "model": "models\\asr\\whisper-large-v3-turbo",
+  "language": "ko",
+  "segments": [
+    {
+      "start": 0.53,
+      "end": 4.87,
+      "text": " 내일 우리 놀러갈 때 입을 옷 어떤 게 나은지 봐줘, 어때?",
+      "words": [
+        {
+          "word": " 내일",
+          "start": 0.53,
+          "end": 1.13
+        },
+        {
+          "word": " 우리",
+          "start": 1.13,
+          "end": 1.41
+        },
+        {
+          "word": " 놀러갈",
+          "start": 1.41,
+          "end": 1.87
+        },
+        {
+          "word": " 때",
+          "start": 1.87,
+          "end": 1.99
+        },
+        {
+          "word": " 입을",
+          "start": 1.99,
+          "end": 2.29
+        },
+        {
+          "word": " 옷",
+          "start": 2.29,
+          "end": 2.41
+        },
+        {
+          "word": " 어떤",
+          "start": 2.41,
+          "end": 3.19
+        },
+        {
+          "word": " 게",
+          "start": 3.19,
+          "end": 3.29
+        },
+        {
+          "word": " 나은지",
+          "start": 3.29,
+          "end": 3.61
+        },
+        {
+          "word": " 봐줘,",
+          "start": 3.61,
+          "end": 3.91
+        },
+        {
+          "word": " 어때?",
+          "start": 4.63,
+          "end": 4.87
+        }
+      ]
+    }
+  ]
+}

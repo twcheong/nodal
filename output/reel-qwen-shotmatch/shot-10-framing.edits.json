@@ -1,0 +1,28 @@
+{
+  "fps": 30,
+  "purpose": "Verify final non-generative video push-in against original shot 10",
+  "shots": [
+    {
+      "shot": 10,
+      "status": "accepted_with_video_framing",
+      "file": "videos/shot-10-raw.webm",
+      "frames": 133,
+      "source_start": 0.0,
+      "source_end": 4.433333333333334,
+      "gain_db": 4.8,
+      "framing": {
+        "start": [
+          1.2,
+          0.51,
+          0.45
+        ],
+        "end": [
+          1.55,
+          0.53,
+          0.4
+        ]
+      },
+      "notes": "Approved male face and long silent pause retained; large ASR confirms 이뻐 at 3.44–4.18s. Generated push-in is weaker than source, so final video applies a linear non-generative crop/scale from 1.20x to 1.55x. Center shifts toward eyes/nose to match original close-up ending; no source image or identity master is edited."
+    }
+  ]
+}

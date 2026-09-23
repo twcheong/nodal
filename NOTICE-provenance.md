@@ -163,3 +163,15 @@ M0 시점에 실제로 설치된 것:
   `ModularPipeline.update_components` 공개 설정 경로를 읽어 어댑터를 연결했다.
   모델 연산 코드를 복사하지 않았으며 새 의존성을 추가하지 않았다.
 - 준비 이미지는 사용자 원본과 nodal `image.Crop`만 사용한다. 외부 이미지 생성 없음.
+
+## 2026-09-23 · 샷 재현 영상의 로컬 한국어 대사 검수
+
+- <https://huggingface.co/dropbox-dash/faster-whisper-large-v3-turbo> 모델 카드를
+  읽어 CTranslate2 변환과 MIT 라이선스를 확인했다. 기존 캐시의
+  `mobiuslabsgmbh/faster-whisper-large-v3-turbo` 주소는 해당 저장소로 이동했다.
+- 리비전 `0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf`의 정적 가중치·토크나이저·설정을
+  `models/asr/whisper-large-v3-turbo`에 받았다. 파일 해시는
+  `output/reel-qwen-shotmatch/asr-model.json`에 보존한다.
+- 기존 로컬 faster-whisper 환경에서 CPU 음성 인식 검수만 수행한다.
+  사용자 영상·음성을 외부로 전송하지 않으며 이미지나 음성을 생성하는 경로가 아니다.
+  프로젝트 의존성 추가, 원격 코드 실행, 외부 코드 복사는 없다.

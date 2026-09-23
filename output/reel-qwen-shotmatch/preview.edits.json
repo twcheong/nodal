@@ -1,0 +1,46 @@
+{
+  "fps": 30,
+  "purpose": "Reviewed first four cuts; full edit still in progress",
+  "shots": [
+    {
+      "shot": 1,
+      "status": "accepted",
+      "file": "videos/shot-01-raw.webm",
+      "frames": 122,
+      "source_start": 0.25,
+      "source_end": 5.05,
+      "notes": "Stable female medium single with consistent face and blouse, no cut/text/extra people in reviewed frames. Large ASR confirms complete original first line including 입을 옷 and 어때; small ASR misrecognized 입을 옷. Selected window includes speech onset/tail and uses pitch-preserving retiming to fit 122 frames.",
+      "gain_db": 3.49
+    },
+    {
+      "shot": 2,
+      "status": "accepted",
+      "file": "videos/shot-02-raw.webm",
+      "frames": 31,
+      "source_start": 0.2,
+      "source_end": 1.45,
+      "notes": "Stable male reverse medium, female shoulder right foreground. Both ASR models confirm 오 귀여워. 50ms RMS confirms audible voice from about 0.25 to 1.40s; selected 0.20–1.45s preserves words and tail, retimed 1.21x to original short cut.",
+      "gain_db": -0.72
+    },
+    {
+      "shot": 3,
+      "status": "accepted",
+      "file": "videos/shot-03-raw.webm",
+      "frames": 75,
+      "source_start": 0.0,
+      "source_end": 2.5,
+      "notes": "Female black wrap-top medium single, source hand-behind-head/hand-on-hip pose retained. Small natural turn without reframing/cut. Both ASR models confirm 이건 어때; large ASR locates speech at 1.17–2.03s inside selected interval.",
+      "gain_db": 11.61
+    },
+    {
+      "shot": 4,
+      "status": "accepted",
+      "file": "videos/shot-04-raw.webm",
+      "frames": 61,
+      "source_start": 0.0,
+      "source_end": 2.033333333333333,
+      "notes": "Male mug reaction remains a single; clean hands and plain yellow mug retained, no cuts/text. Both ASR models confirm 귀여워, with large model timing 0.75–1.53 seconds inside the selected cut.",
+      "gain_db": 10.47
+    }
+  ]
+}

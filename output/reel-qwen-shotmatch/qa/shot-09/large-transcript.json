@@ -1,0 +1,45 @@
+{
+  "method": "Korean forced, beam 10, VAD; no expected text or initial prompt",
+  "audio": "C:\\Users\\nexta\\Desktop\\nodal\\output\\reel-qwen-shotmatch\\qa\\shot-09\\generated-audio.wav",
+  "model": "C:\\Users\\nexta\\Desktop\\nodal\\models\\asr\\whisper-large-v3-turbo",
+  "language": "ko",
+  "segments": [
+    {
+      "start": 2.49,
+      "end": 4.39,
+      "text": " 아이씨, 귀여워 말고 다른 표현 없어?",
+      "words": [
+        {
+          "word": " 아이씨,",
+          "start": 2.49,
+          "end": 2.99
+        },
+        {
+          "word": " 귀여워",
+          "start": 3.07,
+          "end": 3.37
+        },
+        {
+          "word": " 말고",
+          "start": 3.37,
+          "end": 3.53
+        },
+        {
+          "word": " 다른",
+          "start": 3.53,
+          "end": 3.77
+        },
+        {
+          "word": " 표현",
+          "start": 3.77,
+          "end": 4.03
+        },
+        {
+          "word": " 없어?",
+          "start": 4.03,
+          "end": 4.39
+        }
+      ]
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "review_type": "Visual comparison with approved master and source shot references; qualitative, not a biometric identity measurement",
   "identity_master": "../../original-couple-qwen21/01-first-frame.png",
-  "video_generation_ready": false,
+  "video_generation_ready": true,
   "shots": [
     {
       "shot": 1,
@@ -65,14 +65,15 @@
     },
     {
       "shot": 11,
-      "selected": null,
-      "status": "correction_pending",
-      "notes": "Initial image retained approved cast but showed feet/full table and raised seated man in frame. Rejected for camera mismatch; source-first camera edit requested to restore low-left seated head and closer initial framing."
+      "selected": "frames/shot-11-camera.png",
+      "status": "accepted",
+      "notes": "Source-first camera edit corrected the initial overly wide framing: man low-left, woman right, lower legs cut off, table only at lower edge, large rectangular window. Approved cast, navy polo/ivory lace and clean arms retained, text removed."
     },
     {
       "shot": "11-end",
-      "selected": null,
-      "status": "generation_pending"
+      "selected": "frames/shot-11-end-final.png",
+      "status": "accepted",
+      "notes": "Removing whole-master camera influence restored source full room framing: man face low-left, woman right, full sofa, table, ceiling and foreground at original scale. Approved faces and clean navy/ivory outfits retained; original text removed."
     }
   ]
 }

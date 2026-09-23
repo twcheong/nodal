@@ -1,0 +1,25 @@
+{
+  "method": "Korean forced, beam 10, VAD; no expected text or initial prompt",
+  "audio": "C:\\Users\\nexta\\Desktop\\nodal\\output\\reel-qwen-shotmatch\\qa\\shot-02\\generated-audio.wav",
+  "model": "C:\\Users\\nexta\\Desktop\\nodal\\models\\asr\\whisper-large-v3-turbo",
+  "language": "ko",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 1.2,
+      "text": " 오 귀여워",
+      "words": [
+        {
+          "word": " 오",
+          "start": 0.0,
+          "end": 0.44
+        },
+        {
+          "word": " 귀여워",
+          "start": 0.44,
+          "end": 1.2
+        }
+      ]
+    }
+  ]
+}

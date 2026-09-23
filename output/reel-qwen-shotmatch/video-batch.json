@@ -1,0 +1,69 @@
+{
+  "status": "completed_and_verified",
+  "native_output": "reel-native.webm",
+  "execution": "serial local nodal H3 queue",
+  "final_output": "reel-1080p.webm",
+  "submitted_runs": [
+    {
+      "submitted_utc": "2026-09-23T06:42:06.3334793Z",
+      "run_id": "68ccecf8cc814ca18f6ac9d2c59da994",
+      "receipt": "shot-01-video.receipt.json"
+    },
+    {
+      "submitted_utc": "2026-09-23T06:42:06.5349483Z",
+      "run_id": "14920eb4858445ea9534bfdeace5bf20",
+      "receipt": "shot-02-video.receipt.json"
+    },
+    {
+      "submitted_utc": "2026-09-23T06:42:06.7265876Z",
+      "run_id": "cbc6f6fbb9d54367b305dcc8784b65cb",
+      "receipt": "shot-03-video.receipt.json"
+    },
+    {
+      "submitted_utc": "2026-09-23T06:42:06.9285044Z",
+      "run_id": "df526bcd97ca4485b7eb3e74226573fe",
+      "receipt": "shot-04-video.receipt.json"
+    },
+    {
+      "submitted_utc": "2026-09-23T06:42:07.0835032Z",
+      "run_id": "779fce1f46054791ad8500b4b3b79c65",
+      "receipt": "shot-05-video.receipt.json"
+    },
+    {
+      "submitted_utc": "2026-09-23T06:42:08.2623497Z",
+      "run_id": "fe55b62007f24dbd8709c682f9b7ac83",
+      "receipt": "shot-06-video.receipt.json"
+    },
+    {
+      "submitted_utc": "2026-09-23T06:42:08.8625081Z",
+      "run_id": "6d7952d4190f4e8f9d2dee78fc2085b2",
+      "receipt": "shot-07-video.receipt.json"
+    },
+    {
+      "submitted_utc": "2026-09-23T06:42:08.9875049Z",
+      "run_id": "b1c30577816f4de18313c4e108dcbbb2",
+      "receipt": "shot-08-video.receipt.json"
+    },
+    {
+      "submitted_utc": "2026-09-23T06:42:09.1100240Z",
+      "run_id": "cf1c4168c0e44c648055bd9ccff5d8de",
+      "receipt": "shot-09-video.receipt.json"
+    },
+    {
+      "submitted_utc": "2026-09-23T06:42:09.2451407Z",
+      "run_id": "c1865878a77b4c0abdd388fd5e648ad6",
+      "receipt": "shot-10-video.receipt.json"
+    },
+    {
+      "submitted_utc": "2026-09-23T06:42:09.3852830Z",
+      "run_id": "4a3282a12fbb4db7a96077916f06119c",
+      "receipt": "shot-11-video.receipt.json"
+    }
+  ],
+  "fps": 30,
+  "target_frames": 1015,
+  "generation_completed": 11,
+  "upscale_run_id": "022eb872780646fdbdeb7466afc1c7f8",
+  "final_sha256": "df8ab54309e49e3a0015bc9b865cda5089d6c48813faba6adf2e23d4ba1625d1",
+  "native_sha256": "f4a1cc1acfa12b2c632bf15a5b770782511c96b5c24bb7ce932b7fade4067c23"
+}
