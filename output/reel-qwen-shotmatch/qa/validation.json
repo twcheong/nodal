@@ -1,0 +1,30 @@
+{
+  "full_ci": {
+    "command": "tools/ci-local.sh",
+    "exit_code": 1,
+    "passed": 21,
+    "failed": 4,
+    "skipped": 10,
+    "failures": ["python / ruff lint", "python / ruff format", "web / prettier", "web / generated API type drift"],
+    "scope": "Existing working-tree failures also observed before this task; unrelated files were not repaired",
+    "log": "../ci-local.log"
+  },
+  "task_python": {
+    "ruff_lint": "passed",
+    "ruff_format": "passed",
+    "files": ["nodal_job.py", "assemble.py", "compare_frames.py", "collect_video_qa.py"]
+  },
+  "assembly_smoke": {
+    "purpose": "Verify exact hard-cut frame counts, retimed video and pitch-preserving audio on a real local generated clip",
+    "input": "test-edits.json",
+    "edit_report": "edit-smoke.edit-report.json",
+    "independent_decode": "edit-smoke-check/generated-facts.json",
+    "fps": 30,
+    "decoded_frames": 30,
+    "audio_seconds": 1.0,
+    "video_end_seconds_from_millisecond_pts": 1.0003333333333333,
+    "retimed_first_cut_speed": 1.225,
+    "status": "passed"
+  },
+  "final_video": {"status": "not_generated"}
+}

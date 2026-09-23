@@ -1,0 +1,54 @@
+{
+  "graph": {
+    "nodal_version": "1",
+    "id": "1e235009-0000-4000-8000-000000000000",
+    "nodes": {
+      "1e235009-0000-4000-8000-000000000001": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/frames/shot-09-identity.png"
+        }
+      },
+      "1e235009-0000-4000-8000-000000000003": {
+        "type": "diffusion.MiniMaxH3",
+        "inputs": {
+          "model_path": "C:/Users/nexta/Desktop/nodal/models/MiniMax-H3-Pruned",
+          "first_frame": {
+            "$link": [
+              "1e235009-0000-4000-8000-000000000001",
+              "image"
+            ]
+          },
+          "prompt": "A photorealistic Korean romantic comedy. Follow the supplied FIRST FRAME's exact shot composition, lens, faces, clothes and vintage setting. This is ONE SHOT, not an entire montage. Normal-lens chest-up close-up of woman in IVORY LACE CAMISOLE, three-quarter face toward screen LEFT. A little playful frustration, she briefly squeezes eyes shut and tilts her head then looks back at the off-screen man. In the SAME natural young adult FEMALE Korean voice, briskly say: '아이씨, 귀여워 말고 다른 표현 없어!?' Start at 0.15 seconds, finish by 2.50 seconds, keep natural comedic cadence. Only this one sentence, no reply. No fisheye and no other person.\nPreserve facial identity throughout, natural adult anatomy, realistic skin, consistent soft warm window lighting. Locked camera, no zoom or pan or reframing. No shot changes, no extra people, no narrator, no music. Very quiet indoor ambience under requested speech. No captions, subtitles, title, text, logos or watermark in any frame. Preserve the exact visible framing; NEVER replace this shot with a wide two-shot.",
+          "seed": 923509,
+          "steps": 20,
+          "width": 1024,
+          "height": 576,
+          "num_frames": 124,
+          "memory_profile": "pruned_convrot_int8_offload"
+        }
+      }
+    },
+    "outputs": [
+      "1e235009-0000-4000-8000-000000000003"
+    ]
+  },
+  "save_outputs": {
+    "1e235009-0000-4000-8000-000000000003": "videos/shot-09-raw.webm"
+  },
+  "provenance": {
+    "shot": 9,
+    "source_frame_range": [
+      510,
+      596
+    ],
+    "target_duration_seconds": 2.8666666666666667,
+    "source_fps": 30,
+    "generation_fps": 24,
+    "first_frame": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/frames/shot-09-identity.png",
+    "identity_master": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png",
+    "source_audio_used": false,
+    "prompt": "A photorealistic Korean romantic comedy. Follow the supplied FIRST FRAME's exact shot composition, lens, faces, clothes and vintage setting. This is ONE SHOT, not an entire montage. Normal-lens chest-up close-up of woman in IVORY LACE CAMISOLE, three-quarter face toward screen LEFT. A little playful frustration, she briefly squeezes eyes shut and tilts her head then looks back at the off-screen man. In the SAME natural young adult FEMALE Korean voice, briskly say: '아이씨, 귀여워 말고 다른 표현 없어!?' Start at 0.15 seconds, finish by 2.50 seconds, keep natural comedic cadence. Only this one sentence, no reply. No fisheye and no other person.\nPreserve facial identity throughout, natural adult anatomy, realistic skin, consistent soft warm window lighting. Locked camera, no zoom or pan or reframing. No shot changes, no extra people, no narrator, no music. Very quiet indoor ambience under requested speech. No captions, subtitles, title, text, logos or watermark in any frame. Preserve the exact visible framing; NEVER replace this shot with a wide two-shot."
+  }
+}
+

@@ -1,0 +1,104 @@
+{
+  "graph": {
+    "nodal_version": "1",
+    "id": "1e234011-0000-4000-8000-000000000000",
+    "nodes": {
+      "1e234011-0000-4000-8000-000000000001": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png"
+        }
+      },
+      "1e234011-0000-4000-8000-000000000002": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/woman.png"
+        }
+      },
+      "1e234011-0000-4000-8000-000000000003": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/man.png"
+        }
+      },
+      "1e234011-0000-4000-8000-000000000004": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-DcvQpQfJ6EB/transition-24.300.png"
+        }
+      },
+      "1e234011-0000-4000-8000-000000000008": {
+        "type": "diffusion.QwenImage21",
+        "inputs": {
+          "model_path": "C:/Users/nexta/Desktop/nodal/models/Qwen-Image-2.1",
+          "prompt": "Create ONE photorealistic 16:9 cinema frame. STRICT REFERENCE ROLES: Image 1 is approved cast and room; image 2 is approved woman; image 3 is approved man; image 4 is ONLY camera/blocking reference.\nMatch IMAGE 4's final two-shot starting composition. Recreate the two people from IMAGE 1, with their exact identity reinforced by IMAGE 2 woman and IMAGE 3 man. IMAGE 4 is only the camera/blocking reference. Man seated on olive sofa LEFT around x=23%, woman standing RIGHT around x=72%, low carved table lower center, enormous central timber-framed window with trees. The woman's head is around y=13%, his seated head around y=47%, their lower legs/feet partially cut by the bottom edge as in source. Preserve the approved room's walnut wood, sofa, mug, cabinet and rug. Woman wears her approved ivory lace camisole with peplum and dark jeans. Man plain navy polo and faded jeans. They face each other. Woman's hands lightly open at waist as if explaining; man attentive with forearms on thighs. Exactly two adult people. No giant central title, no captions, no source actor identities or tattoos. This framing will later pull back; do not show the wide final room yet.\nPreserve the exact approved character identity, haircut and age. Keep the warm timber room's textures and colors consistent with IMAGE 1, viewed from the camera position in the storyboard reference. Match the reference shot's face size, headroom, foreground/background arrangement and lens perspective precisely. No title, subtitles, captions, writing, logos or watermark anywhere. No extra people, duplicated limbs, collage or split screen. This is a shot from the same movie, not a new cast or generic portrait.",
+          "width": 1536,
+          "height": 864,
+          "steps": 40,
+          "seed": 923411,
+          "reference_resolution": 768,
+          "memory_profile": "group_offload",
+          "reference_1": {
+            "$link": [
+              "1e234011-0000-4000-8000-000000000001",
+              "image"
+            ]
+          },
+          "reference_2": {
+            "$link": [
+              "1e234011-0000-4000-8000-000000000002",
+              "image"
+            ]
+          },
+          "reference_3": {
+            "$link": [
+              "1e234011-0000-4000-8000-000000000003",
+              "image"
+            ]
+          },
+          "reference_4": {
+            "$link": [
+              "1e234011-0000-4000-8000-000000000004",
+              "image"
+            ]
+          }
+        }
+      },
+      "1e234011-0000-4000-8000-000000000009": {
+        "type": "image.Save",
+        "inputs": {
+          "image": {
+            "$link": [
+              "1e234011-0000-4000-8000-000000000008",
+              "image"
+            ]
+          },
+          "embed_workflow": true
+        }
+      }
+    },
+    "outputs": [
+      "1e234011-0000-4000-8000-000000000009"
+    ]
+  },
+  "save_outputs": {
+    "1e234011-0000-4000-8000-000000000009": "frames/shot-11.png"
+  },
+  "provenance": {
+    "shot": 11,
+    "source_frame_range": [
+      729,
+      1015
+    ],
+    "references": [
+      "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png",
+      "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/woman.png",
+      "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/man.png",
+      "C:/Users/nexta/Desktop/nodal/output/reel-DcvQpQfJ6EB/transition-24.300.png"
+    ],
+    "reference_roles": "Image 1 is approved cast and room; image 2 is approved woman; image 3 is approved man; image 4 is ONLY camera/blocking reference.",
+    "original_source_pixels_used": true,
+    "identity_master": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png",
+    "prompt": "Create ONE photorealistic 16:9 cinema frame. STRICT REFERENCE ROLES: Image 1 is approved cast and room; image 2 is approved woman; image 3 is approved man; image 4 is ONLY camera/blocking reference.\nMatch IMAGE 4's final two-shot starting composition. Recreate the two people from IMAGE 1, with their exact identity reinforced by IMAGE 2 woman and IMAGE 3 man. IMAGE 4 is only the camera/blocking reference. Man seated on olive sofa LEFT around x=23%, woman standing RIGHT around x=72%, low carved table lower center, enormous central timber-framed window with trees. The woman's head is around y=13%, his seated head around y=47%, their lower legs/feet partially cut by the bottom edge as in source. Preserve the approved room's walnut wood, sofa, mug, cabinet and rug. Woman wears her approved ivory lace camisole with peplum and dark jeans. Man plain navy polo and faded jeans. They face each other. Woman's hands lightly open at waist as if explaining; man attentive with forearms on thighs. Exactly two adult people. No giant central title, no captions, no source actor identities or tattoos. This framing will later pull back; do not show the wide final room yet.\nPreserve the exact approved character identity, haircut and age. Keep the warm timber room's textures and colors consistent with IMAGE 1, viewed from the camera position in the storyboard reference. Match the reference shot's face size, headroom, foreground/background arrangement and lens perspective precisely. No title, subtitles, captions, writing, logos or watermark anywhere. No extra people, duplicated limbs, collage or split screen. This is a shot from the same movie, not a new cast or generic portrait."
+  }
+}

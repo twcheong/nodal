@@ -1,0 +1,58 @@
+{
+  "graph": {
+    "nodal_version": "1",
+    "id": "1e234204-0000-4000-8000-000000000000",
+    "nodes": {
+      "1e234204-0000-4000-8000-000000000001": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/frames/shot-04.png"
+        }
+      },
+      "1e234204-0000-4000-8000-000000000002": {
+        "type": "diffusion.QwenImage21",
+        "inputs": {
+          "model_path": "C:/Users/nexta/Desktop/nodal/models/Qwen-Image-2.1",
+          "reference_1": {
+            "$link": [
+              "1e234204-0000-4000-8000-000000000001",
+              "image"
+            ]
+          },
+          "prompt": "Make ONLY these precise continuity corrections to this film still. 1) REMOVE EVERY TATTOO from BOTH of the man's arms and forearms. Both arms have completely clean, natural bare skin with no marks, ink, drawings or lettering. 2) Replace the cat-shaped decorated yellow mug with a plain smooth cylindrical mustard-yellow ceramic mug with one normal handle: NO cat face, NO ears, NO printed pattern. Keep the mug's size, location and his grip identical. 3) Remove all finger rings and remove the thin necklace; natural bare fingers and neck. Preserve the man's existing facial identity, facial expression, hair, plain navy polo, jeans, exact pose and anatomy entirely. Preserve camera, framing, light, sofa, background wood wall and window exactly. Do not redesign or beautify his face. No other changes, no text or captions.",
+          "width": 1536,
+          "height": 864,
+          "reference_resolution": 1024,
+          "steps": 40,
+          "seed": 923604,
+          "memory_profile": "group_offload"
+        }
+      },
+      "1e234204-0000-4000-8000-000000000003": {
+        "type": "image.Save",
+        "inputs": {
+          "image": {
+            "$link": [
+              "1e234204-0000-4000-8000-000000000002",
+              "image"
+            ]
+          },
+          "embed_workflow": true
+        }
+      }
+    },
+    "outputs": [
+      "1e234204-0000-4000-8000-000000000003"
+    ]
+  },
+  "priority": 100,
+  "save_outputs": {
+    "1e234204-0000-4000-8000-000000000003": "frames/shot-04-clean.png"
+  },
+  "provenance": {
+    "reason": "Source tattoos, jewelry and patterned mug leaked into the first pass; restore approved continuity before video.",
+    "reviewed_input": "frames/shot-04.png",
+    "identity_master": "../original-couple-qwen21/01-first-frame.png",
+    "prompt": "Make ONLY these precise continuity corrections to this film still. 1) REMOVE EVERY TATTOO from BOTH of the man's arms and forearms. Both arms have completely clean, natural bare skin with no marks, ink, drawings or lettering. 2) Replace the cat-shaped decorated yellow mug with a plain smooth cylindrical mustard-yellow ceramic mug with one normal handle: NO cat face, NO ears, NO printed pattern. Keep the mug's size, location and his grip identical. 3) Remove all finger rings and remove the thin necklace; natural bare fingers and neck. Preserve the man's existing facial identity, facial expression, hair, plain navy polo, jeans, exact pose and anatomy entirely. Preserve camera, framing, light, sofa, background wood wall and window exactly. Do not redesign or beautify his face. No other changes, no text or captions."
+  }
+}

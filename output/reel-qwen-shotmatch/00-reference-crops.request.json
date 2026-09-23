@@ -1,0 +1,81 @@
+{
+  "graph": {
+    "nodal_version": "1",
+    "id": "1e234000-0000-4000-8000-000000000000",
+    "nodes": {
+      "1e234000-0000-4000-8000-000000000001": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png"
+        }
+      },
+      "1e234000-0000-4000-8000-000000000002": {
+        "type": "image.Crop",
+        "inputs": {
+          "image": {
+            "$link": [
+              "1e234000-0000-4000-8000-000000000001",
+              "image"
+            ]
+          },
+          "x": 1000,
+          "y": 0,
+          "width": 250,
+          "height": 245
+        }
+      },
+      "1e234000-0000-4000-8000-000000000003": {
+        "type": "image.Crop",
+        "inputs": {
+          "image": {
+            "$link": [
+              "1e234000-0000-4000-8000-000000000001",
+              "image"
+            ]
+          },
+          "x": 340,
+          "y": 190,
+          "width": 200,
+          "height": 230
+        }
+      },
+      "1e234000-0000-4000-8000-000000000004": {
+        "type": "image.Save",
+        "inputs": {
+          "image": {
+            "$link": [
+              "1e234000-0000-4000-8000-000000000002",
+              "image"
+            ]
+          },
+          "embed_workflow": true
+        }
+      },
+      "1e234000-0000-4000-8000-000000000005": {
+        "type": "image.Save",
+        "inputs": {
+          "image": {
+            "$link": [
+              "1e234000-0000-4000-8000-000000000003",
+              "image"
+            ]
+          },
+          "embed_workflow": true
+        }
+      }
+    },
+    "outputs": [
+      "1e234000-0000-4000-8000-000000000004",
+      "1e234000-0000-4000-8000-000000000005"
+    ]
+  },
+  "save_outputs": {
+    "1e234000-0000-4000-8000-000000000004": "references/woman.png",
+    "1e234000-0000-4000-8000-000000000005": "references/man.png"
+  },
+  "provenance": {
+    "source": "User-approved original Qwen two-shot",
+    "source_sha256": "c67764f377f454152f4ebb54208538242df17493ed0f139486cd39e02ef428dc",
+    "purpose": "Identity details extracted by nodal image.Crop. These are exact original-image crops, not generated identities."
+  }
+}

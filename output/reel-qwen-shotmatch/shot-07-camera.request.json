@@ -1,0 +1,92 @@
+{
+  "graph": {
+    "nodal_version": "1",
+    "id": "1e234707-0000-4000-8000-000000000000",
+    "nodes": {
+      "1e234707-0000-4000-8000-000000000001": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-DcvQpQfJ6EB/frame-014.0.png"
+        }
+      },
+      "1e234707-0000-4000-8000-000000000002": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/woman.png"
+        }
+      },
+      "1e234707-0000-4000-8000-000000000003": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png"
+        }
+      },
+      "1e234707-0000-4000-8000-000000000008": {
+        "type": "diffusion.QwenImage21",
+        "inputs": {
+          "model_path": "C:/Users/nexta/Desktop/nodal/models/Qwen-Image-2.1",
+          "prompt": "Edit IMAGE 1 with two specific replacements: replace the actress entirely with the different approved woman in IMAGE 2, and replace her outfit with the ivory LACE CAMISOLE with ruffled peplum and dark jeans worn by that same approved woman in IMAGE 3. Use IMAGE 2 exact face, dry layered black bob and gold hoop earrings. No necklace, no tattoos. KEEP IMAGE 1 CAMERA AND BACKGROUND EXACTLY: broad 16mm wide-angle medium shot with slight barrel distortion, head near x=53% y=19%, waist and outstretched peplum near lower edge, table clearly visible as a large slanted shape in lower LEFT, broad window left and diagonal ceiling beams, cabinet and mirror receding right. The woman holds BOTH sides of her ruffled peplum in the same exact pose and leans slightly into the wide-angle camera. Preserve her image1 size and body position, do not zoom out to include her knees or thighs. Keep source image1 lens, perspective, camera angle, floor and table layout unchanged. IMAGE 3 is ONLY the desired costume and approved identity, NOT a camera guide: do not use its frontal window framing. Natural adult anatomy, two arms, two hands, warm daylight, no text, no captions. One actress only, no man visible. Clearly the woman from IMAGE 2, not the source actress from IMAGE 1.",
+          "width": 1536,
+          "height": 864,
+          "steps": 40,
+          "seed": 923707,
+          "reference_resolution": 768,
+          "memory_profile": "group_offload",
+          "reference_1": {
+            "$link": [
+              "1e234707-0000-4000-8000-000000000001",
+              "image"
+            ]
+          },
+          "reference_2": {
+            "$link": [
+              "1e234707-0000-4000-8000-000000000002",
+              "image"
+            ]
+          },
+          "reference_3": {
+            "$link": [
+              "1e234707-0000-4000-8000-000000000003",
+              "image"
+            ]
+          }
+        }
+      },
+      "1e234707-0000-4000-8000-000000000009": {
+        "type": "image.Save",
+        "inputs": {
+          "image": {
+            "$link": [
+              "1e234707-0000-4000-8000-000000000008",
+              "image"
+            ]
+          },
+          "embed_workflow": true
+        }
+      }
+    },
+    "outputs": [
+      "1e234707-0000-4000-8000-000000000009"
+    ]
+  },
+  "save_outputs": {
+    "1e234707-0000-4000-8000-000000000009": "frames/shot-07-camera.png"
+  },
+  "provenance": {
+    "shot": 7,
+    "source_frame_range": [
+      412,
+      471
+    ],
+    "references": [
+      "../reel-DcvQpQfJ6EB/frame-014.0.png",
+      "references/woman.png",
+      "../original-couple-qwen21/01-first-frame.png"
+    ],
+    "reference_roles": "Preserve source camera and table/window geometry from image1; replace actress with approved image2 and outfit from image3.",
+    "original_source_pixels_used": true,
+    "identity_master": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png",
+    "prompt": "Edit IMAGE 1 with two specific replacements: replace the actress entirely with the different approved woman in IMAGE 2, and replace her outfit with the ivory LACE CAMISOLE with ruffled peplum and dark jeans worn by that same approved woman in IMAGE 3. Use IMAGE 2 exact face, dry layered black bob and gold hoop earrings. No necklace, no tattoos. KEEP IMAGE 1 CAMERA AND BACKGROUND EXACTLY: broad 16mm wide-angle medium shot with slight barrel distortion, head near x=53% y=19%, waist and outstretched peplum near lower edge, table clearly visible as a large slanted shape in lower LEFT, broad window left and diagonal ceiling beams, cabinet and mirror receding right. The woman holds BOTH sides of her ruffled peplum in the same exact pose and leans slightly into the wide-angle camera. Preserve her image1 size and body position, do not zoom out to include her knees or thighs. Keep source image1 lens, perspective, camera angle, floor and table layout unchanged. IMAGE 3 is ONLY the desired costume and approved identity, NOT a camera guide: do not use its frontal window framing. Natural adult anatomy, two arms, two hands, warm daylight, no text, no captions. One actress only, no man visible. Clearly the woman from IMAGE 2, not the source actress from IMAGE 1."
+  },
+  "priority": 100
+}

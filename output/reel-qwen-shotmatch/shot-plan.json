@@ -1,0 +1,136 @@
+{
+  "source_url": "https://www.instagram.com/reel/DcvQpQfJ6EB/",
+  "source_sha256": "58aec442565b9bb4691b127d86685732d3c33a553efca7deeedb8dd815e1b1f9",
+  "source_fps": 30,
+  "source_frames": 1015,
+  "cut_frames": [
+    0,
+    122,
+    153,
+    228,
+    289,
+    354,
+    412,
+    471,
+    510,
+    596,
+    729,
+    1015
+  ],
+  "output_fps": 30,
+  "target_duration_seconds": 33.833333333333336,
+  "approved_master": "../original-couple-qwen21/01-first-frame.png",
+  "approved_master_sha256": "c67764f377f454152f4ebb54208538242df17493ed0f139486cd39e02ef428dc",
+  "shot_01": {
+    "n": 1,
+    "start": 0,
+    "end": 122,
+    "kind": "여성 첫 의상 · 창가 미디엄",
+    "text": "내일 우리 놀러갈때 입을 옷. 어떤게 나은지 봐줘! 어때?"
+  },
+  "shots": [
+    {
+      "n": 2,
+      "ref": 5,
+      "actor": "man",
+      "start": 122,
+      "end": 153,
+      "kind": "남성 리액션 · 여성 어깨 너머 미디엄",
+      "text": "오 귀여워",
+      "camera": "Match IMAGE 3 exactly: reverse medium shot of the seated man from just above his eye height, facing him nearly frontally. Man's head around x=39%, y=29%, torso and knees lower center-left. The woman's back, blurred dark bob and WHITE short-sleeved blouse shoulder fill the RIGHT foreground, cropped off the right edge. Focus ONLY on man's face. Behind him dark walnut vertical paneling and olive velvet sofa; no window behind his head. He looks upward and slightly right toward her. His navy polo is plain, with no original actor's brand graphics, patches or tattoos. Forearms lowered to thighs, slightly open lips ready to answer. Keep normal lens perspective, not a two-shot showing two faces."
+    },
+    {
+      "n": 3,
+      "ref": 6,
+      "actor": "woman",
+      "start": 153,
+      "end": 228,
+      "kind": "여성 두 번째 의상 · 미디엄",
+      "text": "이건 어때?!",
+      "camera": "Match IMAGE 3's waist-up woman-only medium shot and slightly low camera. Large bright window on LEFT, old mirror and cabinet RIGHT, timber ceiling across top. Woman at x=60%, face near top center-right. Her right elbow is lifted to screen LEFT with right hand behind her head; her left hand is planted on her hip at screen RIGHT. Wear the DARK NAVY/BLACK long-sleeved plunging wrap crop top with fine small reflective dots and slender crossed wrap ties around her bare midriff, dark low-waist trousers; no tattoos. Match image 3's confident outfit-display pose exactly. Preserve approved woman's face and short black hairstyle rather than copying the source actress. Playful small smile looking slightly down to screen LEFT; no man visible."
+    },
+    {
+      "n": 4,
+      "ref": 8,
+      "actor": "man",
+      "start": 228,
+      "end": 289,
+      "kind": "남성 머그컵 리액션 · 미디엄",
+      "text": "귀여워..",
+      "camera": "Match IMAGE 3's three-quarter medium shot of the seated man. His head at x=39%, y=28%, torso fills lower-left center, one bent knee at bottom. Camera slightly above seated eye level and to his right, looking diagonally down at olive sofa against timber paneled wall. Slim strip of bright window at far RIGHT. He turns face up toward screen RIGHT to the off-screen woman. A yellow ceramic mug is held in his LEFT hand at chest height on screen RIGHT; his right hand stays low. Keep approved man's face, messy swept-back black hair and plain navy polo with blue jeans; no tattoos, lettering or patches. Warm admiring slightly open mouth. Woman completely out of frame. No fisheye."
+    },
+    {
+      "n": 5,
+      "ref": 10,
+      "actor": "woman",
+      "start": 289,
+      "end": 354,
+      "kind": "여성 어안 극단 클로즈업",
+      "text": "이건 어떤데?",
+      "camera": "Reproduce IMAGE 3's COMIC EXTREME FISHEYE CLOSE-UP, approximately 8mm lens, very near the woman's face. Face occupies almost the entire frame height and central 65% width; nose and lips gently enlarged by actual perspective, large near eye. Low camera looking UP as she bends toward the lens and looks slightly toward screen LEFT. Strong curved perspective in wood-paneled ceiling above, bright window at lower LEFT, distant old mirror at lower RIGHT. Preserve the facial identity and black bob of the approved woman in IMAGE 2 under the lens distortion. Wear WHITE halter-neck top with small BLACK POLKA DOTS, visible at the bottom edges. No camisole for this shot. Mouth relaxed before a teasing question. No man visible, no text, no collage. The crucial requirement is the same extreme close distance and exaggerated fisheye geometry as IMAGE 3, not a normal portrait."
+    },
+    {
+      "n": 6,
+      "ref": 12,
+      "actor": "man",
+      "start": 354,
+      "end": 412,
+      "kind": "남성 어안 극단 클로즈업",
+      "text": "귀여워..",
+      "camera": "Match IMAGE 3's COMIC EXTREME FISHEYE CLOSE-UP of the seated man's face, approximately 8mm lens. Camera extremely near and slightly ABOVE his face looking down; he tips his chin up to the woman, eyes open and looking up. His face occupies nearly full image height and central 65% width, perspective enlarges nose and lips; dark hair nearly touches upper edge. Curved walnut wall on LEFT and behind; curved vertical window at far RIGHT, olive sofa bottom corners. Only neckline/shoulders of plain navy polo visible along bottom. Keep the exact approved man's face from images 1 and 2 under this lens distortion, no tattoos, no copied source-actor identity. Mouth gently parted before reply. Woman absent. This must have matching extreme fisheye geometry, not a normal close-up."
+    },
+    {
+      "n": 7,
+      "ref": 14,
+      "actor": "woman",
+      "start": 412,
+      "end": 471,
+      "kind": "여성 레이스 의상 · 광각 미디엄",
+      "text": "이건 어때?!",
+      "camera": "Match IMAGE 3's broad 16mm wide-angle medium shot. The standing woman is close to the lens in the center-right, her head near x=60%, y=20%, framed from head to upper thighs, not full-body. Large bright window with green branches fills the LEFT half, low carved table enters lower LEFT foreground, an old mirror/cabinet and doorway recede on RIGHT. She holds out both sides of the short ruffled lace peplum at her waist in a playful outfit-display gesture; exactly two arms and two hands. Use the exact approved ivory lace camisole/ruffle outfit and dark jeans from IMAGE 1, her exact face and hairstyle from IMAGE 2. Backlit hair glow, natural figure and skin. No man in frame. Do not switch to the earlier white blouse or polka dots."
+    },
+    {
+      "n": 8,
+      "ref": 16,
+      "actor": "man",
+      "start": 471,
+      "end": 510,
+      "kind": "남성 양손 엄지 리액션 · 미디엄",
+      "text": "",
+      "camera": "Match IMAGE 3 exactly: normal-lens three-quarter medium shot of man seated on olive sofa, dark walnut paneled wall behind, bright window edge RIGHT. Man positioned center-left, head around x=39%, y=26%, torso and bent knees visible. He grins with eyes nearly closed and lifts BOTH hands in clear thumbs-up gestures at chest/shoulder height, left thumb on image RIGHT and right thumb on image LEFT. Exactly two hands with natural fingers. No mug in either hand. Approved man from images 1 and 2, same face, messy black hair, plain navy polo and faded jeans, no patches or tattoos. Woman outside frame, no text."
+    },
+    {
+      "n": 9,
+      "ref": 17,
+      "actor": "woman",
+      "start": 510,
+      "end": 596,
+      "kind": "여성 불만 · 가슴 위 클로즈업",
+      "text": "아이씨 귀여워말고 다른 표현 없어!?",
+      "camera": "Match IMAGE 3's shallow-depth-of-field chest-up close-up of woman. Normal 65mm portrait perspective, NOT fisheye. Camera nearly eye level, woman three-quarter profile looking toward screen LEFT and down at the off-screen man. Face at x=60%, y=42%, short bob almost touches top edge; shoulders and ivory camisole straps fill lower center-right. Bright softly blurred window occupies LEFT background, wooden trim and vintage cabinet on far RIGHT. Preserve approved woman's exact facial identity and hair, same ivory lace camisole from IMAGE 1. Expression transitions into mild playful exasperation, lips slightly parted and brows lightly knit, not an exaggerated yell in the still. No man visible."
+    },
+    {
+      "n": 10,
+      "ref": 20,
+      "actor": "man",
+      "start": 596,
+      "end": 729,
+      "kind": "남성 뜸 들이기 · 클로즈업에서 푸시인",
+      "text": "이뻐..",
+      "camera": "Match IMAGE 3's close-up of seated man's head and upper shoulders, mostly frontal with gaze angled slightly UP and RIGHT. Normal portrait lens, not fisheye. Head centered at x=52%, face occupying about 68% of image height, hair slightly cropped by upper edge, navy polo collar below. Timber wall panels softly out of focus behind, dark olive sofa low behind shoulders. Preserve approved man's identity, haircut, plain navy polo and clean un-tattooed skin from images 1 and 2. Slightly awkward blank affectionate expression, eyes searching for a different compliment, mouth closed before he replies. No woman in frame. This is the initial size of a later slow push-in, not an extreme close-up yet."
+    },
+    {
+      "n": 11,
+      "ref": 24.3,
+      "actor": "both",
+      "start": 729,
+      "end": 1015,
+      "kind": "마지막 투샷 · 천천히 풀백",
+      "text": "아니 뭐 컬러가 이쁘다. 이런 표현 있잖아! / 컬러가 귀여워. / 컬러 조합이 어떻다. 이런거! / 조합이 귀여워. / 아이씨 그거 말고!",
+      "camera": "Match IMAGE 4's final two-shot starting composition. Recreate the two people from IMAGE 1, with their exact identity reinforced by IMAGE 2 woman and IMAGE 3 man. IMAGE 4 is only the camera/blocking reference. Man seated on olive sofa LEFT around x=23%, woman standing RIGHT around x=72%, low carved table lower center, enormous central timber-framed window with trees. The woman's head is around y=13%, his seated head around y=47%, their lower legs/feet partially cut by the bottom edge as in source. Preserve the approved room's walnut wood, sofa, mug, cabinet and rug. Woman wears her approved ivory lace camisole with peplum and dark jeans. Man plain navy polo and faded jeans. They face each other. Woman's hands lightly open at waist as if explaining; man attentive with forearms on thighs. Exactly two adult people. No giant central title, no captions, no source actor identities or tattoos. This framing will later pull back; do not show the wide final room yet."
+    }
+  ],
+  "reference_policy": "Original reel frames control composition/camera/outfit; approved Qwen master and exact nodal crops control identities. Generated variants never silently replace the master.",
+  "captions": false,
+  "backend": "nodal local Qwen-Image-2.1 and H3; local editing only"
+}

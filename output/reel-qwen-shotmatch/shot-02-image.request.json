@@ -1,0 +1,91 @@
+{
+  "graph": {
+    "nodal_version": "1",
+    "id": "1e234002-0000-4000-8000-000000000000",
+    "nodes": {
+      "1e234002-0000-4000-8000-000000000001": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png"
+        }
+      },
+      "1e234002-0000-4000-8000-000000000002": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/man.png"
+        }
+      },
+      "1e234002-0000-4000-8000-000000000003": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-DcvQpQfJ6EB/frame-005.0.png"
+        }
+      },
+      "1e234002-0000-4000-8000-000000000008": {
+        "type": "diffusion.QwenImage21",
+        "inputs": {
+          "model_path": "C:/Users/nexta/Desktop/nodal/models/Qwen-Image-2.1",
+          "prompt": "Create ONE photorealistic 16:9 cinema frame. STRICT REFERENCE ROLES: IMAGE 1 is the approved cast and actual room; IMAGE 2 is the exact approved man identity crop. IMAGE 3 is ONLY the storyboard camera, framing, pose and outfit reference; NEVER copy that source actor's face or tattoos.\nMatch IMAGE 3 exactly: reverse medium shot of the seated man from just above his eye height, facing him nearly frontally. Man's head around x=39%, y=29%, torso and knees lower center-left. The woman's back, blurred dark bob and WHITE short-sleeved blouse shoulder fill the RIGHT foreground, cropped off the right edge. Focus ONLY on man's face. Behind him dark walnut vertical paneling and olive velvet sofa; no window behind his head. He looks upward and slightly right toward her. His navy polo is plain, with no original actor's brand graphics, patches or tattoos. Forearms lowered to thighs, slightly open lips ready to answer. Keep normal lens perspective, not a two-shot showing two faces.\nPreserve the exact approved character identity, haircut and age. Keep the warm timber room's textures and colors consistent with IMAGE 1, viewed from the camera position in the storyboard reference. Match the reference shot's face size, headroom, foreground/background arrangement and lens perspective precisely. No title, subtitles, captions, writing, logos or watermark anywhere. No extra people, duplicated limbs, collage or split screen. This is a shot from the same movie, not a new cast or generic portrait.",
+          "width": 1536,
+          "height": 864,
+          "steps": 40,
+          "seed": 923402,
+          "reference_resolution": 768,
+          "memory_profile": "group_offload",
+          "reference_1": {
+            "$link": [
+              "1e234002-0000-4000-8000-000000000001",
+              "image"
+            ]
+          },
+          "reference_2": {
+            "$link": [
+              "1e234002-0000-4000-8000-000000000002",
+              "image"
+            ]
+          },
+          "reference_3": {
+            "$link": [
+              "1e234002-0000-4000-8000-000000000003",
+              "image"
+            ]
+          }
+        }
+      },
+      "1e234002-0000-4000-8000-000000000009": {
+        "type": "image.Save",
+        "inputs": {
+          "image": {
+            "$link": [
+              "1e234002-0000-4000-8000-000000000008",
+              "image"
+            ]
+          },
+          "embed_workflow": true
+        }
+      }
+    },
+    "outputs": [
+      "1e234002-0000-4000-8000-000000000009"
+    ]
+  },
+  "save_outputs": {
+    "1e234002-0000-4000-8000-000000000009": "frames/shot-02.png"
+  },
+  "provenance": {
+    "shot": 2,
+    "source_frame_range": [
+      122,
+      153
+    ],
+    "references": [
+      "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png",
+      "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/man.png",
+      "C:/Users/nexta/Desktop/nodal/output/reel-DcvQpQfJ6EB/frame-005.0.png"
+    ],
+    "reference_roles": "IMAGE 1 is the approved cast and actual room; IMAGE 2 is the exact approved man identity crop. IMAGE 3 is ONLY the storyboard camera, framing, pose and outfit reference; NEVER copy that source actor's face or tattoos.",
+    "original_source_pixels_used": true,
+    "identity_master": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png",
+    "prompt": "Create ONE photorealistic 16:9 cinema frame. STRICT REFERENCE ROLES: IMAGE 1 is the approved cast and actual room; IMAGE 2 is the exact approved man identity crop. IMAGE 3 is ONLY the storyboard camera, framing, pose and outfit reference; NEVER copy that source actor's face or tattoos.\nMatch IMAGE 3 exactly: reverse medium shot of the seated man from just above his eye height, facing him nearly frontally. Man's head around x=39%, y=29%, torso and knees lower center-left. The woman's back, blurred dark bob and WHITE short-sleeved blouse shoulder fill the RIGHT foreground, cropped off the right edge. Focus ONLY on man's face. Behind him dark walnut vertical paneling and olive velvet sofa; no window behind his head. He looks upward and slightly right toward her. His navy polo is plain, with no original actor's brand graphics, patches or tattoos. Forearms lowered to thighs, slightly open lips ready to answer. Keep normal lens perspective, not a two-shot showing two faces.\nPreserve the exact approved character identity, haircut and age. Keep the warm timber room's textures and colors consistent with IMAGE 1, viewed from the camera position in the storyboard reference. Match the reference shot's face size, headroom, foreground/background arrangement and lens perspective precisely. No title, subtitles, captions, writing, logos or watermark anywhere. No extra people, duplicated limbs, collage or split screen. This is a shot from the same movie, not a new cast or generic portrait."
+  }
+}
