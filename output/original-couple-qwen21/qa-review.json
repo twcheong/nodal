@@ -1,0 +1,32 @@
+{
+  "selected": "01-first-frame.png",
+  "sha256": "c67764f377f454152f4ebb54208538242df17493ed0f139486cd39e02ef428dc",
+  "run_id": "bef6b61e79ca4e9c8fc117815031d130",
+  "asset": "82dfb618bbcb2a7b122559a70c90a208",
+  "model": "Qwen-Image-2.1",
+  "seed": 923271,
+  "steps": 40,
+  "dimensions": [1536, 864],
+  "file_validation": {
+    "png_valid": true,
+    "mode": "RGBA",
+    "alpha_min": 215,
+    "alpha_max": 255,
+    "fully_opaque_pixel_fraction": 0.9567727924864969,
+    "note": "Unmodified native Qwen output. Nearly opaque RGBA, not guaranteed alpha=255 everywhere."
+  },
+  "input_images": [],
+  "source_url": "https://www.instagram.com/reel/DcvQpQfJ6EB/",
+  "review": {
+    "method": "Full-image visual inspection against source frames 0 and 27 seconds and previous v3 image",
+    "composition": "Seated man on left, standing woman on right, low table centered; both people have plausible relative adult scale and feet on the floor",
+    "anatomy": "No duplicated limbs observed; all four feet visible; both woman's hands and man's hands present, with natural overlap of the man's forearms",
+    "art_direction": "Deep olive sofa, dark vintage timber interior, large rear window, warm backlight, ivory lace top and navy polo",
+    "expression": "Woman has a small closed-mouth smile and gaze toward man; man looks up at her; less posed than previous v3",
+    "text": "No captions or title visible",
+    "limitations": "Fresh casting rather than exact source identities; camera and room are a reinterpretation. This is the previous recreation's wide opening setup, not the source reel's literal initial woman-only medium shot. User taste approval remains pending."
+  },
+  "user_approved_identity_master": false,
+  "external_generation": false,
+  "generation_backend": "nodal MCP run_template_qwen21_generate / diffusion.QwenImage21"
+}

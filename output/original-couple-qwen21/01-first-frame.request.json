@@ -1,0 +1,24 @@
+{
+  "tool": "run_template_qwen21_generate",
+  "arguments": {
+    "prompt": "A photorealistic cinematic still from a contemporary Korean romantic short film, horizontal 16:9. A candid, intimate moment in a richly textured vintage Seoul apartment, never a posed furniture advertisement. Exactly two Korean adults in their late twenties. Wide two-shot: a man sits on a deep olive-green velvet sofa on the LEFT and a woman stands on the RIGHT facing him, a low carved dark-wood coffee table between them. Both people occupy the same depth plane, full bodies and feet visible on the same floor, anatomically normal adult proportions. The seated man's head reaches approximately the standing woman's upper chest. Camera at seated eye level, gentle natural perspective, 40mm cinema lens.\nThe woman has a distinctive beautiful expressive face, luminous but naturally textured skin, slightly asymmetric mischievous closed-mouth smile, almond eyes looking LEFT and down directly at the man's eyes. Airy short black layered bob with wispy fringe and lightly flipped tips, not a stiff geometric bob. Fitted ivory sleeveless lace-trimmed camisole with a short delicate ruffled peplum at the waist, high-waisted dark indigo straight jeans, simple black flats, small silver hoop earrings. Relaxed weight on one leg, one hand near her hip and the other naturally down; exactly two arms and two hands. She is showing her date-night outfit and waiting for his opinion.\nThe man has a handsome angular face, slightly messy swept-back black hair exposing the forehead, no glasses, a fitted navy short-sleeve polo and lightly faded blue jeans with dark loafers. Sitting forward naturally, forearms loosely supported on thighs, hands distinct and relaxed. He looks up into her eyes, lips very slightly parted in a spontaneous amused affectionate reaction. Natural chemistry instead of two people smiling toward a photographer.\nBehind them, an enormous undivided timber-framed picture window fills the central background with softly defocused leafy green branches and distant Korean tiled rooftops. Rich dark walnut paneling, olive sofa down the left wall, richly carved low rectangular table with a single yellow ceramic mug, faded burgundy patterned rug, antique wood sideboard along the right wall with a few ceramics and books, a tall old mirror above it, trailing plants and small framed pictures. Lived-in vintage details, no clutter obscuring the people. The window's warm late-afternoon backlight makes delicate bright edges around hair and shoulders; soft reflected light renders both faces clearly, rich brown shadows, restrained warm film grade with natural skin color, subtle fine film grain, organic lived-in cinematic atmosphere. Balanced exposure, detailed faces. Quiet dynamic tension before a conversation. Single continuous photograph, opaque full frame, no lettering, no captions, no title, no watermark, no collage.",
+    "width": 1536,
+    "height": 864,
+    "steps": 40,
+    "seed": 923271,
+    "reference_resolution": 768
+  },
+  "provenance": {
+    "source_url": "https://www.instagram.com/reel/DcvQpQfJ6EB/",
+    "visually_reviewed": [
+      "output/reel-DcvQpQfJ6EB/frame-000.0.png",
+      "output/reel-DcvQpQfJ6EB/frame-027.0.png",
+      "output/original-couple-v3/05-first-frame.png"
+    ],
+    "input_images": [],
+    "reference_video_pixels_used": false,
+    "composition": "Previous recreation opening: seated man left, standing woman right. Not the literal source opening shot.",
+    "identity": "Fresh casting, as in v3 direction; no user-approved identity reference was supplied.",
+    "purpose": "Local Qwen-Image-2.1 first-frame evaluation"
+  }
+}
