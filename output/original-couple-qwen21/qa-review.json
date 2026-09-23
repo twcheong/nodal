@@ -26,7 +26,8 @@
     "text": "No captions or title visible",
     "limitations": "Fresh casting rather than exact source identities; camera and room are a reinterpretation. This is the previous recreation's wide opening setup, not the source reel's literal initial woman-only medium shot. User taste approval remains pending."
   },
-  "user_approved_identity_master": false,
+  "user_approved_identity_master": true,
+  "approval": "2026-09-23: user said 좋은뎅 진행해줘 영상까지; use this original Qwen image as the video identity and composition reference.",
   "external_generation": false,
   "generation_backend": "nodal MCP run_template_qwen21_generate / diffusion.QwenImage21"
 }

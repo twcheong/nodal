@@ -1,0 +1,14 @@
+{
+  "reason": "Original server terminated during H3 weight loading. Confirmed no listener on 8199, restarted under repaired Python runtime, readiness check passed. Resubmitted exact original arguments.",
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"run_id\": \"db38c9b0e83940ecacc4dcc967d801d6\", \"status\": \"queued\"}"
+    }
+  ],
+  "structuredContent": {
+    "run_id": "db38c9b0e83940ecacc4dcc967d801d6",
+    "status": "queued"
+  },
+  "isError": false
+}

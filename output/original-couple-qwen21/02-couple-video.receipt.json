@@ -1,0 +1,13 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"run_id\": \"257c2cb5c3344fd0833c22ebd730fedd\", \"status\": \"queued\"}"
+    }
+  ],
+  "structuredContent": {
+    "run_id": "257c2cb5c3344fd0833c22ebd730fedd",
+    "status": "queued"
+  },
+  "isError": false
+}

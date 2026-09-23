@@ -1,0 +1,39 @@
+{
+  "detected_language": "ko",
+  "language_probability": 0.9373068809509277,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 1.14,
+      "text": " 이건 어때?",
+      "avg_logprob": -0.9239255298267711,
+      "no_speech_prob": 0.007660189643502235,
+      "words": [
+        {
+          "word": " 이건",
+          "start": 0.0,
+          "end": 0.78
+        },
+        {
+          "word": " 어때?",
+          "start": 0.78,
+          "end": 1.14
+        }
+      ]
+    },
+    {
+      "start": 3.6,
+      "end": 4.42,
+      "text": " 귀여워.",
+      "avg_logprob": -0.9239255298267711,
+      "no_speech_prob": 0.007660189643502235,
+      "words": [
+        {
+          "word": " 귀여워.",
+          "start": 3.6,
+          "end": 4.42
+        }
+      ]
+    }
+  ]
+}
