@@ -1,0 +1,73 @@
+{
+  "id": "wf_agency_intel_trend_scan",
+  "title": "Niche Trend & Format Scan",
+  "description": "Scan top Reels in the client's niche hashtags to extract the formats and hooks winning right now, and deliver a trend brief with ready-to-use content angles.",
+  "outputDir": "data/insights",
+  "tags": ["research"],
+  "inputs": [
+    { "id": "niche", "kind": "scalar", "valueType": "text", "label": "Client niche (e.g. fitness studios, skincare, SaaS)", "observed": "", "confidence": "low" },
+    { "id": "hashtags", "kind": "list", "valueType": "text", "label": "2–3 niche hashtags to scan (without #)", "observed": "", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "Collect top Reels from niche hashtags",
+      "detail": "On Instagram, explore each input hashtag and collect 12–15 top-performing Reels combined. For each Reel record: URL, account, likes and comments, first caption line (the hook), caption structure, format type (talking head / text-overlay list / before-after / POV / tutorial etc.), and the audio name shown. Read on-screen text only — no screenshots.",
+      "acceptance": "12+ Reels from different accounts captured with URL, hook, and format type.",
+      "tool": "chrome",
+      "toolSkills": ["instagram"],
+      "subtasks": [
+        { "id": "s1", "title": "Explore each hashtag's top Reels", "purpose": "4–5 top Reels per hashtag" },
+        { "id": "s2", "title": "Record per-Reel metadata", "purpose": "URL, account, engagement, caption hook" },
+        { "id": "s3", "title": "Tag each Reel's format type", "purpose": "One format label per Reel for pattern analysis" }
+      ],
+      "inputScope": [
+        { "name": "niche", "type": "text", "description": "Context for judging format relevance" },
+        { "name": "hashtags", "type": "text[]", "description": "Hashtags to scan" }
+      ],
+      "outputScope": [
+        { "name": "reels", "type": "json[]", "description": "Per-Reel url, account, likes, comments, hook, format, audio" },
+        { "name": "scanned_hashtags", "type": "text[]", "description": "Hashtags actually scanned" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "validation",
+      "title": "Verify scan coverage",
+      "detail": "Check that reels has 12+ entries, every entry has a non-empty url, hook, and format, and no single account appears more than 3 times.",
+      "acceptance": "is_valid=true and issues is empty.",
+      "inputScope": [
+        { "name": "reels", "type": "json[]" },
+        { "name": "scanned_hashtags", "type": "text[]" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "Empty when valid" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "action",
+      "title": "Write the trend brief",
+      "detail": "Group the Reels by format and write a markdown trend brief: (1) the top 5 dominant formats this scan with a representative example each, (2) recurring hook types with the actual hook lines quoted, (3) five content ideas the team can produce for this niche now (format + hook + topic combos). Save to the workflow output folder.",
+      "acceptance": "Top-5 formats, hook types, and five content ideas sections are all filled.",
+      "tool": "write",
+      "toolSkills": ["md"],
+      "subtasks": [
+        { "id": "s1", "title": "Group and rank formats", "purpose": "Dominant formats by frequency and engagement" },
+        { "id": "s2", "title": "Extract hook patterns", "purpose": "Classify hooks (question / shock / relatable / number)" },
+        { "id": "s3", "title": "Draft five applied ideas", "purpose": "Niche × format × hook combinations ready to brief" }
+      ],
+      "inputScope": [
+        { "name": "reels", "type": "json[]", "description": "Validated Reel data" },
+        { "name": "niche", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "sections_written", "type": "text[]", "description": "Section titles written to the brief" },
+        { "name": "top_formats", "type": "json[]", "description": "Format name, frequency, example URL" },
+        { "name": "idea_count", "type": "number", "description": "Number of applied content ideas" }
+      ]
+    }
+  ]
+}

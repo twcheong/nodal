@@ -1,0 +1,90 @@
+<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+  <rect width="1280" height="720" fill="#0f0f0f"/>
+
+  <text x="60" y="64" fill="#7c6aff" font-size="15" letter-spacing="3" font-weight="600">THE PAIN, MADE CONCRETE</text>
+  <text x="60" y="104" fill="#e8e8e8" font-size="34" font-weight="600">One competitor-research task, done by hand</text>
+
+  <!-- The manual step chain -->
+  <g font-size="14">
+    <rect x="60" y="150" width="150" height="72" rx="8" fill="#171717" stroke="#2a2a2a"/>
+    <text x="135" y="181" fill="#e8e8e8" text-anchor="middle">Open ~12 tabs</text>
+    <text x="135" y="203" fill="#888" font-size="12" text-anchor="middle">competitor profiles</text>
+
+    <rect x="250" y="150" width="150" height="72" rx="8" fill="#171717" stroke="#2a2a2a"/>
+    <text x="325" y="181" fill="#e8e8e8" text-anchor="middle">Read &amp; note</text>
+    <text x="325" y="203" fill="#888" font-size="12" text-anchor="middle">followers, posts, promos</text>
+
+    <rect x="440" y="150" width="150" height="72" rx="8" fill="#171717" stroke="#2a2a2a"/>
+    <text x="515" y="181" fill="#e8e8e8" text-anchor="middle">Copy → paste</text>
+    <text x="515" y="203" fill="#888" font-size="12" text-anchor="middle">into a spreadsheet</text>
+
+    <rect x="630" y="150" width="150" height="72" rx="8" fill="#171717" stroke="#2a2a2a"/>
+    <text x="705" y="181" fill="#e8e8e8" text-anchor="middle">Prompt AI chat</text>
+    <text x="705" y="203" fill="#888" font-size="12" text-anchor="middle">re-typed from memory</text>
+
+    <rect x="820" y="150" width="150" height="72" rx="8" fill="#171717" stroke="#2a2a2a"/>
+    <text x="895" y="181" fill="#e8e8e8" text-anchor="middle">Assemble report</text>
+    <text x="895" y="203" fill="#888" font-size="12" text-anchor="middle">format, summarize</text>
+  </g>
+  <g stroke="#555" stroke-width="1.5" fill="none">
+    <line x1="210" y1="186" x2="250" y2="186"/>
+    <line x1="400" y1="186" x2="440" y2="186"/>
+    <line x1="590" y1="186" x2="630" y2="186"/>
+    <line x1="780" y1="186" x2="820" y2="186"/>
+  </g>
+  <rect x="1020" y="150" width="200" height="72" rx="8" fill="#1e1e1e" stroke="#facc15"/>
+  <text x="1120" y="181" fill="#facc15" font-size="16" font-weight="600" text-anchor="middle">≈ 2.5 hours</text>
+  <text x="1120" y="203" fill="#888" font-size="12" text-anchor="middle">per client, per run</text>
+
+  <!-- Multiplication rows -->
+  <text x="60" y="296" fill="#e8e8e8" font-size="20" font-weight="600">…then the whole chain is repeated:</text>
+
+  <g font-size="15">
+    <!-- row template: client rows fading -->
+    <g>
+      <rect x="60" y="320" width="700" height="34" rx="6" fill="#171717" stroke="#2a2a2a"/>
+      <text x="80" y="343" fill="#e8e8e8">Client 1 — café brand</text>
+      <text x="740" y="343" fill="#888" text-anchor="end">every month</text>
+    </g>
+    <g opacity="0.85">
+      <rect x="60" y="362" width="700" height="34" rx="6" fill="#171717" stroke="#2a2a2a"/>
+      <text x="80" y="385" fill="#e8e8e8">Client 2 — fitness studio</text>
+      <text x="740" y="385" fill="#888" text-anchor="end">every month</text>
+    </g>
+    <g opacity="0.7">
+      <rect x="60" y="404" width="700" height="34" rx="6" fill="#171717" stroke="#2a2a2a"/>
+      <text x="80" y="427" fill="#e8e8e8">Client 3 — dental clinic</text>
+      <text x="740" y="427" fill="#888" text-anchor="end">every month</text>
+    </g>
+    <g opacity="0.55">
+      <rect x="60" y="446" width="700" height="34" rx="6" fill="#171717" stroke="#2a2a2a"/>
+      <text x="80" y="469" fill="#e8e8e8">Client 4 — restaurant group</text>
+      <text x="740" y="469" fill="#888" text-anchor="end">every month</text>
+    </g>
+    <g opacity="0.4">
+      <rect x="60" y="488" width="700" height="34" rx="6" fill="#171717" stroke="#2a2a2a"/>
+      <text x="80" y="511" fill="#e8e8e8">Clients 5–8 …</text>
+      <text x="740" y="511" fill="#888" text-anchor="end">every month</text>
+    </g>
+  </g>
+
+  <!-- Big number panel -->
+  <rect x="820" y="320" width="400" height="202" rx="12" fill="#1e1e1e" stroke="#7c6aff" stroke-width="1.5"/>
+  <text x="1020" y="372" fill="#888" font-size="16" text-anchor="middle">2.5 hrs × 8 clients × monthly</text>
+  <text x="1020" y="432" fill="#7c6aff" font-size="52" font-weight="700" text-anchor="middle">≈ 20 hrs</text>
+  <text x="1020" y="468" fill="#e8e8e8" font-size="18" text-anchor="middle">of identical work, every month</text>
+  <text x="1020" y="498" fill="#555" font-size="13" text-anchor="middle">— and that is just ONE of the recurring tasks</text>
+
+  <!-- Bottom strip: the other recurring tasks -->
+  <text x="60" y="586" fill="#e8e8e8" font-size="17" font-weight="600">The same pattern repeats across:</text>
+  <g font-size="14" fill="#888">
+    <rect x="60" y="606" width="260" height="52" rx="8" fill="#171717" stroke="#2a2a2a"/>
+    <text x="190" y="638" text-anchor="middle">Content &amp; trend research</text>
+    <rect x="340" y="606" width="260" height="52" rx="8" fill="#171717" stroke="#2a2a2a"/>
+    <text x="470" y="638" text-anchor="middle">Campaign monitoring</text>
+    <rect x="620" y="606" width="260" height="52" rx="8" fill="#171717" stroke="#2a2a2a"/>
+    <text x="750" y="638" text-anchor="middle">Client report preparation</text>
+    <rect x="900" y="606" width="320" height="52" rx="8" fill="#171717" stroke="#2a2a2a"/>
+    <text x="1060" y="638" text-anchor="middle">New-client onboarding research</text>
+  </g>
+</svg>

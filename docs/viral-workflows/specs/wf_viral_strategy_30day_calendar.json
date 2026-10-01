@@ -1,0 +1,81 @@
+{
+  "id": "wf_viral_strategy_30day_calendar",
+  "title": "30일 바이럴 콘텐츠 캘린더",
+  "description": "브랜드 정보와 트렌드 인사이트를 종합해 날짜×채널×필러×훅이 채워진 30일 콘텐츠 캘린더를 만든다.",
+  "outputDir": "strategies",
+  "tags": ["campaign"],
+  "inputs": [
+    { "id": "brand_name", "kind": "scalar", "valueType": "text", "label": "브랜드명", "observed": "", "confidence": "low" },
+    { "id": "niche", "kind": "scalar", "valueType": "text", "label": "니치/업종", "observed": "", "confidence": "low" },
+    { "id": "target_audience", "kind": "scalar", "valueType": "text", "label": "타겟 오디언스 한 줄 설명", "observed": "", "confidence": "low" },
+    { "id": "insights_path", "kind": "scalar", "valueType": "path", "label": "트렌드 인사이트 파일 경로 (없으면 비워두기)", "observed": "", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "필러·포맷 믹스 설계",
+      "detail": "insights_path에 파일이 있으면 읽어 최근 트렌드 포맷·훅을 반영하고, 없으면 브랜드·니치·타겟 정보만으로 진행한다. 콘텐츠 필러 4~5개(예: 교육/공감/증명/엔터/판매)를 정의하고 필러별 배분 비율, 채널별(IG 릴스·피드·스토리, Threads 등) 주간 발행 횟수를 결정한다.",
+      "acceptance": "필러 4개 이상과 배분 비율, 채널별 주간 발행 계획이 정의됨.",
+      "tool": "read",
+      "toolSkills": [],
+      "subtasks": [
+        { "id": "s1", "title": "인사이트 파일 반영", "purpose": "최근 트렌드 포맷·훅을 캘린더 재료로 흡수" },
+        { "id": "s2", "title": "필러 정의·배분", "purpose": "브랜드 목표에 맞는 필러와 비율 결정" },
+        { "id": "s3", "title": "채널 리듬 설계", "purpose": "채널별 요일·횟수 골격 확정" }
+      ],
+      "inputScope": [
+        { "name": "brand_name", "type": "text" },
+        { "name": "niche", "type": "text" },
+        { "name": "target_audience", "type": "text" },
+        { "name": "insights_path", "type": "path", "description": "선택 입력 — 트렌드 브리프 md/csv" }
+      ],
+      "outputScope": [
+        { "name": "pillars", "type": "json[]", "description": "필러명·목적·배분 비율" },
+        { "name": "channel_rhythm", "type": "json", "description": "채널별 주간 발행 횟수·요일" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "action",
+      "title": "30일 캘린더 CSV 작성·저장",
+      "detail": "Day 1~30 각 행에 날짜 오프셋, 채널, 필러, 포맷(릴스/카루셀/스토리/텍스트), 콘텐츠 주제, 훅 문장 초안, CTA, 제작 난이도(상/중/하)를 채운 CSV를 저장한다. 필러 배분 비율과 채널 리듬을 지키고, 주 1회 이상은 트렌드 편승형 슬롯(주제를 당일 결정)으로 비워 표시한다.",
+      "acceptance": "30행 전부 채워진 CSV가 저장되고 필러 비율이 설계와 ±10%p 이내.",
+      "tool": "write",
+      "toolSkills": ["csv"],
+      "subtasks": [
+        { "id": "s1", "title": "30행 슬롯 배치", "purpose": "채널 리듬대로 날짜·채널 골격 채우기" },
+        { "id": "s2", "title": "주제·훅·CTA 작성", "purpose": "행마다 실행 가능한 수준의 구체화" },
+        { "id": "s3", "title": "배분 비율 검산", "purpose": "필러 비율이 설계값을 지키는지 확인" }
+      ],
+      "inputScope": [
+        { "name": "pillars", "type": "json[]" },
+        { "name": "channel_rhythm", "type": "json" },
+        { "name": "brand_name", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "row_count", "type": "number", "description": "헤더 제외 행 수 (30이어야 함)" },
+        { "name": "header_row", "type": "text[]", "description": "CSV 헤더" },
+        { "name": "pillar_distribution", "type": "json", "description": "실제 필러별 행 수" },
+        { "name": "rows_written", "type": "json[]", "description": "작성된 30행" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "validation",
+      "title": "캘린더 완전성 검증",
+      "detail": "row_count가 30인지, 훅·CTA가 빈 행이 없는지, pillar_distribution이 설계 비율과 ±10%p 이내인지, 같은 훅 문장이 반복되지 않는지 점검한다.",
+      "acceptance": "is_valid=true이고 issues가 비어 있음.",
+      "inputScope": [
+        { "name": "row_count", "type": "number" },
+        { "name": "rows_written", "type": "json[]" },
+        { "name": "pillar_distribution", "type": "json" },
+        { "name": "pillars", "type": "json[]" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "문제 없으면 빈 배열" }
+      ]
+    }
+  ]
+}

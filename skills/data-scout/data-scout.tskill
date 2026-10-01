@@ -1,0 +1,57 @@
+@workspace twixy
+
+SKILL "Data Scout"
+  version: 1.0
+  description: "Collect and store marketing signals from social platforms for personal use."
+  tags: [data-collection, instagram, tiktok, linkedin]
+
+PLATFORMS {
+  INSTAGRAM
+  TIKTOK
+  LINKEDIN
+  TWITTER
+  YOUTUBE
+}
+
+GOAL "Gather raw marketing data" {
+  objective: "Collect content, engagement metrics, competitor posts, and trending signals from the user's specified source, then save in structured form for downstream analysis."
+  kpi: items_collected
+}
+
+COLLECT "Identify scope and gather data" {
+  // Step 1: Clarify before collecting
+  - Clarify (or infer) scope before starting:
+  - Source: specific URL / platform profile / search query / hashtag
+  - Data type: posts, engagement metrics, comments, bio info, trends
+  - Depth: latest N posts / date range / full history
+  - Format: structured JSON / raw markdown / both
+
+  // Step 2: Open the target platform
+  USE instagram AS ig
+
+  // Step 3: Extract posts with metrics
+  EXTRACT Post FROM ig
+    LIMIT 30
+    ORDER BY published_at DESC
+    INTO $raw_posts
+
+  EXTRACT Metric FROM ig
+    WHERE post_id = $raw_posts.id
+    INTO $raw_posts.metrics
+
+  // Step 4: Handle pagination / infinite scroll as needed
+  - If login is required, prompt user to authenticate. Never store credentials.
+
+  STORE $raw_posts AS "instagram_posts_{date}" IN $RAW
+}
+
+TRACK "Confirm and offer next steps" {
+  LOAD "instagram_posts_{date}" FROM $RAW AS $posts
+
+  - Report: "[Scout] Collected {count} items from {source}"
+  - Saved to: `~/.openclaw/workspace/twixy/data/raw/{filename}`
+
+  EMIT "scout_complete"
+    WITH payload = $posts
+    TO SKILL "Analytics"
+}

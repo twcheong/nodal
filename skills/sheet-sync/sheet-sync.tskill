@@ -1,0 +1,70 @@
+@workspace twixy
+
+SKILL "Sheet Sync"
+  version: 1.0
+  summary: "로컬 Excel 과 Google Sheets 사이를 한 방향으로 동기화한다 (XLSX → Sheet, 또는 Sheet → XLSX)."
+  description: "Marketers often keep dashboards in Google Sheets but generate raw data with the local Excel pipeline. This skill mirrors one to the other in a single shot. Direction is decided by what the user names — if they point at a local .xlsx, push it up; if they point at a spreadsheetId, pull it down. Tabs/sheet names round-trip 1:1."
+  tags: [sync, google, sheets, excel, deliverable]
+  trigger: "시트 싱크, sheet sync, 엑셀 구글시트 동기화, sheet 로 올려, sheet 받아와"
+  output: "Updated XLSX in $REPORTS or Google Sheet URL"
+
+PLATFORMS {
+  INSTAGRAM
+  TIKTOK
+  LINKEDIN
+  TWITTER
+  YOUTUBE
+}
+
+GOAL "One-shot mirror between local XLSX and Google Sheet" {
+  objective: "Move tabular data between the two stores without the marketer copy-pasting cells."
+  kpi: sheet_sync_runs
+}
+
+PHASE "Connect" {
+  TRACK "Make sure Google is connected" {
+    - Call tool-google-status. If !connected, abort with a friendly message pointing to Settings → Google Workspace.
+  }
+}
+
+PHASE "Direction" {
+  ANALYZE "Decide push or pull" {
+    // The orchestrator looks at the user's prompt for either an .xlsx path
+    // (push to Sheets) or a Google spreadsheetId / URL (pull to XLSX).
+    // If both are present, push wins (user usually means "publish my work").
+    LET $direction = "push" IF user named a local .xlsx, ELSE "pull"
+  }
+}
+
+PHASE "Push (XLSX → Google Sheet)" {
+  TRACK "Read local, write Sheet" {
+    SKIP UNLESS $direction == "push"
+
+    - Call tool-read-xlsx with relPath = $localXlsx. Returns { sheets: [{ name, rows }] }.
+    - Call tool-write-gsheet with payload = { title: $localXlsx basename, spreadsheetId: $existingId (optional), sheets: $sheets }.
+      // If $existingId is provided, missing tabs are auto-added.
+      // If not, a new spreadsheet is created with the same tab structure.
+    - Handler returns { ok, spreadsheetId, url, sheets }.
+
+    EMIT "sheet_pushed"
+      WITH payload = { source: $localXlsx, spreadsheetId, url }
+      TO SKILL "Watchtower"
+  }
+}
+
+PHASE "Pull (Google Sheet → XLSX)" {
+  TRACK "Read Sheet, write local" {
+    SKIP UNLESS $direction == "pull"
+
+    // Default: read every named tab. tool-read-gsheet without `range` reads
+    // A1:ZZ500 of the first sheet — for full multi-tab pull the orchestrator
+    // calls it once per tab name (cheap; same auth client).
+    - Call tool-read-gsheet with spreadsheetId = $sheetId, options = { range: $tab + "!A1:ZZ500" } per tab.
+    - Aggregate rows into payload = { sheets: [{ name: $tab, rows }] } across tabs.
+    - Call tool-write-xlsx with relPath = "$REPORTS/sheet_{spreadsheetId}_{date}.xlsx" payload.
+
+    EMIT "sheet_pulled"
+      WITH payload = { spreadsheetId: $sheetId, relPath: $localXlsx }
+      TO SKILL "Watchtower"
+  }
+}

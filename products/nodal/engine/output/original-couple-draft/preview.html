@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>다 귀여워 — 오리지널 영상 시안</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #f4f0e9;
+        color: #292923;
+        font-family: "Malgun Gothic", sans-serif;
+      }
+      main {
+        max-width: 1440px;
+        margin: auto;
+        padding: 48px 32px 64px;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 24px;
+        margin-bottom: 32px;
+      }
+      .eyebrow {
+        color: #93633f;
+        font-size: 12px;
+        letter-spacing: 0.15em;
+      }
+      h1 {
+        font-size: clamp(30px, 4vw, 52px);
+        letter-spacing: -0.055em;
+        margin: 12px 0;
+      }
+      p {
+        line-height: 1.8;
+        margin: 0;
+        color: #656459;
+        font-size: 14px;
+      }
+      .pill {
+        font-size: 12px;
+        white-space: nowrap;
+        border: 1px solid #c9c0b2;
+        padding: 9px 14px;
+        border-radius: 24px;
+      }
+      figure {
+        margin: 0;
+      }
+      img,
+      video {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        object-fit: contain;
+        background: #272823;
+        border-radius: 6px;
+      }
+      figcaption {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 0 22px;
+        font-size: 13px;
+        color: #656459;
+      }
+      figcaption strong {
+        color: #393a32;
+        font-weight: 600;
+      }
+      .shots {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      h2 {
+        font-size: 20px;
+        letter-spacing: -0.035em;
+        margin: 44px 0 20px;
+      }
+      .notes {
+        border-top: 1px solid #d8d1c6;
+        padding-top: 24px;
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 28px;
+      }
+      .notes h3 {
+        margin: 0 0 10px;
+        font-size: 14px;
+      }
+      footer {
+        padding-top: 36px;
+        font-size: 12px;
+        color: #777568;
+      }
+      a {
+        color: inherit;
+        text-underline-offset: 3px;
+      }
+      @media (max-width: 720px) {
+        main {
+          padding: 28px 18px;
+        }
+        header {
+          display: block;
+        }
+        .pill {
+          display: inline-block;
+          margin-top: 16px;
+        }
+        .shots,
+        .notes {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <div class="eyebrow">ORIGINAL SCENE STUDY · 2026.09.20</div>
+          <h1>다 귀여워.</h1>
+          <p>
+            새 커플, 같은 오후의 거실.<br />옷을 보여주고 반응을 주고받는 짧은 로맨틱 코미디 시안.
+          </p>
+        </div>
+        <span class="pill">nodal 로컬 생성 · 영상 자막 없음</span>
+      </header>
+      <figure>
+        <a href="02-master-two-shot.png"
+          ><img
+            src="02-master-two-shot.png"
+            alt="오렌지색 소파 앞의 새 여성 캐릭터와 소파에 앉은 안경 쓴 남성 캐릭터"
+        /></a>
+        <figcaption><strong>01 · 함께 있는 공간</strong><span>1536 × 864</span></figcaption>
+      </figure>
+      <div class="shots">
+        <figure>
+          <a href="03-woman-medium.png"
+            ><img
+              src="03-woman-medium.png"
+              alt="아이보리 가디건을 입고 남자친구를 바라보는 여성 장면"
+          /></a>
+          <figcaption><strong>02 · “어때?”</strong><span>여성 미디엄</span></figcaption>
+        </figure>
+        <figure>
+          <a href="04-man-reaction.png"
+            ><img
+              src="04-man-reaction.png"
+              alt="같은 거실에서 여성을 향해 미소 짓는 남성 반응 장면"
+          /></a>
+          <figcaption><strong>03 · “귀여워.”</strong><span>남성 리액션</span></figcaption>
+        </figure>
+      </div>
+      <h2>움직임과 대사 시안</h2>
+      <figure>
+        <video controls playsinline preload="metadata" poster="03-woman-medium.png">
+          <source src="06-woman-video-1080p.webm" type="video/webm" />
+        </video>
+        <figcaption>
+          <strong>여성 장면 · 약 5.17초</strong><span>24fps · 1024×576 생성 → 1920×1080 복원</span>
+        </figcaption>
+      </figure>
+      <p>음성 검수: “입을 옷” 구절은 자동 인식 결과가 달라 발음 확인이 필요합니다.</p>
+      <div class="notes">
+        <section>
+          <h3>캐릭터 기준</h3>
+          <p>
+            최초에 새로 생성한 두 사람의 얼굴과 머리를 모든 이미지의 공통 참조로 사용했습니다.
+            의상은 아이보리·베이지 니트로 맞췄습니다.
+          </p>
+        </section>
+        <section>
+          <h3>장소 기준</h3>
+          <p>
+            오렌지색 소파, 회색 벽, 왼쪽 책장과 오른쪽 창. 광원 방향과 가구 재질이 다음 컷에서도
+            이어집니다.
+          </p>
+        </section>
+        <section>
+          <h3>참고 범위</h3>
+          <p>
+            참고 영상에서는 상황과 대화 리듬을 가져왔습니다. 참고 영상 프레임이나 인물 이미지는 생성
+            입력에 사용하지 않았습니다.
+          </p>
+        </section>
+      </div>
+      <footer>
+        <a href="README.md">제작 기록</a> ·
+        <a href="05-woman-video.webm">생성 해상도 원본 영상</a> · 전체 완성본이 아닌 장면 이미지와
+        영상 한 컷의 시안입니다.
+      </footer>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,93 @@
+{
+  "id": "wf_agency_watch_brand_mentions",
+  "title": "Brand Mention Sweep",
+  "description": "Sweep X, Threads, and Reddit for fresh mentions of the client's brand and products, triage them by sentiment and urgency, and deliver a response-ready report.",
+  "outputDir": "data/reports",
+  "tags": ["analytics"],
+  "inputs": [
+    { "id": "client_name", "kind": "scalar", "valueType": "text", "label": "Client brand name", "observed": "", "confidence": "low" },
+    { "id": "product_names", "kind": "list", "valueType": "text", "label": "Product or alternate names to search (optional extras)", "observed": "", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "Sweep X and Threads for mentions",
+      "detail": "Search X and Threads for the brand name and each product name. Collect up to 15 recent mentions combined: URL, platform, author handle, mention text, approximate engagement, and posted time. Include replies and quote posts that reference the brand even without the exact handle.",
+      "acceptance": "Recent X and Threads mentions collected with text and metadata (up to 15).",
+      "tool": "chrome",
+      "toolSkills": ["watchtower"],
+      "subtasks": [
+        { "id": "s1", "title": "Search brand and product terms on X", "purpose": "Fresh posts, replies, quote posts" },
+        { "id": "s2", "title": "Search the same terms on Threads", "purpose": "Cover the second conversation surface" },
+        { "id": "s3", "title": "Record mention metadata", "purpose": "URL, author, text, engagement, time" }
+      ],
+      "inputScope": [
+        { "name": "client_name", "type": "text", "description": "Primary search term" },
+        { "name": "product_names", "type": "text[]", "description": "Additional search terms" }
+      ],
+      "outputScope": [
+        { "name": "social_mentions", "type": "json[]", "description": "Per-mention url, platform, author, text, engagement, posted_at" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "action",
+      "title": "Sweep Reddit for brand discussions",
+      "detail": "Search Reddit for the brand and product names. Collect up to 10 relevant threads or comments: URL, subreddit, title or comment text, upvotes, comment count, and age. Prioritize question threads and complaint threads — these need responses first.",
+      "acceptance": "Relevant Reddit threads collected with context (up to 10).",
+      "tool": "chrome",
+      "toolSkills": [],
+      "subtasks": [
+        { "id": "s1", "title": "Search brand terms on Reddit", "purpose": "Threads and comments mentioning the brand" },
+        { "id": "s2", "title": "Prioritize questions and complaints", "purpose": "Surface response-worthy discussions first" }
+      ],
+      "inputScope": [
+        { "name": "client_name", "type": "text" },
+        { "name": "product_names", "type": "text[]" }
+      ],
+      "outputScope": [
+        { "name": "reddit_mentions", "type": "json[]", "description": "Per-thread url, subreddit, text, upvotes, comments, age" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "validation",
+      "title": "Verify sweep coverage",
+      "detail": "Check that both sweeps ran (empty results are acceptable only with an explicit 'no mentions found' status per platform), every collected mention has a URL and text, and there are no duplicate URLs across the two lists.",
+      "acceptance": "is_valid=true and issues is empty.",
+      "inputScope": [
+        { "name": "social_mentions", "type": "json[]" },
+        { "name": "reddit_mentions", "type": "json[]" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "Empty when valid" }
+      ]
+    },
+    {
+      "id": "n4",
+      "type": "action",
+      "title": "Write the triage report",
+      "detail": "Classify every mention by sentiment (positive/neutral/negative) and urgency (respond today / respond this week / no action), then write a markdown report: (1) urgent items first, each with a suggested response draft, (2) sentiment summary counts per platform, (3) recurring themes worth a content response, (4) items to monitor. The account manager should be able to act from this report alone.",
+      "acceptance": "All mentions triaged; urgent items include response drafts.",
+      "tool": "write",
+      "toolSkills": ["md"],
+      "subtasks": [
+        { "id": "s1", "title": "Classify sentiment and urgency", "purpose": "Every mention gets both labels" },
+        { "id": "s2", "title": "Draft responses for urgent items", "purpose": "Ready-to-adapt reply text" },
+        { "id": "s3", "title": "Summarize themes and watch items", "purpose": "Feed content ideas and next sweeps" }
+      ],
+      "inputScope": [
+        { "name": "social_mentions", "type": "json[]" },
+        { "name": "reddit_mentions", "type": "json[]" },
+        { "name": "client_name", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "sections_written", "type": "text[]", "description": "Report sections written" },
+        { "name": "urgent_count", "type": "number", "description": "Mentions flagged respond-today" },
+        { "name": "sentiment_summary", "type": "json", "description": "Counts by sentiment per platform" }
+      ]
+    }
+  ]
+}

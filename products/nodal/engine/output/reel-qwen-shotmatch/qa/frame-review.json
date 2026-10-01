@@ -1,0 +1,79 @@
+{
+  "review_type": "Visual comparison with approved master and source shot references; qualitative, not a biometric identity measurement",
+  "identity_master": "../../original-couple-qwen21/01-first-frame.png",
+  "video_generation_ready": true,
+  "shots": [
+    {
+      "shot": 1,
+      "selected": "frames/shot-01.png",
+      "status": "accepted",
+      "notes": "Approved woman's bob, earrings and face retained; white puff-sleeve blouse; low-angle waist-up single, window left, wood cabinet right."
+    },
+    {
+      "shot": 2,
+      "selected": "frames/shot-02-match.png",
+      "status": "accepted",
+      "notes": "Reverse medium with woman blurred at right foreground. Nodal crop/resize tightens excess knee framing. Angle and sofa details remain approximate."
+    },
+    {
+      "shot": 3,
+      "selected": "frames/shot-03-identity.png",
+      "status": "accepted",
+      "notes": "Targeted correction now retains approved face, dry bob and earrings while preserving source black wrap top, medium framing and hand-behind-head/hand-on-hip pose."
+    },
+    {
+      "shot": 4,
+      "selected": "frames/shot-04-match.png",
+      "status": "accepted",
+      "notes": "Removed leaked tattoos, rings, necklace and cat mug through Qwen. Plain yellow mug and clean arms visually confirmed. Nodal crop/resize restores source head scale."
+    },
+    {
+      "shot": 5,
+      "selected": "frames/shot-05-identity.png",
+      "status": "accepted",
+      "notes": "Targeted identity edit removed necklace and moved hair, earrings and facial features toward the approved actress while preserving extreme fisheye and polka-dot halter. Identity assessment is qualitative and constrained by lens distortion."
+    },
+    {
+      "shot": 6,
+      "selected": "frames/shot-06.png",
+      "status": "accepted",
+      "notes": "Extreme male fisheye reaction, plain navy polo and short tousled hair; curved wall left/window right."
+    },
+    {
+      "shot": 7,
+      "selected": "frames/shot-07-camera.png",
+      "status": "accepted",
+      "notes": "Camera-specific regeneration replaces the weaker crop candidate: approved woman and ivory lace peplum now in source wide-angle layout with diagonal ceiling, large window/table left, mirror/cabinet right and both hands holding peplum."
+    },
+    {
+      "shot": 8,
+      "selected": "frames/shot-08.png",
+      "status": "accepted",
+      "notes": "Both thumbs up, clean arms, no mug, smiling seated man at center-left. Two natural hands visible."
+    },
+    {
+      "shot": 9,
+      "selected": "frames/shot-09-identity.png",
+      "status": "accepted",
+      "notes": "Targeted replacement corrected leaked source face, hair, printed camisole and necklace. Approved dry bob, facial features, gold earrings and lace top now retained; chest-up framing and gaze left preserved."
+    },
+    {
+      "shot": 10,
+      "selected": "frames/shot-10.png",
+      "status": "accepted",
+      "notes": "Approved man in normal-lens head-and-shoulders close-up, short tousled hair and navy polo; gaze up-right, ready for slow push-in."
+    },
+    {
+      "shot": 11,
+      "selected": "frames/shot-11-camera.png",
+      "status": "accepted",
+      "notes": "Source-first camera edit corrected the initial overly wide framing: man low-left, woman right, lower legs cut off, table only at lower edge, large rectangular window. Approved cast, navy polo/ivory lace and clean arms retained, text removed."
+    },
+    {
+      "shot": "11-end",
+      "selected": "frames/shot-11-end-final.png",
+      "status": "accepted",
+      "notes": "Removing whole-master camera influence restored source full room framing: man face low-left, woman right, full sofa, table, ceiling and foreground at original scale. Approved faces and clean navy/ivory outfits retained; original text removed."
+    }
+  ]
+}

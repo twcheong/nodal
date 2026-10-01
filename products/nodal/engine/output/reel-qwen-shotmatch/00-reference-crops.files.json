@@ -1,0 +1,12 @@
+[
+  {
+    "file": "references/woman.png",
+    "asset": "344aaa4191488016da7ce97b29746fdb",
+    "sha256": "2dd1affc07320eb1fb6c0d647c5fe60fcf011abf99fe942798fac4c2dd7acbf2"
+  },
+  {
+    "file": "references/man.png",
+    "asset": "f2701e41726eef70e92ff430a2afaab7",
+    "sha256": "8b8aaf9bf884761af34fe593db7e1c15a5b4b89dfe0ecbac8fc9cfa3ee933d6e"
+  }
+]

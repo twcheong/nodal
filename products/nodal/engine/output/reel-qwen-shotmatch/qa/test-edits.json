@@ -1,0 +1,8 @@
+{
+  "fps": 30,
+  "purpose": "Local assembly verification only; not a production edit",
+  "shots": [
+    {"shot": "test-a", "file": "../../original-couple-qwen21/02-couple-video.webm", "frames": 12, "source_start": 0.1, "source_end": 0.59},
+    {"shot": "test-b", "file": "../../original-couple-qwen21/02-couple-video.webm", "frames": 18, "source_start": 3.6, "source_end": 4.2}
+  ]
+}

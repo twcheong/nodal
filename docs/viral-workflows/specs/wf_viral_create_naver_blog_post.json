@@ -1,0 +1,103 @@
+{
+  "id": "wf_viral_create_naver_blog_post",
+  "title": "네이버 블로그 상위노출 장문 포스트",
+  "description": "타겟 키워드의 네이버 상위 블로그를 분석해 이길 수 있는 아웃라인을 설계하고 2,000자 이상의 상위노출용 원고를 작성한다.",
+  "outputDir": "content/drafts",
+  "tags": ["content"],
+  "inputs": [
+    { "id": "target_keyword", "kind": "scalar", "valueType": "query", "label": "상위노출 목표 키워드", "observed": "", "confidence": "low" },
+    { "id": "brand_name", "kind": "scalar", "valueType": "text", "label": "브랜드명", "observed": "", "confidence": "low" },
+    { "id": "target_audience", "kind": "scalar", "valueType": "text", "label": "타겟 독자 한 줄 설명", "observed": "", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "네이버 상위 블로그 5~7개 분석",
+      "detail": "네이버에서 target_keyword를 검색해 블로그/인플루언서 영역 상위 글 5~7개를 연다. 각 글의 제목 패턴, 전체 글자 수(추정), 소제목 개수와 구성, 키워드 등장 위치(제목/첫 문단/소제목), 이미지 개수, 다루는 하위 주제 목록을 기록하고, 상위 글들이 공통으로 빠뜨린 내용(콘텐츠 갭)을 찾는다.",
+      "acceptance": "상위 글 5개 이상의 구조 분석과 콘텐츠 갭 2개 이상 도출.",
+      "tool": "chrome",
+      "toolSkills": ["seo-crawl"],
+      "subtasks": [
+        { "id": "s1", "title": "상위 글 수집·구조 기록", "purpose": "제목·글자수·소제목·키워드 배치 파악" },
+        { "id": "s2", "title": "공통 하위 주제 정리", "purpose": "상위권이 반드시 다루는 내용 목록화" },
+        { "id": "s3", "title": "콘텐츠 갭 발굴", "purpose": "아무도 안 다룬 차별화 포인트 찾기" }
+      ],
+      "inputScope": [
+        { "name": "target_keyword", "type": "query", "description": "검색할 키워드" }
+      ],
+      "outputScope": [
+        { "name": "serp_analysis", "type": "json[]", "description": "상위 글별 title_pattern·length·headings·keyword_placement" },
+        { "name": "common_topics", "type": "text[]", "description": "상위권 공통 하위 주제" },
+        { "name": "content_gaps", "type": "text[]", "description": "차별화 가능한 공백 주제" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "action",
+      "title": "이기는 아웃라인 설계",
+      "detail": "분석 결과를 바탕으로 상위권 공통 주제를 전부 커버하고 콘텐츠 갭을 추가로 채우는 아웃라인을 설계한다: 제목 5안(키워드 앞배치·후킹 요소 포함), 소제목 6~8개 구조, 각 섹션의 핵심 메시지와 목표 분량, 키워드·연관어 배치 계획, 이미지 삽입 위치와 이미지 내용 설명(텍스트 지시문).",
+      "acceptance": "제목 5안과 소제목 6개 이상의 섹션 계획이 완성됨.",
+      "tool": "read",
+      "toolSkills": [],
+      "subtasks": [
+        { "id": "s1", "title": "제목 5안 작성", "purpose": "키워드 포함 + 클릭 유인 조합" },
+        { "id": "s2", "title": "섹션 구조·분량 설계", "purpose": "공통 주제 + 갭 커버 아웃라인" },
+        { "id": "s3", "title": "키워드 배치 계획", "purpose": "본문 내 자연스러운 등장 위치 결정" }
+      ],
+      "inputScope": [
+        { "name": "serp_analysis", "type": "json[]" },
+        { "name": "common_topics", "type": "text[]" },
+        { "name": "content_gaps", "type": "text[]" },
+        { "name": "target_keyword", "type": "query" }
+      ],
+      "outputScope": [
+        { "name": "title_options", "type": "text[]", "description": "제목 5안" },
+        { "name": "outline", "type": "json[]", "description": "섹션별 소제목·핵심 메시지·목표 글자수" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "action",
+      "title": "장문 원고 작성·저장",
+      "detail": "아웃라인대로 2,000자 이상의 원고를 md로 작성해 저장한다. 첫 문단에 키워드를 자연스럽게 포함하고, 경험담 톤(직접 써본/해본 시점)을 유지하며, 섹션마다 이미지 삽입 위치를 [이미지: 설명] 형식의 텍스트 지시문으로 표기한다. 문서 끝에 추천 태그 10개와 제목 5안을 함께 수록한다.",
+      "acceptance": "2,000자 이상, 소제목 6개 이상, 이미지 지시문·태그·제목안 포함 md 저장.",
+      "tool": "write",
+      "toolSkills": ["md"],
+      "subtasks": [
+        { "id": "s1", "title": "섹션별 본문 집필", "purpose": "아웃라인의 메시지·분량 준수" },
+        { "id": "s2", "title": "키워드·연관어 삽입", "purpose": "과최적화 없이 배치 계획 반영" },
+        { "id": "s3", "title": "이미지 지시문·태그 수록", "purpose": "발행 준비 완성도 확보" }
+      ],
+      "inputScope": [
+        { "name": "outline", "type": "json[]" },
+        { "name": "title_options", "type": "text[]" },
+        { "name": "brand_name", "type": "text" },
+        { "name": "target_audience", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "char_count", "type": "number", "description": "본문 글자 수 (2000 이상)" },
+        { "name": "sections_written", "type": "text[]", "description": "작성된 소제목 목록" },
+        { "name": "keyword_occurrences", "type": "number", "description": "본문 내 타겟 키워드 등장 횟수" },
+        { "name": "image_slots", "type": "number", "description": "이미지 지시문 개수" }
+      ]
+    },
+    {
+      "id": "n4",
+      "type": "validation",
+      "title": "원고 품질 검증",
+      "detail": "char_count가 2,000 이상인지, sections_written이 6개 이상인지, keyword_occurrences가 5~15 범위(과소/과최적화 방지)인지, 이미지 지시문이 3개 이상인지 점검한다.",
+      "acceptance": "is_valid=true이고 issues가 비어 있음.",
+      "inputScope": [
+        { "name": "char_count", "type": "number" },
+        { "name": "sections_written", "type": "text[]" },
+        { "name": "keyword_occurrences", "type": "number" },
+        { "name": "image_slots", "type": "number" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "문제 없으면 빈 배열" }
+      ]
+    }
+  ]
+}

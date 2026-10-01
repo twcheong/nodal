@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;">
+  <title>OpenClaw Installer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- SIDEBAR: step tracker -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand__mark">🦞</div>
+        <div class="brand__text">
+          <div class="brand__name">OpenClaw</div>
+          <div class="brand__sub">Installer</div>
+        </div>
+      </div>
+
+      <ol class="steps" id="step-list">
+        <li class="step is-active" data-step="welcome">
+          <span class="step__num">1</span>
+          <span class="step__label">Welcome</span>
+        </li>
+        <li class="step" data-step="license">
+          <span class="step__num">2</span>
+          <span class="step__label">License</span>
+        </li>
+        <li class="step" data-step="system">
+          <span class="step__num">3</span>
+          <span class="step__label">System check</span>
+        </li>
+        <li class="step" data-step="config">
+          <span class="step__num">4</span>
+          <span class="step__label">Configuration</span>
+        </li>
+        <li class="step" data-step="install">
+          <span class="step__num">5</span>
+          <span class="step__label">Install</span>
+        </li>
+        <li class="step" data-step="finish">
+          <span class="step__num">6</span>
+          <span class="step__label">Finish</span>
+        </li>
+      </ol>
+
+      <div class="sidebar__foot">
+        <span id="platform-label">Detecting platform…</span>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+      <div class="main__body">
+
+        <!-- STEP 1: Welcome -->
+        <section class="panel is-active" data-panel="welcome">
+          <p class="eyebrow">Step 1 of 6</p>
+          <h1 class="display">Welcome aboard.</h1>
+          <p class="lede">
+            This wizard installs <strong>OpenClaw</strong> — your own personal AI
+            assistant that runs locally on your machine. You'll be chatting with
+            your own agent in about five minutes.
+          </p>
+          <ul class="feature-list">
+            <li>
+              <span class="feature-list__dot"></span>
+              Installs the OpenClaw CLI globally via npm.
+            </li>
+            <li>
+              <span class="feature-list__dot"></span>
+              Configures your AI model provider of choice.
+            </li>
+            <li>
+              <span class="feature-list__dot"></span>
+              Starts the local Gateway daemon so it keeps running in the background.
+            </li>
+          </ul>
+          <p class="fineprint">
+            Click <em>Next</em> to continue. You can cancel at any time.
+          </p>
+        </section>
+
+        <!-- STEP 2: License -->
+        <section class="panel" data-panel="license">
+          <p class="eyebrow">Step 2 of 6</p>
+          <h1 class="display">License agreement.</h1>
+          <div class="license-box">
+<pre>MIT License
+
+Copyright (c) OpenClaw contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre>
+          </div>
+          <label class="checkbox">
+            <input type="checkbox" id="accept-license" />
+            <span>I accept the terms of the license agreement.</span>
+          </label>
+        </section>
+
+        <!-- STEP 3: System check -->
+        <section class="panel" data-panel="system">
+          <p class="eyebrow">Step 3 of 6</p>
+          <h1 class="display">System check.</h1>
+          <p class="lede">OpenClaw needs <strong>Node.js 22 or later</strong> (Node 24 recommended).</p>
+
+          <div class="check-row" id="check-node">
+            <div class="check-row__icon" data-status="pending">
+              <svg class="spinner" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>
+            </div>
+            <div class="check-row__content">
+              <div class="check-row__title">Node.js</div>
+              <div class="check-row__sub" id="node-status">Checking…</div>
+            </div>
+            <div class="check-row__actions" id="node-actions"></div>
+          </div>
+
+          <p class="fineprint" id="system-hint">
+            If you need to install Node.js, we'll open nodejs.org in your browser.
+            Come back and click <em>Re-check</em> once it's installed.
+          </p>
+        </section>
+
+        <!-- STEP 4: Configuration -->
+        <section class="panel" data-panel="config">
+          <p class="eyebrow">Step 4 of 6</p>
+          <h1 class="display">Pick your brain.</h1>
+          <p class="lede">
+            Choose which AI model provider OpenClaw should talk to, and paste
+            your API key. This never leaves your machine.
+          </p>
+
+          <div class="field">
+            <label for="provider">Model provider</label>
+            <div class="provider-grid">
+              <label class="provider">
+                <input type="radio" name="provider" value="anthropic" checked />
+                <span class="provider__card">
+                  <span class="provider__name">Anthropic</span>
+                  <span class="provider__note">Claude models</span>
+                </span>
+              </label>
+              <label class="provider">
+                <input type="radio" name="provider" value="openai" />
+                <span class="provider__card">
+                  <span class="provider__name">OpenAI</span>
+                  <span class="provider__note">GPT models</span>
+                </span>
+              </label>
+              <label class="provider">
+                <input type="radio" name="provider" value="google" />
+                <span class="provider__card">
+                  <span class="provider__name">Google</span>
+                  <span class="provider__note">Gemini models</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="api-key">API key</label>
+            <input type="password" id="api-key" placeholder="sk-..." autocomplete="off" spellcheck="false" />
+            <p class="field__hint">
+              Saved to <code>~/.openclaw/.env</code> with <code>0600</code> permissions.
+              You can also skip this and set it up later during onboarding.
+            </p>
+          </div>
+        </section>
+
+        <!-- STEP 5: Install -->
+        <section class="panel" data-panel="install">
+          <p class="eyebrow">Step 5 of 6</p>
+          <h1 class="display">Installing.</h1>
+          <p class="lede" id="install-status">Hang tight — running <code>npm install -g openclaw@latest</code>.</p>
+
+          <div class="progress">
+            <div class="progress__bar" id="progress-bar"></div>
+          </div>
+
+          <pre class="log" id="log-output" aria-live="polite"></pre>
+        </section>
+
+        <!-- STEP 6: Finish -->
+        <section class="panel" data-panel="finish">
+          <p class="eyebrow">Step 6 of 6</p>
+          <h1 class="display">Off to the races. 🦞</h1>
+          <p class="lede">
+            OpenClaw is installed. Two more clicks and you're chatting with your assistant.
+          </p>
+
+          <div class="finish-actions">
+            <button class="card-btn" id="btn-onboard">
+              <div class="card-btn__title">1. Run onboarding</div>
+              <div class="card-btn__sub">
+                Opens a terminal running <code>openclaw onboard --install-daemon</code>.
+                Completes the interactive wizard using the provider and key you configured.
+              </div>
+            </button>
+            <button class="card-btn" id="btn-dashboard">
+              <div class="card-btn__title">2. Open the dashboard</div>
+              <div class="card-btn__sub">
+                Runs <code>openclaw dashboard</code> to open the Control UI in your browser.
+                Only works after onboarding has finished.
+              </div>
+            </button>
+          </div>
+
+          <p class="fineprint">
+            Documentation: <a href="#" data-external="https://github.com/openclaw/openclaw">github.com/openclaw/openclaw</a>
+          </p>
+        </section>
+
+      </div>
+
+      <!-- BOTTOM BUTTON BAR -->
+      <footer class="footer">
+        <button class="btn btn--ghost" id="btn-cancel">Cancel</button>
+        <div class="footer__spacer"></div>
+        <button class="btn btn--ghost" id="btn-back" disabled>Back</button>
+        <button class="btn btn--primary" id="btn-next">Next</button>
+      </footer>
+    </main>
+
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

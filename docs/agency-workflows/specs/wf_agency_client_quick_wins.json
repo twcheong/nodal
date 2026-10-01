@@ -1,0 +1,260 @@
+{
+  "id": "wf_agency_client_quick_wins",
+  "title": "Instagram Quick-Wins Scan",
+  "description": "Scan the surface of a client's Instagram profile — bio, link-in-bio, pinned posts, highlights, recent grid — and deliver a prioritized list of fixes shippable this week. Every recommendation must cite an actually-observed field from the scan; no strategy-level or rebrand items.",
+  "outputDir": "data/reports",
+  "tags": [
+    "client"
+  ],
+  "inputs": [
+    {
+      "id": "account_url",
+      "kind": "scalar",
+      "valueType": "url",
+      "label": "Client's Instagram profile URL",
+      "observed": "",
+      "confidence": "low"
+    },
+    {
+      "id": "client_name",
+      "kind": "scalar",
+      "valueType": "text",
+      "label": "Client name",
+      "observed": "",
+      "confidence": "low"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "Capture profile surface",
+      "detail": "Open the Instagram profile page and capture everything visible WITHOUT opening any post: display name, handle, category label, the full bio text line by line, followers / following / post counts (exact integer from the title/tooltip attribute when exposed, plus the rounded display string separately), the external link (visible label AND actual href), story highlights in order (count and each highlight's name), and the first 12 grid items (for each: post URL from the article element href, format badge Reel | Carousel | Static Image, and whether it carries a pinned badge).\n\nCOST RULE: this node reads ONE page. Targeted DOM reads only — no full-page text dumps, no full accessibility-tree reads, no screenshots. Produce one compact JSON bundle and move on.",
+      "acceptance": "Profile surface JSON with bio lines, exact-or-flagged follower count, external link label+href (or explicit absence), ordered highlights list, and ≤12 grid items each with url + format + pinned flag. Zero posts opened.",
+      "tool": "chrome",
+      "toolSkills": [
+        "instagram"
+      ],
+      "subtasks": [
+        {
+          "id": "s1",
+          "title": "Read profile header",
+          "purpose": "Name, handle, category, bio lines, follower/following/post counts (exact + display string)"
+        },
+        {
+          "id": "s2",
+          "title": "Read external link and highlights",
+          "purpose": "Link label + href (or record absence), highlight count and names in display order"
+        },
+        {
+          "id": "s3",
+          "title": "Snapshot the grid",
+          "purpose": "First 12 items: url, format badge, pinned badge — from the grid only, no post pages"
+        }
+      ],
+      "inputScope": [
+        {
+          "name": "account_url",
+          "type": "url",
+          "description": "Instagram profile URL"
+        }
+      ],
+      "outputScope": [
+        {
+          "name": "profile_surface",
+          "type": "json",
+          "description": "Header, bio lines, counts, external link, highlights list"
+        },
+        {
+          "name": "grid_snapshot",
+          "type": "json[]",
+          "description": "First ≤12 grid items: url, format, pinned flag"
+        }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "action",
+      "title": "Read pinned posts",
+      "detail": "From grid_snapshot, take the items flagged as pinned (0–3). Open each pinned post once and extract ONLY: url, format, first_line_hook, the <time> element's datetime attribute as posted_at_iso, and whether the caption contains a CTA line. If no posts are pinned, output an empty array — that absence is itself a quick-win candidate downstream.\n\nCOST RULE: one targeted DOM read per pinned post, one small JSON object each, never a page dump. Do not open any non-pinned post.",
+      "acceptance": "One JSON object per pinned post (0–3) with url, format, hook, ISO timestamp, has_cta — or an explicit empty array when nothing is pinned. No non-pinned posts opened.",
+      "tool": "chrome",
+      "toolSkills": [
+        "instagram"
+      ],
+      "subtasks": [
+        {
+          "id": "s1",
+          "title": "Select pinned items from grid snapshot",
+          "purpose": "Use the pinned flags already captured — never rescan the grid"
+        },
+        {
+          "id": "s2",
+          "title": "Targeted per-post extraction",
+          "purpose": "url, format, first-line hook, <time datetime> ISO, caption CTA presence — one narrow read each"
+        }
+      ],
+      "inputScope": [
+        {
+          "name": "grid_snapshot",
+          "type": "json[]",
+          "description": "Grid items with pinned flags"
+        }
+      ],
+      "outputScope": [
+        {
+          "name": "pinned_posts",
+          "type": "json[]",
+          "description": "0–3 pinned posts: url, format, hook, posted_at_iso, has_cta"
+        }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "action",
+      "title": "Probe link-in-bio destination",
+      "detail": "If profile_surface has an external link, open its href and record: whether it loads (final URL after redirects, error/parked-page signals), the page title, whether it is a link aggregator (Linktree/Beacons/etc.), and — when it is an aggregator — the visible link entries (label + href, up to 10). Note whether the destination matches what the bio's link label / CTA promises.\n\nIf the profile has NO external link, skip the browsing entirely and output present=false — the absence is a quick-win candidate, not an error.\n\nCOST RULE: one destination page (plus its visible link list), targeted reads only, no dumps.",
+      "acceptance": "link_destination JSON with present flag; when present: loads_ok, final URL, page title, aggregator flag, ≤10 link entries, and a bio-promise match note.",
+      "tool": "chrome",
+      "subtasks": [
+        {
+          "id": "s1",
+          "title": "Open the bio link",
+          "purpose": "Record final URL, load success, page title — or present=false without browsing"
+        },
+        {
+          "id": "s2",
+          "title": "Capture aggregator entries",
+          "purpose": "If Linktree-like: up to 10 visible links with label + href"
+        },
+        {
+          "id": "s3",
+          "title": "Match against bio promise",
+          "purpose": "Does the destination deliver what the bio label/CTA implies?"
+        }
+      ],
+      "inputScope": [
+        {
+          "name": "profile_surface",
+          "type": "json",
+          "description": "External link href + label, bio CTA lines"
+        }
+      ],
+      "outputScope": [
+        {
+          "name": "link_destination",
+          "type": "json",
+          "description": "present, loads_ok, final_url, title, is_aggregator, links[], bio_match_note"
+        }
+      ]
+    },
+    {
+      "id": "n4",
+      "type": "validation",
+      "title": "Validate scan completeness",
+      "detail": "Check the three collection outputs before the report consumes them:\n1. profile_surface has handle, ≥1 bio line, and a follower count that is either an exact integer or explicitly flagged as rounded-display-only\n2. grid_snapshot has 1–12 rows, every row has url + format in {Reel, Carousel, Static Image} + a boolean pinned flag\n3. pinned_posts length equals the number of pinned-flagged grid rows, and every entry has a parseable posted_at_iso\n4. link_destination has a boolean present; when present=true it has loads_ok, final_url and title\n5. no field that should be a number contains a display string like '1.2K' without the rounded flag\n\nSet is_valid=false and name the offending fields if any check fails. Do NOT draft any recommendations here — that is the report node's job.",
+      "acceptance": "is_valid=true, issues=[], pinned count consistent with grid flags, all numeric fields integer-or-flagged.",
+      "inputScope": [
+        {
+          "name": "profile_surface",
+          "type": "json"
+        },
+        {
+          "name": "grid_snapshot",
+          "type": "json[]"
+        },
+        {
+          "name": "pinned_posts",
+          "type": "json[]"
+        },
+        {
+          "name": "link_destination",
+          "type": "json"
+        }
+      ],
+      "outputScope": [
+        {
+          "name": "is_valid",
+          "type": "boolean"
+        },
+        {
+          "name": "issues",
+          "type": "string[]",
+          "description": "Empty when valid"
+        },
+        {
+          "name": "scan_bundle",
+          "type": "json",
+          "description": "The four outputs merged into one clean object for the report node"
+        }
+      ]
+    },
+    {
+      "id": "n5",
+      "type": "action",
+      "title": "Write quick-wins report",
+      "detail": "Write <handle>-quick-wins.md to the workflow output folder (data/reports).\n\nStructure:\n(1) Snapshot — a table of the current state: bio (verbatim), follower count, external link + destination status, highlights (count + names), pinned posts (count + hooks), grid format mix from the 12-item snapshot.\n(2) Quick Wins — 5–10 fixes, each shippable within one week by the client or the agency, ordered by impact. Every item uses the fixed shape: **Current** (the observed state, quoting the scanned field) → **Fix** (the concrete change, with proposed copy where applicable — e.g. a rewritten bio line or CTA) → **Why** (one line) → **Effort** (S or M).\n(3) Out of scope — one short list naming things deliberately NOT included because they are strategy-level (rebrand, content pillars, posting cadence), so the client sees the boundary was a choice.\n\nEVIDENCE RULE: every Quick Win's Current line must quote or reference a field that exists in scan_bundle. If you cannot point at the observed evidence, the item does not go in the report. Absences count as evidence (no link in bio, no pinned posts, no CTA in bio) — invented observations do not.\n\nSCOPE RULE: nothing in Quick Wins may require new content production beyond single-line copy (bio, link labels, highlight names) or reordering/pinning existing assets. Anything bigger belongs in Out of scope.",
+      "acceptance": "Markdown saved with the three sections; 5–10 quick wins each in Current→Fix→Why→Effort shape; every Current cites a scan_bundle field; no strategy-level items inside Quick Wins.",
+      "tool": "write",
+      "toolSkills": [
+        "md"
+      ],
+      "subtasks": [
+        {
+          "id": "s1",
+          "title": "Build the snapshot table",
+          "purpose": "Current state verbatim from scan_bundle — the before picture"
+        },
+        {
+          "id": "s2",
+          "title": "Draft 5–10 evidence-cited quick wins",
+          "purpose": "Current→Fix→Why→Effort, ordered by impact, single-week shippable only"
+        },
+        {
+          "id": "s3",
+          "title": "Declare out-of-scope items",
+          "purpose": "Name the strategy-level fixes deliberately excluded"
+        },
+        {
+          "id": "s4",
+          "title": "Write the markdown file",
+          "purpose": "Save as <handle>-quick-wins.md under the workflow outputDir"
+        }
+      ],
+      "inputScope": [
+        {
+          "name": "scan_bundle",
+          "type": "json",
+          "description": "Merged validated scan data"
+        },
+        {
+          "name": "client_name",
+          "type": "text",
+          "description": "Client name for the report header"
+        }
+      ],
+      "outputScope": [
+        {
+          "name": "report_title",
+          "type": "text",
+          "description": "H1 as written"
+        },
+        {
+          "name": "sections_written",
+          "type": "text[]",
+          "description": "Section headings in order: Snapshot, Quick Wins, Out of scope"
+        },
+        {
+          "name": "quick_win_count",
+          "type": "number",
+          "description": "Items in the Quick Wins section (5–10)"
+        },
+        {
+          "name": "evidence_fields_cited",
+          "type": "text[]",
+          "description": "scan_bundle field referenced by each quick win, same order — length must equal quick_win_count"
+        }
+      ]
+    }
+  ]
+}

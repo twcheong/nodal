@@ -1,0 +1,32 @@
+<!doctype html>
+<html data-theme="light"><head><meta charset="utf-8"><link rel="stylesheet" href="tokens.css">
+<style>body{background:var(--bg-base);padding:24px}</style></head>
+<body>
+<div style="max-width:700px;margin:0 auto">
+  <div style="display:flex;align-items:stretch;gap:12px;background:var(--bg-elevated);border:1px solid #f59e0b;border-radius:var(--radius-md);padding:12px">
+    <div style="width:36px;height:36px;position:relative;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+      <svg style="position:absolute;inset:0" viewBox="0 0 36 36" fill="none" stroke="#f59e0b" stroke-width="1.5"><polygon points="18,2 34,34 2,34"/></svg>
+      <b style="position:relative;font-size:12px;font-weight:600;color:#f59e0b;margin-top:6px">2</b>
+    </div>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-family:var(--font-mono);font-size:11px;padding:1px 7px;border-radius:var(--radius-sm);background:#f59e0b22;color:#f59e0b;font-weight:600">[Human Review]</span>
+        <span style="font-size:13px;color:var(--text-primary);font-weight:500">Human Review (optional)</span>
+        <span style="font-size:10px;padding:1px 6px;border-radius:var(--radius-sm);font-weight:600;background:#f59e0b22;color:#b07d18">Awaiting you</span>
+        <span style="margin-left:auto;font-size:10px;color:var(--text-muted)">▾</span>
+      </div>
+      <div style="margin-top:10px;background:var(--bg-base);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--text-secondary);line-height:1.6">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted);margin-bottom:6px">Step output</div>
+        경쟁사 3곳에서 최근 글 15건을 수집했습니다. 카페온도 5건 · 빈브라더스 5건 · 커피문 5건. 주제 분류: 신메뉴 6 · 브랜드 스토리 4 · 이벤트 3 · 매장 2.
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--text-secondary)">Read the input above, then decide:</div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+        <button style="background:var(--accent);border:none;color:#fff;border-radius:var(--radius-sm);padding:6px 14px;font-size:12px;font-weight:600">✅ Approve</button>
+        <button style="background:transparent;border:1px solid var(--border);color:var(--text-secondary);border-radius:var(--radius-sm);padding:6px 14px;font-size:12px">✏️ Send note</button>
+        <button style="background:transparent;border:1px solid var(--border);color:var(--text-muted);border-radius:var(--radius-sm);padding:6px 14px;font-size:12px">⤼ Skip</button>
+      </div>
+      <textarea rows="2" style="margin-top:8px;width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;font-family:var(--font-sans);resize:none;outline:none;color:var(--text-primary)" placeholder="e.g. The summary section is too long, please condense it before continuing."></textarea>
+    </div>
+  </div>
+</div>
+</body></html>

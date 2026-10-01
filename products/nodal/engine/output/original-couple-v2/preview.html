@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>수정 투샷 — 영상 시안</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #f4f0e9;
+        color: #292923;
+        font-family: "Malgun Gothic", sans-serif;
+      }
+      main {
+        max-width: 1280px;
+        margin: auto;
+        padding: 40px 24px;
+      }
+      h1 {
+        font-size: 32px;
+        letter-spacing: -0.04em;
+      }
+      h2 {
+        font-size: 18px;
+        margin: 36px 0 16px;
+      }
+      p {
+        color: #666257;
+        line-height: 1.8;
+        font-size: 14px;
+      }
+      video,
+      img {
+        width: 100%;
+        display: block;
+        aspect-ratio: 16 / 9;
+        object-fit: contain;
+        background: #24251f;
+        border-radius: 6px;
+      }
+      a {
+        color: #805637;
+        text-underline-offset: 3px;
+      }
+      .facts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>“이건 어때?” · “귀여워.”</h1>
+      <p>수정한 인물 비율과 구도를 바탕으로 만든 투샷 영상 시안입니다.</p>
+      <video controls playsinline preload="metadata" poster="01-corrected-wide.png">
+        <source src="03-couple-video-1080p.webm" type="video/webm" />
+      </video>
+      <div class="facts">
+        <p>약 5.17초 · 24fps · 자막 없음</p>
+        <p>1024×576 생성 → 1920×1080 복원</p>
+        <p>nodal 로컬 생성</p>
+      </div>
+      <h2>기준 이미지</h2>
+      <img
+        src="01-corrected-wide.png"
+        alt="왼쪽에 앉은 남성과 오른쪽에 선 여성, 가운데 테이블과 뒤쪽 창"
+      />
+      <p>왼쪽에 앉은 남성, 오른쪽에 선 여성, 가운데 테이블과 뒤쪽 큰 창을 기준으로 사용했습니다.</p>
+      <p>
+        <a href="02-couple-video.webm">생성 해상도 원본</a> ·
+        <a href="README.md">제작 및 검토 기록</a>
+      </p>
+    </main>
+  </body>
+</html>

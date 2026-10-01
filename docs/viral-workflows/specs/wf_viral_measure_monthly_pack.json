@@ -1,0 +1,78 @@
+{
+  "id": "wf_viral_measure_monthly_pack",
+  "title": "월간 통합 바이럴 리포트 팩",
+  "description": "이번 달 채널별 리포트와 인사이트 파일을 취합해 경영 요약·채널별 성과·다음 달 액션이 담긴 통합 리포트 팩을 만든다.",
+  "outputDir": "data/reports",
+  "tags": ["reporting"],
+  "inputs": [
+    { "id": "brand_name", "kind": "scalar", "valueType": "text", "label": "브랜드명", "observed": "", "confidence": "low" },
+    { "id": "month_label", "kind": "scalar", "valueType": "text", "label": "대상 월 (예: 2026-07)", "observed": "", "confidence": "low" },
+    { "id": "reports_dir", "kind": "scalar", "valueType": "path", "label": "리포트 폴더 경로 (기본: data/reports)", "observed": "data/reports", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "월간 리포트·인사이트 취합",
+      "detail": "reports_dir와 data/insights에서 month_label에 해당하는 파일들(주간 성과 리포트, 해시태그 추적, 팔로워 트래커, 트렌드 브리프 등)을 읽는다. 채널별(IG/Threads/YouTube/네이버/기타)로 핵심 지표(팔로워 증감, 총 도달·참여, 발행 편수)와 이달의 승자 콘텐츠 Top 3, 실패 사례 1~2개를 요약한다. 파일이 없는 채널은 '데이터 없음'으로 명시한다.",
+      "acceptance": "존재하는 모든 채널 데이터가 요약되고 누락 채널이 명시됨.",
+      "tool": "read",
+      "toolSkills": [],
+      "subtasks": [
+        { "id": "s1", "title": "대상 월 파일 스캔·로드", "purpose": "이번 달 산출물 전수 확인" },
+        { "id": "s2", "title": "채널별 지표 요약", "purpose": "증감·도달·참여를 채널 단위로 집계" },
+        { "id": "s3", "title": "승자·실패 콘텐츠 선정", "purpose": "다음 달 방향의 근거 확보" }
+      ],
+      "inputScope": [
+        { "name": "reports_dir", "type": "path", "description": "취합 대상 폴더" },
+        { "name": "month_label", "type": "text", "description": "대상 월 필터" }
+      ],
+      "outputScope": [
+        { "name": "channel_summaries", "type": "json[]", "description": "채널별 지표·승자·실패 요약" },
+        { "name": "missing_channels", "type": "text[]", "description": "데이터가 없던 채널" },
+        { "name": "files_read", "type": "text[]", "description": "취합에 사용한 파일 목록" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "validation",
+      "title": "취합 커버리지 검증",
+      "detail": "channel_summaries가 1개 이상인지, 각 요약에 지표와 승자 콘텐츠가 있는지, files_read가 비어 있지 않은지, missing_channels 표기가 일관적인지 점검한다.",
+      "acceptance": "is_valid=true이고 issues가 비어 있음.",
+      "inputScope": [
+        { "name": "channel_summaries", "type": "json[]" },
+        { "name": "files_read", "type": "text[]" },
+        { "name": "missing_channels", "type": "text[]" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "문제 없으면 빈 배열" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "action",
+      "title": "통합 리포트 팩 생성",
+      "detail": "리포트 팩을 생성한다. 구성: (1) 경영 요약 1페이지 — 이달의 3줄 결론과 핵심 숫자, (2) 채널별 섹션 — 지표 표, 승자 콘텐츠와 성공 요인, 실패와 교훈, (3) 이달의 배움 — 훅/포맷/시간대에서 검증된 것, (4) 다음 달 액션 5개 — 우선순위와 담당 채널 명시. 표와 텍스트만 사용한다(이미지 없음).",
+      "acceptance": "4개 구성이 전부 채워진 리포트 팩 저장.",
+      "tool": "write",
+      "toolSkills": ["report-pack"],
+      "subtasks": [
+        { "id": "s1", "title": "경영 요약 작성", "purpose": "의사결정자용 3줄 결론과 핵심 숫자" },
+        { "id": "s2", "title": "채널 섹션 구성", "purpose": "채널별 표·승자·교훈 정리" },
+        { "id": "s3", "title": "다음 달 액션 도출", "purpose": "배움을 실행 항목 5개로 전환" }
+      ],
+      "inputScope": [
+        { "name": "channel_summaries", "type": "json[]" },
+        { "name": "missing_channels", "type": "text[]" },
+        { "name": "brand_name", "type": "text" },
+        { "name": "month_label", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "sections_written", "type": "text[]", "description": "작성된 섹션 제목" },
+        { "name": "channel_count", "type": "number", "description": "리포트에 포함된 채널 수" },
+        { "name": "action_items", "type": "json[]", "description": "다음 달 액션 5개" }
+      ]
+    }
+  ]
+}

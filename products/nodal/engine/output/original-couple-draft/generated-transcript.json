@@ -1,0 +1,13 @@
+{
+  "detected_language": "ko",
+  "language_probability": 0.9963569045066833,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 5.0,
+      "text": " 내일 우리 놀러 갈 때 입으로 어때?",
+      "avg_logprob": -0.4614032231844388,
+      "no_speech_prob": 0.01863710954785347
+    }
+  ]
+}

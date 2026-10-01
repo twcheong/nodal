@@ -1,0 +1,102 @@
+{
+  "nodal_version": "1",
+  "id": "01996c21-0000-7000-8000-000000000003",
+  "definitions": {
+    "qwen21_generate": {
+      "doc": "Generate an image from text with local Qwen-Image-2.1. Saves RGB/RGBA PNG and provenance. Non-commercial research/evaluation only; commercial use requires a separate Qwen license.",
+      "params": {
+        "prompt": {
+          "type": "STRING",
+          "doc": "Describe the image or edits. For transparency explicitly request RGBA and a transparent background."
+        },
+        "seed": {
+          "type": "INT",
+          "default": 42,
+          "widget": {
+            "seed": true,
+            "control": "fixed"
+          }
+        },
+        "steps": {
+          "type": "INT",
+          "default": 40,
+          "widget": {
+            "min": 1,
+            "max": 100
+          }
+        },
+        "width": {
+          "type": "INT",
+          "default": 1024,
+          "widget": {
+            "min": 256,
+            "max": 2048,
+            "step": 32
+          }
+        },
+        "height": {
+          "type": "INT",
+          "default": 1024,
+          "widget": {
+            "min": 256,
+            "max": 2048,
+            "step": 32
+          }
+        },
+        "reference_resolution": {
+          "type": "INT",
+          "default": 768,
+          "widget": {
+            "min": 256,
+            "max": 2048,
+            "step": 32
+          }
+        }
+      },
+      "nodes": {
+        "01996c21-0000-7000-8000-000000000001": {
+          "type": "diffusion.QwenImage21",
+          "inputs": {
+            "prompt": {
+              "$param": "prompt"
+            },
+            "seed": {
+              "$param": "seed"
+            },
+            "steps": {
+              "$param": "steps"
+            },
+            "width": {
+              "$param": "width"
+            },
+            "height": {
+              "$param": "height"
+            },
+            "reference_resolution": {
+              "$param": "reference_resolution"
+            }
+          }
+        },
+        "01996c21-0000-7000-8000-000000000002": {
+          "type": "image.Save",
+          "inputs": {
+            "image": {
+              "$link": ["01996c21-0000-7000-8000-000000000001", "image"]
+            },
+            "embed_workflow": true
+          }
+        }
+      },
+      "returns": {
+        "image": {
+          "$link": ["01996c21-0000-7000-8000-000000000002", "asset"]
+        },
+        "metadata": {
+          "$link": ["01996c21-0000-7000-8000-000000000001", "metadata"]
+        }
+      }
+    }
+  },
+  "nodes": {},
+  "outputs": []
+}

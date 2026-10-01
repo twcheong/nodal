@@ -1,0 +1,73 @@
+{
+  "id": "wf_viral_signal_ig_reels_trend",
+  "title": "IG 릴스 트렌드 포맷 스캔",
+  "description": "니치 해시태그의 상위 릴스를 훑어 지금 통하는 포맷·훅 패턴을 추출하고 적용 아이디어까지 정리한 트렌드 브리프를 만든다.",
+  "outputDir": "data/insights",
+  "tags": ["research"],
+  "inputs": [
+    { "id": "niche", "kind": "scalar", "valueType": "text", "label": "니치/업종 (예: 홈카페, 헬스, 뷰티)", "observed": "", "confidence": "low" },
+    { "id": "hashtags", "kind": "list", "valueType": "text", "label": "탐색할 해시태그 2~3개 (# 없이)", "observed": "", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "니치 해시태그 상위 릴스 수집",
+      "detail": "Instagram에서 입력된 해시태그 각각을 탐색해 상위 노출 릴스를 합쳐 12~15개 수집한다. 각 릴스에서 URL, 계정명, 좋아요·댓글 수, 캡션 첫 줄(훅), 캡션 구조, 포맷 유형(말하는 얼굴/자막 나열/비포애프터/POV/리스트형 등), 사용된 오디오 표기를 텍스트로 기록한다. 스크린샷은 찍지 않고 화면의 텍스트 정보만 읽는다.",
+      "acceptance": "서로 다른 계정의 릴스 12개 이상이 URL·훅·포맷 유형과 함께 수집됨.",
+      "tool": "chrome",
+      "toolSkills": ["instagram"],
+      "subtasks": [
+        { "id": "s1", "title": "해시태그별 상위 릴스 탐색", "purpose": "해시태그당 4~5개씩 상위 노출 릴스 확보" },
+        { "id": "s2", "title": "릴스별 메타데이터 기록", "purpose": "URL, 계정, 반응 수, 캡션 훅 수집" },
+        { "id": "s3", "title": "포맷 유형 분류 태깅", "purpose": "각 릴스를 포맷 유형 하나로 라벨링" }
+      ],
+      "inputScope": [
+        { "name": "niche", "type": "text", "description": "포맷 판단의 기준이 되는 니치 맥락" },
+        { "name": "hashtags", "type": "text[]", "description": "탐색할 해시태그 목록" }
+      ],
+      "outputScope": [
+        { "name": "reels", "type": "json[]", "description": "릴스별 url·account·likes·comments·hook·format·audio 배열" },
+        { "name": "scanned_hashtags", "type": "text[]", "description": "실제 탐색 완료한 해시태그" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "validation",
+      "title": "수집 커버리지 검증",
+      "detail": "reels 배열이 12개 이상인지, 각 항목에 url·hook·format이 비어 있지 않은지, 동일 계정이 3개를 초과하지 않는지 점검한다.",
+      "acceptance": "is_valid=true이고 issues가 비어 있음.",
+      "inputScope": [
+        { "name": "reels", "type": "json[]" },
+        { "name": "scanned_hashtags", "type": "text[]" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "문제 없으면 빈 배열" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "action",
+      "title": "트렌드 브리프 작성·저장",
+      "detail": "수집한 릴스를 포맷 유형별로 묶어 트렌드 브리프 마크다운을 작성한다: (1) 이번 스캔의 지배 포맷 Top 5와 각 포맷의 대표 사례, (2) 반복 등장하는 훅 유형과 실제 훅 문장 인용, (3) 니치에 바로 적용할 콘텐츠 아이디어 5개(포맷+훅+주제 조합). 파일은 워크플로우 출력 폴더에 저장한다.",
+      "acceptance": "포맷 Top 5, 훅 유형, 적용 아이디어 5개 섹션이 모두 채워진 md 저장.",
+      "tool": "write",
+      "toolSkills": ["md"],
+      "subtasks": [
+        { "id": "s1", "title": "포맷별 그룹핑·순위화", "purpose": "빈도와 반응 수 기준으로 지배 포맷 선정" },
+        { "id": "s2", "title": "훅 패턴 추출", "purpose": "훅 문장들을 유형(질문/충격/공감/숫자 등)으로 분류" },
+        { "id": "s3", "title": "적용 아이디어 도출", "purpose": "니치×포맷×훅 조합으로 실행 아이디어 5개 작성" }
+      ],
+      "inputScope": [
+        { "name": "reels", "type": "json[]", "description": "검증된 릴스 수집 결과" },
+        { "name": "niche", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "sections_written", "type": "text[]", "description": "브리프에 작성된 섹션 제목" },
+        { "name": "top_formats", "type": "json[]", "description": "포맷명·빈도·대표 사례 URL" },
+        { "name": "idea_count", "type": "number", "description": "적용 아이디어 개수" }
+      ]
+    }
+  ]
+}

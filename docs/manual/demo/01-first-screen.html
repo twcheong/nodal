@@ -1,0 +1,58 @@
+<!doctype html>
+<html data-theme="light"><head><meta charset="utf-8"><link rel="stylesheet" href="tokens.css"></head>
+<body>
+<div class="app">
+  <div class="titlebar"><span class="lights"><i></i><i></i><i></i></span>TWIXY</div>
+  <div class="body">
+    <aside class="sidebar"><div class="col">
+      <button class="logo active" title="Chat"><img src="../../../assets/icon-petrol-64.png" alt="Twixy"></button>
+      <button title="Workflow">◇</button>
+      <button title="Dashboard">⊟</button>
+      <button title="Data Management">⊞</button>
+      <button title="Settings">⚙</button>
+    </div></aside>
+    <div class="main">
+      <div class="cop-header">
+        <button class="hbtn" title="Workflows">☰</button>
+        <button class="hbtn active" title="New chat">＋</button>
+        <div class="tabstrip"></div>
+        <button class="hbtn">⚠ Report</button>
+        <span class="projbadge">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+          maple-cafe
+        </span>
+        <button class="hbtn" title="Chat history">⚙</button>
+      </div>
+      <div class="chatcol">
+        <div class="msgs" style="display:flex">
+          <div style="max-width:720px;margin:0 auto;padding:0 24px;display:flex;flex-direction:column;justify-content:center;min-height:100%;width:100%">
+            <div style="text-align:center;padding-bottom:60px">
+              <div style="font-size:22px;font-weight:600;color:var(--text-primary);letter-spacing:-0.01em">What do you want to automate?</div>
+              <div style="margin-top:8px;font-size:13px;color:var(--text-muted);line-height:1.6">Describe the task — if a workflow for it already exists I'll run it, otherwise I'll build one and run it for you.</div>
+            </div>
+          </div>
+        </div>
+        <div class="chiprow-outer">
+          <div class="chiprow">
+            <span class="modechip active"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg> Simple</span>
+            <span class="modechip">◇ Workflow</span>
+            <span class="modechip">▤ Content</span>
+            <span class="sublabel">One-time task — plans &amp; runs immediately, nothing saved</span>
+          </div>
+          <form class="composer">
+            <div class="box">
+              <textarea rows="3" placeholder="Describe the one-time task (e.g. fix the broken links in @data/raw/….xlsx)…"></textarea>
+              <span class="charcount">0 / 8,000</span>
+            </div>
+            <button class="sendbtn" type="button">Send</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="statusbar">
+    <span class="dot"></span><span style="color:var(--green)">Twixy · Ready</span>
+    <span class="usage"><span class="eyebrow">tok</span><span class="track"><span class="fill" style="width:22%;display:block"></span></span><span class="val">38.2K tok</span></span>
+  </div>
+</div>
+</body></html>

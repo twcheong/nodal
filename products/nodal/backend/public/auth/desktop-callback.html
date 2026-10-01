@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Sign in to Nodal</title>
+    <link rel="stylesheet" href="/auth/desktop-callback.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Nodal</h1>
+      <p id="status">Signing you in…</p>
+      <a id="open" class="button" hidden>Open Nodal</a>
+      <button id="retry" class="button secondary" hidden>Try again</button>
+      <p id="hint" class="hint" hidden>
+        If nothing happens, make sure the Nodal app is installed, then press the button above.
+        You can close this tab once the app has opened.
+      </p>
+    </main>
+    <script src="/vendor/supabase-js-2.101.1.js"></script>
+    <script src="/auth/desktop-callback.js"></script>
+  </body>
+</html>

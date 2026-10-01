@@ -1,0 +1,75 @@
+{
+  "source": "01-first-frame.png",
+  "source_sha256": "c67764f377f454152f4ebb54208538242df17493ed0f139486cd39e02ef428dc",
+  "user_approved_source": true,
+  "native_file": "02-couple-video.webm",
+  "native_sha256": "0fe15570c4b2ee4e017f634a96b2cddd9a026979ed7773fcc3d4027446729f2d",
+  "restored_file": "03-couple-video-1080p.webm",
+  "restored_sha256": "b5aef6708b7868207904f7b20910866bc7c2389d5fc85cf2be408e12e57435a9",
+  "failed_server_run": "257c2cb5c3344fd0833c22ebd730fedd",
+  "native_run": "db38c9b0e83940ecacc4dcc967d801d6",
+  "native_asset": "27830772b91aef977265870316a9ee3c",
+  "restored_run": "b6dff29a452b404eb226823d886ad13d",
+  "restored_asset": "52f166755db052672b97ca2b0851dbf0",
+  "native_resolution": [
+    1024,
+    576
+  ],
+  "restored_resolution": [
+    1920,
+    1080
+  ],
+  "frame_count": 124,
+  "fps": 24,
+  "duration_seconds": 5.166666666666667,
+  "audio_wav_sha256": "740f7b6ff37a7da39b8e00804a347b4b3969d85eae126df3f710cb07b49121ff",
+  "restored_audio_wav_sha256": "740f7b6ff37a7da39b8e00804a347b4b3969d85eae126df3f710cb07b49121ff",
+  "decoded_audio_identical": true,
+  "visual_review": {
+    "native_sampled_frames_reviewed": 22,
+    "full_size_native_frames": [
+      84
+    ],
+    "full_size_restored_frames": [
+      84
+    ],
+    "layout": "Seated man left, standing woman right, table and mug between, consistent clothing and floor contact",
+    "visible_captions": "None in reviewed frames",
+    "anatomy": "No extra limbs seen in sampled frames; natural slight head and shoulder movement",
+    "limitations": "Sampled inspection, not exhaustive frame-by-frame approval. Fine facial, hair and background texture changes remain. No claim of pixel-identical identity or exact camera lock."
+  },
+  "speech_review": {
+    "method": "Local faster-whisper small CPU int8; local cached weights",
+    "language": "ko",
+    "language_probability": 0.9373068809509277,
+    "transcript": [
+      {
+        "text": "이건 어때?",
+        "start": 0,
+        "end": 1.14
+      },
+      {
+        "text": "귀여워.",
+        "start": 3.6,
+        "end": 4.42
+      }
+    ],
+    "dialogue_matches_requested_text": true,
+    "human_listening_verified": false,
+    "speaker_gender_and_lip_sync_verified": false
+  },
+  "backend": "nodal local MCP / MiniMax-H3-Pruned / RealESRGAN_x4plus",
+  "first_frame_backend": "nodal local MCP / Qwen-Image-2.1",
+  "seed": 923271,
+  "steps": 20,
+  "actual_denoising_iterations": 19,
+  "original_reference_video_pixels_used": false,
+  "deliverable_scope": "5.17-second two-shot video, not the full reference reel",
+  "ci": {
+    "passed": 21,
+    "failed": 4,
+    "skipped": 10,
+    "failures": "Existing Python lint/format, web prettier, generated API type drift",
+    "log": "ci-video.log"
+  }
+}

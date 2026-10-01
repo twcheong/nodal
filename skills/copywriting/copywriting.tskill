@@ -1,0 +1,71 @@
+@workspace twixy
+
+SKILL "Copywriting"
+  version: 1.0
+  summary: "제품/브랜드/채널/톤을 받아 광고 문구·SNS 캡션·제목 변형 N개를 브랜드 보이스로 생성한다."
+  description: "Turns a product/brand brief into ready-to-use marketing copy — ad headlines, social captions, and title/hook variants. New tools: zero. This is pure LLM reasoning grounded in the user's brand context (SOUL.md voice + their own collected data in data/), composed on the main model where copy quality matters. The marketer supplies what to write about (product, audience, channel, tone, length, how many); the skill returns several distinct variants plus a one-line note on the angle of each, and optionally saves them to a draft file on request. Trigger phrases: 카피 써줘, 광고 문구, 인스타 캡션, 제목 변형, copywriting, write copy, caption, hook variants, ad copy."
+  tags: [copywriting, content, captions, ads, llm]
+  trigger: "카피라이팅, 카피 써줘, 광고 문구, SNS 캡션, 인스타 캡션, 제목 변형, 후킹 문구, copywriting, write copy, ad copy, caption, hook variants"
+  output: "N copy variants + per-variant angle note (chat); optional draft file in $DRAFTS"
+
+PLATFORMS {
+  INSTAGRAM
+  TIKTOK
+  LINKEDIN
+  TWITTER
+  YOUTUBE
+}
+
+GOAL "Generate on-brand marketing copy variants" {
+  objective: "Take a product/brand brief (service, audience, channel, tone, length, count) and produce several distinct, channel-appropriate copy variants in the user's brand voice, each with a short note on its angle."
+  kpi: copy_variants_shipped
+}
+
+PHASE "Brief" {
+  COLLECT "Resolve the brief and brand voice" {
+    // No platform fetch — copywriting is LLM-only. "Collect" here means
+    // gathering the inputs and the brand context the copy must match.
+    - Resolve the brief from the user's request. Required inputs (ask only for what is genuinely missing — infer the rest from context):
+      product: the product / service / offer being promoted.
+      audience: who the copy is for (persona, segment).
+      channel: where it runs — instagram caption / naver blog / email subject / x post / youtube title, etc.
+      tone: voice and register (e.g. 친근한, 전문적, 위트있는). Default to the SOUL.md brand tone if unspecified.
+      length: short / medium / long, or an explicit character limit for the channel.
+      count: how many variants to produce. Default 5.
+
+    // Ground the copy in brand voice + the user's real data — never generic best-practice filler.
+    - Read SOUL.md for the brand identity, tone rules, and forbidden phrasing (no hype words like "Amazing!", no filler affirmations).
+    LOAD "latest" FROM $INSIGHTS AS $brand_context
+
+    - If no insight file exists, proceed with SOUL.md voice + the user's brief alone — do not block on missing data.
+  }
+}
+
+PHASE "Write" {
+  STRATEGIZE "Draft and differentiate the variants" {
+    SPAWN copy_writer
+      TASK "Write {count} distinct {channel} copy variants for {product} aimed at {audience} in a {tone} tone at {length} length. Each variant must take a DIFFERENT angle (e.g. benefit-led, curiosity hook, social proof, problem/agitation, direct CTA) — do not paraphrase one idea {count} times. Respect the channel's norms: caption length + hashtag/emoji conventions for instagram, subject-line brevity for email, hook-first for tiktok/youtube titles. Honor SOUL.md voice and its banned phrasings. Return an array of { variant, angle } where `angle` is a one-line note on why this version works. Match the brand voice and any patterns visible in the provided brand context."
+      USING $brand_context
+      OUTPUT $variants
+      AWAIT
+
+    PLAN Strategy AS $copy_set
+      FROM $variants
+      ABOUT "rank the variants strongest-first and recommend which one to lead with for this channel and audience"
+  }
+}
+
+PHASE "Deliver" {
+  TRACK "Present variants and optionally save a draft" {
+    - Present every variant to the user as a numbered list: the copy text, then its one-line angle note. Lead with the recommended pick from $copy_set.
+    - Keep it copy-paste clean — no surrounding commentary the user has to strip out.
+
+    // File save is OPT-IN. Only when the user asks to save / keep / 파일로.
+    - If the user asked to save them: call the write tool to persist a markdown draft at "$DRAFTS/copy_{channel}_{date}.md" containing all variants + angle notes, then report the relative path (e.g. content/drafts/copy_instagram_2026-06-26.md).
+    - If the user did not ask to save, do NOT write a file — just return the copy in chat.
+
+    EMIT "copy_ready"
+      WITH payload = { channel: $channel, count: $count }
+      TO SKILL "Watchtower"
+  }
+}

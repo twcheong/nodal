@@ -1,0 +1,62 @@
+@workspace twixy
+
+SKILL "Social Scout Plus"
+  version: 1.0
+  summary: "틱톡·X·링크드인 채널의 게시물·참여 인사이트를 브라우저로 수집하는 data-scout 확장."
+  description: "Extends Data Scout to the channels it doesn't emphasize — TikTok, X (Twitter), and LinkedIn — collecting recent posts and their engagement signals via the built-in browser tool (no new tool). Note x_search is denied at runtime, so X is read through the browser, not the search tool. The marketer supplies a profile/handle/hashtag and depth per channel; the skill drives the browser to read public posts, stores a structured snapshot in data/raw alongside data-scout's output, and hands off for analysis. Login-gated views prompt the user to authenticate — credentials are never stored. Trigger phrases: 틱톡 수집, X 수집, 트위터 수집, 링크드인 수집, 소셜 수집 확장, social scout, tiktok scrape, linkedin posts, twitter collect."
+  tags: [data-collection, tiktok, twitter, linkedin, browser]
+  trigger: "틱톡 수집, 틱톡 인사이트, X 수집, 트위터 수집, 링크드인 수집, 링크드인 게시물, 소셜 채널 수집, social scout plus, tiktok collect, linkedin posts, twitter collect"
+  output: "structured post+engagement snapshot in $RAW; emits social_scout_complete"
+
+PLATFORMS {
+  TIKTOK
+  TWITTER
+  LINKEDIN
+}
+
+GOAL "Gather TikTok/X/LinkedIn signals" {
+  objective: "Collect recent posts and engagement metrics for the user's target profile/handle/hashtag on TikTok, X, or LinkedIn, then save a structured snapshot for downstream analysis."
+  kpi: items_collected
+}
+
+PHASE "Collect" {
+  COLLECT "Read posts across the requested channels" {
+    - Resolve scope from the user's request:
+      channel: tiktok / twitter / linkedin (one or more).
+      target: profile handle, hashtag, or search query.
+      depth: latest N posts / date range. Default: latest 30.
+      data type: posts, engagement (likes/comments/shares/views), bio. Default: posts + engagement.
+
+    // Use the platform session for supported channels; X goes through the browser (x_search is denied).
+    USE tiktok AS tk
+    EXTRACT Post FROM tk
+      LIMIT 30
+      ORDER BY published_at DESC
+      INTO $tiktok_posts
+
+    EXTRACT Metric FROM tk
+      WHERE post_id = $tiktok_posts.id
+      INTO $tiktok_posts.metrics
+
+    // For X and LinkedIn, drive the browser tool by prose to the target profile/hashtag,
+    // read the recent posts, and capture { url, text, published_at, likes, comments, shares/reposts, views }.
+    - If channel includes twitter: open the X profile/search for {target} in the browser and read the latest posts + engagement. Do NOT use x_search (denied at runtime).
+    - If channel includes linkedin: open the LinkedIn profile/company page for {target} and read recent posts + reactions/comments.
+    - Handle infinite scroll until depth is reached. If login is required, prompt the user to authenticate — never store credentials.
+    - Merge all channels into one normalized list of { channel, url, text, published_at, metrics }.
+
+    STORE $social_posts AS "social_{channel}_{date}" IN $RAW
+  }
+}
+
+PHASE "Confirm" {
+  TRACK "Report and hand off" {
+    LOAD "social_{channel}_{date}" FROM $RAW AS $posts
+
+    - Report: "[Social Scout+] Collected {count} items from {channel} for {target}" and the relative save path (e.g. data/raw/social_{channel}_{date}.json).
+
+    EMIT "social_scout_complete"
+      WITH payload = { channel: $channel, count: $posts.count }
+      TO SKILL "Watchtower"
+  }
+}

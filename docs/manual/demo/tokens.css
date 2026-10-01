@@ -1,0 +1,113 @@
+/* Twixy 데모 목업 공용 — Paper/Petrol 라이트 토큰 (src/design/tokens.css 미러) */
+@font-face {
+  font-family: 'Pretendard Variable';
+  src: url('../../../node_modules/pretendard/dist/web/variable/woff2/PretendardVariable.woff2') format('woff2-variations');
+  font-weight: 45 920;
+}
+:root {
+  --paper: #fafaf6; --card-white: #ffffff; --place: #eff4f1; --mint: #e4f0e9;
+  --hairline: #d9e1da; --soft-hairline: #cfdbd3;
+  --ink-900: #14201b; --ink-600: #4a594f; --ink-400: #8a968d; --white: #ffffff;
+  --petrol-500: #0d5c50; --petrol-700: #093f37;
+  --clay-500: #b5482f; --ochre-500: #b07d18;
+  --bg-base: var(--paper); --bg-surface: var(--card-white); --bg-elevated: var(--card-white);
+  --bg-hover: var(--place); --bg-active: var(--mint); --bg-input: var(--place);
+  --border: var(--hairline); --border-subtle: var(--hairline);
+  --text-primary: var(--ink-900); --text-secondary: var(--ink-600); --text-muted: var(--ink-400);
+  --accent: var(--petrol-500); --accent-deep: var(--petrol-700); --accent-dim: var(--mint);
+  --accent-glow: rgba(13, 92, 80, 0.10);
+  --success: var(--petrol-500); --danger: var(--clay-500); --warning: var(--ochre-500);
+  --red: var(--clay-500); --yellow: var(--ochre-500); --green: var(--petrol-500);
+  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius: 12px;
+  --font-sans: 'Pretendard Variable', 'Pretendard', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', ui-monospace, 'Fira Code', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg-base); color: var(--text-primary);
+  font-family: var(--font-sans); font-size: 14px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; overflow: hidden; }
+
+/* ── 앱 프레임 ── */
+.app { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+.titlebar { height: 38px; background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0; display: flex; align-items: center; padding-left: 80px;
+  font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.05em; position: relative; }
+.lights { position: absolute; left: 18px; top: 12px; display: flex; gap: 8px; }
+.lights i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+.lights i:nth-child(1) { background: #ff5f57; } .lights i:nth-child(2) { background: #febc2e; }
+.lights i:nth-child(3) { background: #28c840; }
+.body { flex: 1; display: flex; overflow: hidden; }
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; background: var(--bg-base); }
+
+/* ── 사이드바 ── */
+.sidebar { width: 52px; background: var(--bg-surface); border-right: 1px solid var(--border-subtle);
+  display: flex; flex-direction: column; align-items: center; padding: 48px 0 12px; gap: 4px; flex-shrink: 0; }
+.sidebar .col { flex: 1; display: flex; flex-direction: column; gap: 2px; width: 100%; padding-inline: 6px; margin-top: 8px; }
+.sidebar button { width: 100%; height: 36px; border: none; border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-muted); font-size: 16px;
+  display: flex; align-items: center; justify-content: center; font-family: var(--font-sans); }
+.sidebar button.active { background: var(--accent-dim); color: var(--accent); }
+.sidebar button.logo { background: transparent; }
+.sidebar button.logo img { width: 22px; height: 22px; border-radius: 5px; display: block; }
+.sidebar button.logo.active img { transform: scale(1.25); }
+
+/* ── 상태바 ── */
+.statusbar { height: 28px; background: var(--bg-surface); border-top: 1px solid var(--border-subtle);
+  display: flex; align-items: center; padding-inline: 16px; gap: 6px; font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.statusbar .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); flex-shrink: 0; }
+.usage { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.usage .eyebrow { font-size: 9px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); opacity: 0.7; }
+.usage .track { width: 80px; height: 4px; background: var(--bg-input); border-radius: 2px; overflow: hidden; }
+.usage .fill { height: 100%; background: var(--accent); }
+.usage .val { font-size: 10px; font-family: monospace; color: var(--text-muted); min-width: 44px; text-align: right; }
+
+/* ── Copilot 헤더 ── */
+.cop-header { display: flex; align-items: center; gap: 6px; padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
+.hbtn { padding: 4px 9px; font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);
+  background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); line-height: 1.4; }
+.hbtn.active { color: var(--text-primary); background: var(--bg-active); border-color: var(--accent); }
+.tabstrip { flex: 1; min-width: 0; display: flex; gap: 4px; overflow: hidden; align-items: center; }
+.chattab { display: flex; align-items: center; gap: 6px; flex-shrink: 0; max-width: 190px;
+  padding: 4px 8px 4px 10px; font-size: 11px; line-height: 1.4; color: var(--text-muted);
+  background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); }
+.chattab.active { color: var(--text-primary); background: var(--bg-active); border-color: var(--accent); }
+.chattab .x { color: var(--text-muted); font-size: 12px; padding: 0 2px; }
+.projbadge { padding: 4px 9px; border: 1px solid var(--border); background: var(--bg-elevated);
+  color: var(--text-muted); border-radius: var(--radius-sm); font-size: 11px; display: flex; align-items: center; gap: 5px; }
+
+/* ── 모드 칩 + 컴포저 ── */
+.chiprow-outer { border-top: 1px solid var(--border-subtle); flex-shrink: 0; }
+.chiprow { max-width: 720px; margin: 0 auto; padding: 10px 24px 0; display: flex; gap: 6px; align-items: center; }
+.modechip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; font-size: 11px;
+  font-family: var(--font-mono); color: var(--text-muted); background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle); border-radius: 999px; line-height: 1.5; }
+.modechip.active { color: #fff; background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.sublabel { font-size: 10px; color: var(--text-muted); margin-left: 4px; }
+.composer { max-width: 720px; margin: 0 auto; padding: 8px 24px 16px; display: flex; gap: 8px; align-items: flex-end; width: 100%; }
+.composer .box { flex: 1; position: relative; }
+.composer textarea { width: 100%; background: var(--bg-surface); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: var(--radius-md); padding: 10px 12px;
+  font-family: var(--font-sans); font-size: 13px; resize: none; outline: none; line-height: 1.5; display: block; }
+.composer textarea::placeholder { color: var(--text-muted); }
+.charcount { position: absolute; right: 10px; bottom: 6px; font-size: 10px; color: var(--text-muted); opacity: 0.45; }
+.sendbtn { background: var(--accent); border: none; border-radius: var(--radius-md); color: #fff;
+  font-size: 13px; font-weight: 600; padding: 10px 18px; font-family: var(--font-sans); }
+
+/* ── 채팅 버블 ── */
+.chatcol { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.msgs { flex: 1; overflow: hidden; }
+.msgs-inner { max-width: 720px; margin: 0 auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; }
+.bubble { max-width: 85%; border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+  padding: 8px 12px; font-size: 13px; line-height: 1.55; }
+.bubble.user { align-self: flex-end; background: var(--accent-dim); color: var(--text-primary); }
+.bubble.ai { align-self: flex-start; background: var(--bg-elevated); color: var(--text-secondary); }
+
+/* ── 패널 공통 ── */
+.aside { flex-shrink: 0; overflow: hidden; background: var(--bg-surface); display: flex; flex-direction: column; }
+.aside.r { border-left: 1px solid var(--border-subtle); }
+.aside.l { border-right: 1px solid var(--border-subtle); }
+.sec-head { padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0;
+  font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); }
+.mono-eyebrow { font-size: 10px; font-family: var(--font-mono); color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.4px; }

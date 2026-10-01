@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Twixy Master Map</title>
+<style>
+  :root {
+    --ink: #1f2a2e; --muted: #5a6b70; --accent: #0e6e6e; --accent-soft: #e3efef;
+    --paper: #faf9f6; --card: #ffffff; --line: #e3e1da; --alt: #f3f7f7;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.55 -apple-system, 'Apple SD Gothic Neo', Pretendard, sans-serif; color: var(--ink); background: var(--paper); }
+  header { position: sticky; top: 0; z-index: 10; background: var(--paper); border-bottom: 1px solid var(--line); padding: 10px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  header h1 { font-size: 18px; margin: 0; color: var(--accent); }
+  header .stamp { color: var(--muted); font-size: 12px; }
+  .lang-toggle { margin-left: auto; display: flex; border: 1px solid var(--accent); border-radius: 8px; overflow: hidden; }
+  .lang-toggle button { border: 0; background: transparent; padding: 5px 14px; font-size: 13px; cursor: pointer; color: var(--accent); }
+  .lang-toggle button.on { background: var(--accent); color: #fff; }
+  nav { padding: 8px 24px; display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--line); background: var(--card); }
+  nav a { font-size: 12px; color: var(--muted); text-decoration: none; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); }
+  nav a:hover { color: var(--accent); border-color: var(--accent); }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  section { margin-bottom: 44px; }
+  h2 { font-size: 20px; color: var(--accent); border-bottom: 2px solid var(--accent-soft); padding-bottom: 6px; margin: 0 0 6px; }
+  h3 { font-size: 15px; margin: 22px 0 8px; }
+  .note { color: var(--muted); font-style: italic; font-size: 12.5px; margin: 6px 0 12px; }
+  table { border-collapse: collapse; width: 100%; background: var(--card); font-size: 13px; }
+  th, td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: var(--accent); color: #fff; font-weight: 600; }
+  tr:nth-child(even) td { background: var(--alt); }
+  td.feat { font-weight: 600; }
+  .chip { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12px; white-space: nowrap; border: 1px solid rgba(0,0,0,.08); }
+  .bullets { padding-left: 20px; margin: 8px 0; }
+  .bullets li { margin-bottom: 5px; }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+  .filters button { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 3px 12px; font-size: 12px; cursor: pointer; color: var(--muted); }
+  .filters button.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .matrix td { vertical-align: top; font-size: 12.5px; }
+  .persona { background: var(--card); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+  .persona summary { cursor: pointer; padding: 10px 14px; font-weight: 600; background: var(--alt); }
+  .persona table { border: 0; }
+  .kv td:first-child { width: 170px; font-weight: 600; background: var(--alt); }
+  .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .col { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .col h4 { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; margin-bottom: 6px; font-size: 12.5px; background: var(--paper); }
+  .card .key { color: var(--accent); font-weight: 600; margin-right: 6px; }
+  .arealbl { color: var(--muted); font-size: 12px; }
+  footer { color: var(--muted); font-size: 12px; text-align: center; padding: 24px; border-top: 1px solid var(--line); }
+  @media (max-width: 760px) { .board { grid-template-columns: 1fr; } main { padding: 14px; } }
+  .tablewrap { overflow-x: auto; }
+  code { font: 12px ui-monospace, Menlo, monospace; background: var(--alt); padding: 1px 5px; border-radius: 4px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Twixy Master Map</h1>
+  <span class="stamp" id="stamp"></span>
+  <div class="lang-toggle">
+    <button id="btn-ko">한국어</button>
+    <button id="btn-en">EN</button>
+  </div>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<footer id="foot"></footer>
+
+<script type="module">
+import * as M from '../data/map.mjs';
+
+let lang = localStorage.getItem('mm-lang') || 'ko';
+let backlogFilter = 'all';
+
+const t = v => (v && typeof v === 'object' && ('en' in v)) ? v[lang] : v;
+const status = key => {
+  const s = M.statuses[key];
+  return `<span class="chip" style="background:#${s.color}">${t(s.label)}</span>`;
+};
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+const S = (en, ko) => lang === 'en' ? en : ko; // UI 문자열
+
+const SECTIONS = () => [
+  ['vision', S('1. Product Vision', '1. 제품 비전')],
+  ['goals', S('2. Business Goals', '2. 비즈니스 목표')],
+  ['roadmap', S('3. Product Roadmap', '3. 제품 로드맵')],
+  ['backlog', S('4. Product Backlog', '4. 제품 백로그')],
+  ['release', S('5. Release Plan', '5. 릴리스 계획')],
+  ['sprint', S('6. Sprint Backlog', '6. 스프린트 백로그')],
+  ['board', S('7. Sprint Board', '7. 스프린트 보드')],
+  ['increment', S('8. Product Increment', '8. Product Increment')],
+  ['personas', S('9. User Personas', '9. 사용자 페르소나')],
+  ['appendix', S('Appendix A. DoD Debt', '부록 A. DoD 부채')],
+];
+
+const goalById = id => M.goals.find(g => g.id === id);
+const backlogById = id => M.backlog.find(b => b.id === id);
+
+function linkLabel(link) {
+  if (link === 'chore') return S('- (engineering chore)', '- (엔지니어링 작업)');
+  if (link === 'sales') return S('Sales scope - excluded', 'Sales 범위 - 제외');
+  const b = backlogById(link);
+  return b ? `${t(b.name)} (${b.release})` : '-';
+}
+
+function tableHTML(headers, rows) {
+  return `<div class="tablewrap"><table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map((c, i) => `<td class="${i === 0 ? 'feat' : ''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+
+function render() {
+  document.documentElement.lang = lang;
+  document.getElementById('stamp').textContent = t(M.meta.stamp);
+  document.getElementById('btn-ko').classList.toggle('on', lang === 'ko');
+  document.getElementById('btn-en').classList.toggle('on', lang === 'en');
+  document.getElementById('nav').innerHTML = SECTIONS().map(([id, label]) => `<a href="#${id}">${label}</a>`).join('');
+  document.getElementById('foot').textContent = S(
+    'Single source: docs/master-map/data/map.mjs — edit the data, commit, and this page plus both docx exports update together.',
+    '단일 소스: docs/master-map/data/map.mjs — 데이터를 고쳐 커밋하면 이 페이지와 영/한 docx가 함께 갱신됩니다.',
+  );
+
+  const parts = [];
+
+  // 1. Vision
+  parts.push(`<section id="vision"><h2>${SECTIONS()[0][1]}</h2>
+    <p>${M.vision.headline.map(seg => seg.bold ? `<b>${esc(t(seg.t))}</b>` : esc(t(seg.t))).join('')}</p>
+    <h3>${S('Core framing', '핵심 프레이밍')}</h3>
+    <ul class="bullets">${M.vision.framing.map(b => `<li>${esc(t(b))}</li>`).join('')}</ul>
+    <h3>${S('What the product is today', '오늘의 제품')}</h3>
+    <p>${esc(t(M.vision.today))}</p>
+    <h3>${S('The Adaptive Process ladder', 'Adaptive Process 단위 사다리')}</h3>
+    <p class="note">${esc(t(M.adaptiveProcess.intro))}</p>
+    ${tableHTML(
+      [S('Stage', '단계'), S('Unit', '단위'), S('Definition', '정의'), S('In this map', '이 맵에서')],
+      M.adaptiveProcess.stages.map(s => [esc(s.stage), esc(t(s.unit)), esc(t(s.def)), esc(t(s.section))]),
+    )}
+    <p class="note">${esc(t(M.meta.salesNote))}</p>
+  </section>`);
+
+  // 2. Goals
+  parts.push(`<section id="goals"><h2>${SECTIONS()[1][1]}</h2>
+    <p class="note">${S(`Updated column: '${M.BASELINE}' marks the initial audit baseline; later changes carry their own date.`, `갱신 열: '${M.BASELINE}'은 초기 전수조사 기준선이며, 이후 변경분에만 개별 날짜를 찍습니다.`)}</p>
+    ${tableHTML(
+      ['#', S('Business Goal', '비즈니스 목표'), S('Description', '설명'), S('Status', '상태'), S('Quarter', '분기'), S('Updated', '갱신')],
+      M.goals.map((g, i) => [String(i + 1), esc(t(g.name)), esc(t(g.desc)), status(g.status), g.quarter, g.updated ?? M.BASELINE]),
+    )}
+  </section>`);
+
+  // 3. Roadmap matrix (derived from matrixQuarter)
+  const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
+  const byQ = Object.fromEntries(quarters.map(q => [q, M.goals.filter(g => g.matrixQuarter === q)]));
+  const maxRows = Math.max(...quarters.map(q => byQ[q].length), 1);
+  parts.push(`<section id="roadmap"><h2>${SECTIONS()[2][1]}</h2>
+    <p class="note">${S('Goals arrayed by target quarter; goals spanning Q3-Q4 sit in their completion quarter. Derived automatically from the goals data.', '목표를 목표 분기별로 진열. Q3-Q4에 걸친 목표는 완료 예정 분기에 배치. goals 데이터에서 자동 파생됩니다.')}</p>
+    ${tableHTML(quarters.map(q => `Quarter ${q.slice(1)}`),
+      Array.from({ length: maxRows }, (_, r) => quarters.map(q => {
+        const g = byQ[q][r];
+        return g ? `${esc(t(g.name))} ${status(g.status)}` : (r === 0 && !byQ[q].length ? '-' : '');
+      })))}
+  </section>`);
+
+  // 4. Backlog with release filter
+  const rels = ['all', 'R0', 'R1', 'R2', 'R3', 'R4'];
+  const blRows = M.backlog.filter(b => backlogFilter === 'all' || b.release === backlogFilter);
+  parts.push(`<section id="backlog"><h2>${SECTIONS()[3][1]}</h2>
+    <p class="note">${S('Sprint-level chores (TWIX-13, 38, 39) stay in section 6 and are not promoted to features.', '스프린트 수준의 일회성 작업(TWIX-13, 38, 39)은 6장에만 남기고 Feature로 승격하지 않습니다.')}</p>
+    <div class="filters">${rels.map(r => `<button data-rel="${r}" class="${backlogFilter === r ? 'on' : ''}">${r === 'all' ? S('All', '전체') : r}</button>`).join('')}</div>
+    ${tableHTML(
+      [S('Feature / Work Package', '기능 / 워크 패키지'), S('Pri', '순위'), S('Business Goal', '비즈니스 목표'), S('Release', '릴리스'), S('Status', '상태'), S('Notes', '비고'), S('Branch', '브랜치'), S('Updated', '갱신')],
+      blRows.map(b => [esc(t(b.name)), String(M.backlog.indexOf(b) + 1), esc(t(goalById(b.goal).name)), b.release ?? 'U', status(b.status), esc(t(b.notes)), b.branch ? `<code>${esc(b.branch)}</code>` : '-', b.updated ?? M.BASELINE]),
+    )}
+  </section>`);
+
+  // 5. Release plan (matrix derived from backlog.release)
+  const relCols = M.releases;
+  const relItems = relCols.map(r => M.backlog.filter(b => (b.release ?? null) === r.id));
+  const relMax = Math.max(...relItems.map(a => a.length), 1);
+  parts.push(`<section id="release"><h2>${SECTIONS()[4][1]}</h2>
+    <p class="note">${S('Derived automatically from each backlog item’s release field.', '백로그 각 항목의 release 필드에서 자동 파생됩니다.')}</p>
+    ${tableHTML(relCols.map(r => esc(t(r.label))),
+      Array.from({ length: relMax }, (_, i) => relItems.map((items, c) => items[i] ? esc(t(items[i].name)) : (i === 0 && !items.length ? '-' : ''))))}
+    <h3>${S('Criteria', '기준')}</h3>
+    ${tableHTML([S('Release', '릴리스'), S('Criteria', '기준')], relCols.map(r => [esc(t(r.label)), esc(t(r.criteria))]))}
+    <h3>${S('Release Backlog — Epics', 'Release Backlog — 에픽')}</h3>
+    <p class="note">${S('Features assigned to a release, decomposed into epics. Story drafts feed sprint planning (Jira).', '릴리스에 배정된 Feature를 에픽으로 분해한 것. 스토리 초안은 스프린트 계획(Jira) 때 가져다 씁니다.')}</p>
+    ${tableHTML(
+      [S('Epic', '에픽'), S('Feature', '기능'), S('Rel', '릴리스'), S('Scope', '범위'), S('Story drafts', '스토리 초안'), S('Branch', '브랜치'), S('Updated', '갱신')],
+      M.epics.map(e => [esc(t(e.name)), esc(t(backlogById(e.feature).name)), e.release, esc(t(e.scope)), e.stories.map(s => '• ' + esc(t(s))).join('<br>'), e.branch ? `<code>${esc(e.branch)}</code>` : '-', e.updated ?? M.BASELINE]),
+    )}
+  </section>`);
+
+  // 6. Sprint backlog
+  parts.push(`<section id="sprint"><h2>${SECTIONS()[5][1]}</h2>
+    <p class="note">${S(`Pulled from the Jira TWIX board on ${M.sprint.fetchedAt}. `, `${M.sprint.fetchedAt} Jira TWIX 보드 기준. `)}${esc(t(M.sprint.modelNote))}</p>
+    <h3>${S('Active sprint', '활성 스프린트')} — ${esc(t(M.sprint.name))}</h3>
+    ${tableHTML(
+      [S('Key', '키'), S('Work item', '작업 항목'), S('Tag', '태그'), S('Status', '상태'), S('Linked feature (release)', '연결 Feature (릴리스)')],
+      M.sprint.items.map(it => [it.key, esc(t(it.title)), esc(t(it.tag)), status(it.status), esc(linkLabel(it.link))]),
+    )}
+    <h3>${S('Jira product backlog', 'Jira 제품 백로그')} (${M.sprint.backlogItems.length})</h3>
+    ${tableHTML(
+      [S('Key', '키'), S('Work item', '작업 항목'), S('Status', '상태'), S('Linked feature (release)', '연결 Feature (릴리스)'), S('Code reality', '코드 현실')],
+      M.sprint.backlogItems.map(it => [it.key, esc(t(it.title)), status(it.status), esc(linkLabel(it.link)), it.reality ? esc(t(it.reality)) : '-']),
+    )}
+  </section>`);
+
+  // 7. Sprint board (derived)
+  const cols = [
+    [S('To Do', '할 일'), M.sprint.items.filter(i => i.status === 'jiraTodo')],
+    [S('In Progress', '진행 중'), []],
+    [S('Done', '완료'), M.sprint.items.filter(i => i.status === 'jiraDone')],
+  ];
+  parts.push(`<section id="board"><h2>${SECTIONS()[6][1]}</h2>
+    <p class="note">${esc(t(M.sprint.boardNote))}</p>
+    <div class="board">${cols.map(([name, items]) => `<div class="col"><h4>${name} · ${items.length}</h4>${items.map(i => `<div class="card"><span class="key">${i.key}</span>${esc(t(i.title))}</div>`).join('') || `<div class="card">-</div>`}</div>`).join('')}</div>
+  </section>`);
+
+  // 8. Increment
+  parts.push(`<section id="increment"><h2>${SECTIONS()[7][1]} — ${S('Current Feature Inventory', '현재 기능 인벤토리')}</h2>
+    <p class="note">${esc(t(M.incrementIntro.scrum))}</p>
+    <p>${esc(t(M.incrementIntro.audit))}</p>
+    ${M.increment.map((a, i) => `
+      <h3>8.${i + 1} ${esc(t(a.area))}</h3>
+      ${a.note ? `<p class="note">${esc(t(a.note))}</p>` : ''}
+      ${tableHTML([S('Feature', '기능'), S('Status', '상태'), S('Notes', '비고')], a.rows.map(([f, s, n]) => [esc(t(f)), status(s), esc(t(n))]))}
+    `).join('')}
+  </section>`);
+
+  // 9. Personas
+  parts.push(`<section id="personas"><h2>${SECTIONS()[8][1]}</h2>
+    ${M.personas.map(p => `<details class="persona"><summary>${esc(t(p.title))}</summary>
+      <table class="kv">${p.fields.map(([k, v]) => `<tr><td>${esc(t(k))}</td><td>${esc(t(v))}</td></tr>`).join('')}</table>
+    </details>`).join('')}
+  </section>`);
+
+  // Appendix
+  parts.push(`<section id="appendix"><h2>${SECTIONS()[9][1]}</h2>
+    <p class="note">${esc(t(M.appendix.intro))}</p>
+    ${M.appendix.groups.map(g => `<h3>${esc(t(g.title))}</h3><ul class="bullets">${g.bullets.map(b => `<li>${esc(t(b))}</li>`).join('')}</ul>`).join('')}
+  </section>`);
+
+  document.getElementById('main').innerHTML = parts.join('');
+
+  document.querySelectorAll('.filters button').forEach(btn => btn.addEventListener('click', () => {
+    backlogFilter = btn.dataset.rel;
+    render();
+    document.getElementById('backlog').scrollIntoView();
+  }));
+}
+
+document.getElementById('btn-ko').addEventListener('click', () => { lang = 'ko'; localStorage.setItem('mm-lang', lang); render(); });
+document.getElementById('btn-en').addEventListener('click', () => { lang = 'en'; localStorage.setItem('mm-lang', lang); render(); });
+render();
+</script>
+</body>
+</html>

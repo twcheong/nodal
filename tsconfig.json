@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "DOM.AsyncIterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    // Nodal 노드 에디터(엔진 subtree) 소스가 쓰는 별칭 — vite.config.ts 의 alias 와 같다.
+    "paths": {
+      "@nodal/schemas/*": ["./products/nodal/engine/schemas/*"],
+      "@nodal/types": ["./products/nodal/engine/packages/core/src/nodal/types.json"]
+    }
+  },
+  "include": ["src", "shared", "products"],
+  // 엔진(twcheong/nodal subtree)은 자기 tsconfig·테스트를 따로 가진다 — pnpm -C products/nodal/engine typecheck
+  "exclude": ["products/nodal/engine"]
+}

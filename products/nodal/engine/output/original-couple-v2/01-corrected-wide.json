@@ -1,0 +1,22 @@
+{
+  "tool": "run_template_flux2_klein_multi_reference",
+  "arguments": {
+    "reference_1": "C:/Users/nexta/Desktop/nodal/output/original-couple-draft/01-cast-room.png",
+    "prompt": "A realistic live-action Korean romantic comedy film still, horizontal 16:9. Image 1 is ONLY the face and haircut identity of the adult woman; image 2 is ONLY the face and haircut identity of the adult man, including his round thin glasses. Rebuild all bodies and the whole composition from scratch with correct anatomical adult proportions. Wide SIDE-ON TWO-SHOT: the man sits on a normal burnt-orange sofa at the far LEFT of frame, facing RIGHT; the woman stands on the RIGHT of frame facing LEFT toward him. A low oak coffee table sits BETWEEN them. A huge rectangular picture window fills the CENTER BACK WALL behind the gap, with greenery outside, warm grey plaster walls, oak window trim, and a small walnut cabinet on the far right. Natural bright afternoon window backlight. Keep a generous gap between their bodies across the table. Both adults are at the SAME DISTANCE from the camera, about 4 metres away, photographed with a 50mm lens at camera height 120cm, horizontal level camera, no exaggerated perspective. Their HEADS ARE THE SAME PHYSICAL SIZE, approximately equal pixel size. The man is an ordinary 175cm adult, the woman an ordinary 165cm adult, both with normal 7.5-head anatomical body proportions. The woman is fully upright with straight natural legs and both feet on the visible wooden floor. The man sits normally on a 44cm-high sofa seat with torso upright, hands on knees, both feet on the SAME FLOOR. Because he is seated, the TOP OF HIS HEAD is around the HEIGHT OF HER UPPER CHEST, clearly BELOW the top of her head by about 40cm. His torso is only slightly broader than hers. She must not look small next to him. Her full head-to-toe body occupies roughly 80 percent of the image height; his seated head-to-floor body roughly 58 percent. Show both people and their feet; include some floor below them. The woman wears an ivory fitted ribbed cardigan and straight blue jeans; the man wears a beige cardigan, white undershirt and blue jeans. Exact faces from the supplied face references, realistic skin texture, crisp eyes, high detail. One coherent photograph, not a collage. No captions, subtitles, title, words, logo or watermark.",
+    "transformer": "C:/Users/nexta/Desktop/nodal/models/FLUX.2-klein-base-4B/transformer",
+    "text_encoder": "C:/Users/nexta/.nodal/models/text_encoders/qwen_3_4b.safetensors",
+    "vae": "C:/Users/nexta/Desktop/nodal/models/FLUX.2-klein-base-4B/vae",
+    "config_repo": "C:/Users/nexta/Desktop/nodal/models/FLUX.2-klein-base-4B",
+    "width": 1536,
+    "height": 864,
+    "steps": 28,
+    "seed": 920271
+  },
+  "provenance": {
+    "identity_anchor": "01-cast-room.png; nodal face crops only",
+    "source_composition": "Source frame 27 seconds inspected visually only: seated man left, standing woman right, table between, large rear window",
+    "reference_video_pixels_used": false,
+    "rejected_previous": "02-master-two-shot.png body proportions and blocking",
+    "purpose": "Correct adult scale and restore reference-style camera blocking"
+  }
+}

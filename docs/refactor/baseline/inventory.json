@@ -1,0 +1,3400 @@
+{
+  "env": {
+    "generatedAt": "2026-09-21T11:19:39.168Z",
+    "commit": "ebabb58090c1b708b42184a3dfc6ec37b04b6574",
+    "branch": "refactor/b-host",
+    "dirty": true,
+    "os": "win32 x64",
+    "node": "v24.13.0",
+    "npm": "11.6.2"
+  },
+  "metrics": {
+    "loc": {
+      "electron/main.ts": 2216,
+      "electron/preload.ts": 782,
+      "electron/planning.ts": 3129,
+      "src/global.d.ts": 1212,
+      "gatewayHooks": {
+        "useOpenClaw": 1935,
+        "useCopilotChat": 940,
+        "useWorkflowTestSession": 613,
+        "useOrchestrationGateway": 249,
+        "useWorkflowClaw": 211,
+        "useDashboardClaw": 202,
+        "useOrchestrationClaw": 151
+      }
+    },
+    "mainTs": {
+      "writeFileSync": 12,
+      "configPathReads": 3,
+      "configPathWrites": 1,
+      "startsWithWorkspaceChecks": 0
+    },
+    "rawSoulImports": 0,
+    "patchBytes": 82035,
+    "htmlEntries": [
+      "composer.html",
+      "guardrail.html",
+      "index.html",
+      "sidetab.html",
+      "test-overlay.html",
+      "twixy-enterprise.html"
+    ],
+    "gatewayHooksTotal": 4301
+  },
+  "ipcMain": [
+    {
+      "channel": "admin-reveal",
+      "kind": "handle",
+      "file": "electron/mrIpc.ts",
+      "line": 100
+    },
+    {
+      "channel": "admin-stats",
+      "kind": "handle",
+      "file": "electron/mrIpc.ts",
+      "line": 36
+    },
+    {
+      "channel": "aiagent-create",
+      "kind": "handle",
+      "file": "electron/aiAgentIpc.ts",
+      "line": 27
+    },
+    {
+      "channel": "aiagent-delete",
+      "kind": "handle",
+      "file": "electron/aiAgentIpc.ts",
+      "line": 37
+    },
+    {
+      "channel": "aiagent-get",
+      "kind": "handle",
+      "file": "electron/aiAgentIpc.ts",
+      "line": 24
+    },
+    {
+      "channel": "aiagent-list",
+      "kind": "handle",
+      "file": "electron/aiAgentIpc.ts",
+      "line": 20
+    },
+    {
+      "channel": "aiagent-restore",
+      "kind": "handle",
+      "file": "electron/aiAgentIpc.ts",
+      "line": 41
+    },
+    {
+      "channel": "aiagent-run-clear",
+      "kind": "handle",
+      "file": "electron/aiAgentIpc.ts",
+      "line": 54
+    },
+    {
+      "channel": "aiagent-run-load",
+      "kind": "handle",
+      "file": "electron/aiAgentIpc.ts",
+      "line": 46
+    },
+    {
+      "channel": "aiagent-run-save",
+      "kind": "handle",
+      "file": "electron/aiAgentIpc.ts",
+      "line": 50
+    },
+    {
+      "channel": "aiagent-update",
+      "kind": "handle",
+      "file": "electron/aiAgentIpc.ts",
+      "line": 32
+    },
+    {
+      "channel": "apply-display-markup",
+      "kind": "handle",
+      "file": "electron/accountIpc.ts",
+      "line": 98
+    },
+    {
+      "channel": "auth-get-session",
+      "kind": "handle",
+      "file": "electron/accountIpc.ts",
+      "line": 57
+    },
+    {
+      "channel": "auth-save-session",
+      "kind": "handle",
+      "file": "electron/accountIpc.ts",
+      "line": 62
+    },
+    {
+      "channel": "auth-sign-in",
+      "kind": "handle",
+      "file": "electron/accountIpc.ts",
+      "line": 106
+    },
+    {
+      "channel": "auth-sign-out",
+      "kind": "handle",
+      "file": "electron/accountIpc.ts",
+      "line": 83
+    },
+    {
+      "channel": "browser-preview:close-target",
+      "kind": "handle",
+      "file": "electron/browserPreviewIpc.ts",
+      "line": 66
+    },
+    {
+      "channel": "browser-preview:input",
+      "kind": "handle",
+      "file": "electron/browserPreviewIpc.ts",
+      "line": 77
+    },
+    {
+      "channel": "browser-preview:refresh",
+      "kind": "handle",
+      "file": "electron/browserPreviewIpc.ts",
+      "line": 44
+    },
+    {
+      "channel": "browser-preview:set-active",
+      "kind": "handle",
+      "file": "electron/browserPreviewIpc.ts",
+      "line": 50
+    },
+    {
+      "channel": "browser-preview:set-viewport",
+      "kind": "handle",
+      "file": "electron/browserPreviewIpc.ts",
+      "line": 60
+    },
+    {
+      "channel": "browser-preview:start",
+      "kind": "handle",
+      "file": "electron/browserPreviewIpc.ts",
+      "line": 30
+    },
+    {
+      "channel": "browser-preview:stop",
+      "kind": "handle",
+      "file": "electron/browserPreviewIpc.ts",
+      "line": 36
+    },
+    {
+      "channel": "browser-slot-set",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1309
+    },
+    {
+      "channel": "check-node22",
+      "kind": "handle",
+      "file": "electron/setupIpc.ts",
+      "line": 218
+    },
+    {
+      "channel": "claim-project-ownership",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1241
+    },
+    {
+      "channel": "close-sidetab",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 55
+    },
+    {
+      "channel": "close-test-overlay",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 134
+    },
+    {
+      "channel": "compile-tskill",
+      "kind": "handle",
+      "file": "electron/skills.ts",
+      "line": 462
+    },
+    {
+      "channel": "connections-connect",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 157
+    },
+    {
+      "channel": "connections-disconnect",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 164
+    },
+    {
+      "channel": "connections-list",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 152
+    },
+    {
+      "channel": "connections-set-token",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 171
+    },
+    {
+      "channel": "correct-language",
+      "kind": "handle",
+      "file": "electron/languageCorrection.ts",
+      "line": 78
+    },
+    {
+      "channel": "correct-language-batch",
+      "kind": "handle",
+      "file": "electron/languageCorrection.ts",
+      "line": 117
+    },
+    {
+      "channel": "dashboard-snapshot",
+      "kind": "handle",
+      "file": "electron/dashboard.ts",
+      "line": 27
+    },
+    {
+      "channel": "deck-render-sheet",
+      "kind": "handle",
+      "file": "electron/fileToolsIpc.ts",
+      "line": 226
+    },
+    {
+      "channel": "delete-file",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1512
+    },
+    {
+      "channel": "delete-skill",
+      "kind": "handle",
+      "file": "electron/skills.ts",
+      "line": 510
+    },
+    {
+      "channel": "designated-paths-get-config",
+      "kind": "handle",
+      "file": "electron/designated-paths/ipc.ts",
+      "line": 40
+    },
+    {
+      "channel": "designated-paths-set-config",
+      "kind": "handle",
+      "file": "electron/designated-paths/ipc.ts",
+      "line": 44
+    },
+    {
+      "channel": "execution-plan-import",
+      "kind": "handle",
+      "file": "electron/planIpc.ts",
+      "line": 93
+    },
+    {
+      "channel": "export-md",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1761
+    },
+    {
+      "channel": "export-pdf",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1724
+    },
+    {
+      "channel": "export-pdf-to",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1745
+    },
+    {
+      "channel": "extract-file-text",
+      "kind": "handle",
+      "file": "electron/fileToolsIpc.ts",
+      "line": 168
+    },
+    {
+      "channel": "generate-session-summary",
+      "kind": "handle",
+      "file": "electron/sessionLogs.ts",
+      "line": 477
+    },
+    {
+      "channel": "get-agent-model",
+      "kind": "handle",
+      "file": "electron/accountIpc.ts",
+      "line": 277
+    },
+    {
+      "channel": "get-analysis-meta",
+      "kind": "handle",
+      "file": "electron/sessionLogs.ts",
+      "line": 449
+    },
+    {
+      "channel": "get-app-version",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1169
+    },
+    {
+      "channel": "get-auth-profiles",
+      "kind": "handle",
+      "file": "electron/accountIpc.ts",
+      "line": 259
+    },
+    {
+      "channel": "get-channels",
+      "kind": "handle",
+      "file": "electron/accountIpc.ts",
+      "line": 114
+    },
+    {
+      "channel": "get-collab-mode",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1211
+    },
+    {
+      "channel": "get-gateway-token",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1656
+    },
+    {
+      "channel": "get-openclaw-log",
+      "kind": "handle",
+      "file": "electron/setupIpc.ts",
+      "line": 187
+    },
+    {
+      "channel": "get-openclaw-status",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1164
+    },
+    {
+      "channel": "get-project-config",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1212
+    },
+    {
+      "channel": "get-project-dir",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1207
+    },
+    {
+      "channel": "get-project-root",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1210
+    },
+    {
+      "channel": "get-skill-stats",
+      "kind": "handle",
+      "file": "electron/sessionLogs.ts",
+      "line": 356
+    },
+    {
+      "channel": "get-startup-error",
+      "kind": "handle",
+      "file": "electron/setupIpc.ts",
+      "line": 184
+    },
+    {
+      "channel": "get-subagent-model",
+      "kind": "handle",
+      "file": "electron/accountIpc.ts",
+      "line": 286
+    },
+    {
+      "channel": "get-tool-permissions",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1642
+    },
+    {
+      "channel": "get-twixy-mode",
+      "kind": "handle",
+      "file": "electron/accountIpc.ts",
+      "line": 148
+    },
+    {
+      "channel": "get-workspace",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1163
+    },
+    {
+      "channel": "google-clear-client",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 73
+    },
+    {
+      "channel": "google-get-client",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 81
+    },
+    {
+      "channel": "google-get-status",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 60
+    },
+    {
+      "channel": "google-set-client",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 65
+    },
+    {
+      "channel": "guardrail-get-config",
+      "kind": "handle",
+      "file": "electron/guardrail/ipc.ts",
+      "line": 23
+    },
+    {
+      "channel": "guardrail-overwrite-redirect",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 207
+    },
+    {
+      "channel": "guardrail-popup-close",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 181
+    },
+    {
+      "channel": "guardrail-popup-decide",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 191
+    },
+    {
+      "channel": "guardrail-popup-request-sync",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 187
+    },
+    {
+      "channel": "guardrail-popup-show",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 173
+    },
+    {
+      "channel": "guardrail-remove-allowlist-entry",
+      "kind": "handle",
+      "file": "electron/guardrail/ipc.ts",
+      "line": 57
+    },
+    {
+      "channel": "guardrail-set-config",
+      "kind": "handle",
+      "file": "electron/guardrail/ipc.ts",
+      "line": 25
+    },
+    {
+      "channel": "import-dropped-file",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1549
+    },
+    {
+      "channel": "install-node22",
+      "kind": "handle",
+      "file": "electron/setupIpc.ts",
+      "line": 232
+    },
+    {
+      "channel": "install-skill",
+      "kind": "handle",
+      "file": "electron/skills.ts",
+      "line": 471
+    },
+    {
+      "channel": "list-dir",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1881
+    },
+    {
+      "channel": "list-session-logs",
+      "kind": "handle",
+      "file": "electron/sessionLogs.ts",
+      "line": 186
+    },
+    {
+      "channel": "list-shared-dir",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1895
+    },
+    {
+      "channel": "list-skills",
+      "kind": "handle",
+      "file": "electron/skills.ts",
+      "line": 528
+    },
+    {
+      "channel": "log-ui",
+      "kind": "handle",
+      "file": "electron/setupIpc.ts",
+      "line": 195
+    },
+    {
+      "channel": "logbook-context",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1392
+    },
+    {
+      "channel": "main-chat-append",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1362
+    },
+    {
+      "channel": "main-chat-clear",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1366
+    },
+    {
+      "channel": "main-chat-load",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1358
+    },
+    {
+      "channel": "main-session-get",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1370
+    },
+    {
+      "channel": "main-session-set",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1374
+    },
+    {
+      "channel": "mark-analysis-done",
+      "kind": "handle",
+      "file": "electron/sessionLogs.ts",
+      "line": 457
+    },
+    {
+      "channel": "mcp-list",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 192
+    },
+    {
+      "channel": "mcp-oauth-connect",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 218
+    },
+    {
+      "channel": "mcp-remove",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 205
+    },
+    {
+      "channel": "mcp-upsert",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 197
+    },
+    {
+      "channel": "memory-list-notes",
+      "kind": "handle",
+      "file": "electron/memoryIpc.ts",
+      "line": 37
+    },
+    {
+      "channel": "memory-read",
+      "kind": "handle",
+      "file": "electron/memoryIpc.ts",
+      "line": 17
+    },
+    {
+      "channel": "memory-read-note",
+      "kind": "handle",
+      "file": "electron/memoryIpc.ts",
+      "line": 57
+    },
+    {
+      "channel": "memory-write",
+      "kind": "handle",
+      "file": "electron/memoryIpc.ts",
+      "line": 27
+    },
+    {
+      "channel": "move-file",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1586
+    },
+    {
+      "channel": "mr-cancel",
+      "kind": "handle",
+      "file": "electron/mrIpc.ts",
+      "line": 179
+    },
+    {
+      "channel": "mr-comment",
+      "kind": "handle",
+      "file": "electron/mrIpc.ts",
+      "line": 168
+    },
+    {
+      "channel": "mr-create",
+      "kind": "handle",
+      "file": "electron/mrIpc.ts",
+      "line": 129
+    },
+    {
+      "channel": "mr-current-actor",
+      "kind": "handle",
+      "file": "electron/mrIpc.ts",
+      "line": 114
+    },
+    {
+      "channel": "mr-get",
+      "kind": "handle",
+      "file": "electron/mrIpc.ts",
+      "line": 125
+    },
+    {
+      "channel": "mr-list",
+      "kind": "handle",
+      "file": "electron/mrIpc.ts",
+      "line": 116
+    },
+    {
+      "channel": "mr-merge",
+      "kind": "handle",
+      "file": "electron/mrIpc.ts",
+      "line": 190
+    },
+    {
+      "channel": "mr-read-blob",
+      "kind": "handle",
+      "file": "electron/mrIpc.ts",
+      "line": 249
+    },
+    {
+      "channel": "mr-read-shared",
+      "kind": "handle",
+      "file": "electron/mrIpc.ts",
+      "line": 263
+    },
+    {
+      "channel": "mr-review",
+      "kind": "handle",
+      "file": "electron/mrIpc.ts",
+      "line": 154
+    },
+    {
+      "channel": "node-install-progress",
+      "kind": "on",
+      "file": "electron/setupIpc.ts",
+      "line": 235
+    },
+    {
+      "channel": "open-external",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1473
+    },
+    {
+      "channel": "open-file",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 2090
+    },
+    {
+      "channel": "open-log-file",
+      "kind": "handle",
+      "file": "electron/setupIpc.ts",
+      "line": 188
+    },
+    {
+      "channel": "open-sidetab",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 44
+    },
+    {
+      "channel": "open-test-overlay",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 125
+    },
+    {
+      "channel": "orchestration-chat-append",
+      "kind": "handle",
+      "file": "electron/orchestrationIpc.ts",
+      "line": 56
+    },
+    {
+      "channel": "orchestration-chat-clear",
+      "kind": "handle",
+      "file": "electron/orchestrationIpc.ts",
+      "line": 60
+    },
+    {
+      "channel": "orchestration-chat-load",
+      "kind": "handle",
+      "file": "electron/orchestrationIpc.ts",
+      "line": 52
+    },
+    {
+      "channel": "orchestration-create",
+      "kind": "handle",
+      "file": "electron/orchestrationIpc.ts",
+      "line": 27
+    },
+    {
+      "channel": "orchestration-delete",
+      "kind": "handle",
+      "file": "electron/orchestrationIpc.ts",
+      "line": 41
+    },
+    {
+      "channel": "orchestration-get",
+      "kind": "handle",
+      "file": "electron/orchestrationIpc.ts",
+      "line": 24
+    },
+    {
+      "channel": "orchestration-list",
+      "kind": "handle",
+      "file": "electron/orchestrationIpc.ts",
+      "line": 20
+    },
+    {
+      "channel": "orchestration-restore",
+      "kind": "handle",
+      "file": "electron/orchestrationIpc.ts",
+      "line": 45
+    },
+    {
+      "channel": "orchestration-run-clear",
+      "kind": "handle",
+      "file": "electron/orchestrationIpc.ts",
+      "line": 72
+    },
+    {
+      "channel": "orchestration-run-load",
+      "kind": "handle",
+      "file": "electron/orchestrationIpc.ts",
+      "line": 64
+    },
+    {
+      "channel": "orchestration-run-save",
+      "kind": "handle",
+      "file": "electron/orchestrationIpc.ts",
+      "line": 68
+    },
+    {
+      "channel": "orchestration-update",
+      "kind": "handle",
+      "file": "electron/orchestrationIpc.ts",
+      "line": 34
+    },
+    {
+      "channel": "overlay-request-sync",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 86
+    },
+    {
+      "channel": "overlay-resume",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 110
+    },
+    {
+      "channel": "overlay-send",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 100
+    },
+    {
+      "channel": "overlay-set-opacity",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 65
+    },
+    {
+      "channel": "overlay-start",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 105
+    },
+    {
+      "channel": "overlay-stop",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 95
+    },
+    {
+      "channel": "overlay-sync-push",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 77
+    },
+    {
+      "channel": "overlay-toggle-plan-mode",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 115
+    },
+    {
+      "channel": "pick-folder",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 2160
+    },
+    {
+      "channel": "pick-output-dir",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 2174
+    },
+    {
+      "channel": "pick-project-dir",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1457
+    },
+    {
+      "channel": "plan-begin-run",
+      "kind": "handle",
+      "file": "electron/planIpc.ts",
+      "line": 121
+    },
+    {
+      "channel": "plan-create",
+      "kind": "handle",
+      "file": "electron/planIpc.ts",
+      "line": 66
+    },
+    {
+      "channel": "plan-delete",
+      "kind": "handle",
+      "file": "electron/planIpc.ts",
+      "line": 111
+    },
+    {
+      "channel": "plan-finalize",
+      "kind": "handle",
+      "file": "electron/planIpc.ts",
+      "line": 193
+    },
+    {
+      "channel": "plan-get",
+      "kind": "handle",
+      "file": "electron/planIpc.ts",
+      "line": 62
+    },
+    {
+      "channel": "plan-list",
+      "kind": "handle",
+      "file": "electron/planIpc.ts",
+      "line": 57
+    },
+    {
+      "channel": "plan-mark-aborted",
+      "kind": "handle",
+      "file": "electron/planIpc.ts",
+      "line": 185
+    },
+    {
+      "channel": "plan-mark-paused",
+      "kind": "handle",
+      "file": "electron/planIpc.ts",
+      "line": 177
+    },
+    {
+      "channel": "plan-read-run",
+      "kind": "handle",
+      "file": "electron/planIpc.ts",
+      "line": 202
+    },
+    {
+      "channel": "plan-request-pause",
+      "kind": "handle",
+      "file": "electron/planIpc.ts",
+      "line": 169
+    },
+    {
+      "channel": "plan-step-compact",
+      "kind": "handle",
+      "file": "electron/planIpc.ts",
+      "line": 154
+    },
+    {
+      "channel": "plan-step-end",
+      "kind": "handle",
+      "file": "electron/planIpc.ts",
+      "line": 143
+    },
+    {
+      "channel": "plan-step-read-raw",
+      "kind": "handle",
+      "file": "electron/planIpc.ts",
+      "line": 165
+    },
+    {
+      "channel": "plan-step-start",
+      "kind": "handle",
+      "file": "electron/planIpc.ts",
+      "line": 132
+    },
+    {
+      "channel": "plan-update",
+      "kind": "handle",
+      "file": "electron/planIpc.ts",
+      "line": 100
+    },
+    {
+      "channel": "pptx-render-sketch",
+      "kind": "handle",
+      "file": "electron/fileToolsIpc.ts",
+      "line": 119
+    },
+    {
+      "channel": "product-invoke",
+      "kind": "handle",
+      "file": "electron/product-ipc.ts",
+      "line": 23
+    },
+    {
+      "channel": "pull-shared",
+      "kind": "handle",
+      "file": "electron/enterpriseIpc.ts",
+      "line": 79
+    },
+    {
+      "channel": "read-file",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1666
+    },
+    {
+      "channel": "read-file-bytes",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1678
+    },
+    {
+      "channel": "read-image",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1857
+    },
+    {
+      "channel": "read-session-log",
+      "kind": "handle",
+      "file": "electron/sessionLogs.ts",
+      "line": 227
+    },
+    {
+      "channel": "read-skill-source",
+      "kind": "handle",
+      "file": "electron/skills.ts",
+      "line": 447
+    },
+    {
+      "channel": "recent-files",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1481
+    },
+    {
+      "channel": "record-openrouter-usage",
+      "kind": "handle",
+      "file": "electron/accountIpc.ts",
+      "line": 150
+    },
+    {
+      "channel": "refresh-markup",
+      "kind": "handle",
+      "file": "electron/accountIpc.ts",
+      "line": 101
+    },
+    {
+      "channel": "retry-openclaw",
+      "kind": "handle",
+      "file": "electron/setupIpc.ts",
+      "line": 240
+    },
+    {
+      "channel": "reveal-in-finder",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1617
+    },
+    {
+      "channel": "save-api-keys",
+      "kind": "handle",
+      "file": "electron/accountIpc.ts",
+      "line": 310
+    },
+    {
+      "channel": "save-channels",
+      "kind": "handle",
+      "file": "electron/accountIpc.ts",
+      "line": 119
+    },
+    {
+      "channel": "save-subagent-model",
+      "kind": "handle",
+      "file": "electron/accountIpc.ts",
+      "line": 295
+    },
+    {
+      "channel": "session-log-append",
+      "kind": "handle",
+      "file": "electron/sessionLogs.ts",
+      "line": 159
+    },
+    {
+      "channel": "set-project-config",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1217
+    },
+    {
+      "channel": "set-project-dir",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1405
+    },
+    {
+      "channel": "set-twixy-mode",
+      "kind": "handle",
+      "file": "electron/accountIpc.ts",
+      "line": 215
+    },
+    {
+      "channel": "test-overlay-focus-main",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 148
+    },
+    {
+      "channel": "test-overlay-request-sync",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 143
+    },
+    {
+      "channel": "test-overlay-review-decision",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 158
+    },
+    {
+      "channel": "test-overlay-stop",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 144
+    },
+    {
+      "channel": "test-overlay-sync-push",
+      "kind": "handle",
+      "file": "electron/overlayIpc.ts",
+      "line": 138
+    },
+    {
+      "channel": "tool-edit-pptx",
+      "kind": "handle",
+      "file": "electron/fileToolsIpc.ts",
+      "line": 89
+    },
+    {
+      "channel": "tool-fetch-to-file",
+      "kind": "handle",
+      "file": "electron/fileToolsIpc.ts",
+      "line": 185
+    },
+    {
+      "channel": "tool-google-connect",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 88
+    },
+    {
+      "channel": "tool-google-disconnect",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 95
+    },
+    {
+      "channel": "tool-query-data",
+      "kind": "handle",
+      "file": "electron/fileToolsIpc.ts",
+      "line": 195
+    },
+    {
+      "channel": "tool-read-gdoc",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 108
+    },
+    {
+      "channel": "tool-read-gsheet",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 124
+    },
+    {
+      "channel": "tool-read-pptx",
+      "kind": "handle",
+      "file": "electron/fileToolsIpc.ts",
+      "line": 72
+    },
+    {
+      "channel": "tool-read-xlsx",
+      "kind": "handle",
+      "file": "electron/fileToolsIpc.ts",
+      "line": 153
+    },
+    {
+      "channel": "tool-send-email",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 136
+    },
+    {
+      "channel": "tool-write-gdoc",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 100
+    },
+    {
+      "channel": "tool-write-gsheet",
+      "kind": "handle",
+      "file": "electron/integrationsIpc.ts",
+      "line": 116
+    },
+    {
+      "channel": "tool-write-pdf",
+      "kind": "handle",
+      "file": "electron/fileToolsIpc.ts",
+      "line": 46
+    },
+    {
+      "channel": "tool-write-pptx",
+      "kind": "handle",
+      "file": "electron/fileToolsIpc.ts",
+      "line": 204
+    },
+    {
+      "channel": "tool-write-xlsx",
+      "kind": "handle",
+      "file": "electron/fileToolsIpc.ts",
+      "line": 57
+    },
+    {
+      "channel": "twixy-enterprise-admin-load",
+      "kind": "handle",
+      "file": "electron/enterpriseIpc.ts",
+      "line": 156
+    },
+    {
+      "channel": "twixy-enterprise-pick-folder",
+      "kind": "handle",
+      "file": "electron/enterpriseIpc.ts",
+      "line": 145
+    },
+    {
+      "channel": "twixy-enterprise-read-run",
+      "kind": "handle",
+      "file": "electron/enterpriseIpc.ts",
+      "line": 139
+    },
+    {
+      "channel": "wf-slot-clear-all",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1346
+    },
+    {
+      "channel": "wf-slot-lease",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1327
+    },
+    {
+      "channel": "wf-slot-release",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1338
+    },
+    {
+      "channel": "workflow-chat-append",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 109
+    },
+    {
+      "channel": "workflow-chat-clear",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 113
+    },
+    {
+      "channel": "workflow-chat-load",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 105
+    },
+    {
+      "channel": "workflow-create",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 53
+    },
+    {
+      "channel": "workflow-delete",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 78
+    },
+    {
+      "channel": "workflow-get",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 49
+    },
+    {
+      "channel": "workflow-list",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 38
+    },
+    {
+      "channel": "workflow-raw-scratch-clear",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 137
+    },
+    {
+      "channel": "workflow-restore",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 90
+    },
+    {
+      "channel": "workflow-run-detail-load",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 164
+    },
+    {
+      "channel": "workflow-run-detail-save",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 160
+    },
+    {
+      "channel": "workflow-run-history-append",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 151
+    },
+    {
+      "channel": "workflow-run-history-list",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 155
+    },
+    {
+      "channel": "workflow-test-run-clear",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 130
+    },
+    {
+      "channel": "workflow-test-run-load",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 122
+    },
+    {
+      "channel": "workflow-test-run-save",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 126
+    },
+    {
+      "channel": "workflow-update",
+      "kind": "handle",
+      "file": "electron/workflowIpc.ts",
+      "line": 67
+    },
+    {
+      "channel": "write-file",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1686
+    },
+    {
+      "channel": "write-watch-file",
+      "kind": "handle",
+      "file": "electron/main.ts",
+      "line": 1533
+    }
+  ],
+  "preloadApi": [
+    {
+      "global": "twixy",
+      "path": "adminReveal",
+      "line": 43,
+      "channels": [
+        "invoke:admin-reveal"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "adminStats",
+      "line": 42,
+      "channels": [
+        "invoke:admin-stats"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "aiAgentCreate",
+      "line": 256,
+      "channels": [
+        "invoke:aiagent-create"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "aiAgentDelete",
+      "line": 266,
+      "channels": [
+        "invoke:aiagent-delete"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "aiAgentList",
+      "line": 255,
+      "channels": [
+        "invoke:aiagent-list"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "aiAgentUpdate",
+      "line": 261,
+      "channels": [
+        "invoke:aiagent-update"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "appendSessionLog",
+      "line": 477,
+      "channels": [
+        "invoke:session-log-append"
+      ],
+      "rendererRefs": 6
+    },
+    {
+      "global": "twixy",
+      "path": "applyDisplayMarkup",
+      "line": 463,
+      "channels": [
+        "invoke:apply-display-markup"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "authGetSession",
+      "line": 392,
+      "channels": [
+        "invoke:auth-get-session"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "authSaveSession",
+      "line": 393,
+      "channels": [
+        "invoke:auth-save-session"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "authSignIn",
+      "line": 394,
+      "channels": [
+        "invoke:auth-sign-in"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "authSignOut",
+      "line": 395,
+      "channels": [
+        "invoke:auth-sign-out"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "browserPreviewCloseTarget",
+      "line": 656,
+      "channels": [
+        "invoke:browser-preview:close-target"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "browserPreviewInput",
+      "line": 662,
+      "channels": [
+        "invoke:browser-preview:input"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "browserPreviewRefresh",
+      "line": 654,
+      "channels": [
+        "invoke:browser-preview:refresh"
+      ],
+      "rendererRefs": 0
+    },
+    {
+      "global": "twixy",
+      "path": "browserPreviewSetActive",
+      "line": 655,
+      "channels": [
+        "invoke:browser-preview:set-active"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "browserPreviewSetViewport",
+      "line": 659,
+      "channels": [
+        "invoke:browser-preview:set-viewport"
+      ],
+      "rendererRefs": 0
+    },
+    {
+      "global": "twixy",
+      "path": "browserPreviewStart",
+      "line": 652,
+      "channels": [
+        "invoke:browser-preview:start"
+      ],
+      "rendererRefs": 0
+    },
+    {
+      "global": "twixy",
+      "path": "browserPreviewStop",
+      "line": 653,
+      "channels": [
+        "invoke:browser-preview:stop"
+      ],
+      "rendererRefs": 0
+    },
+    {
+      "global": "twixy",
+      "path": "browserSlotSet",
+      "line": 135,
+      "channels": [
+        "invoke:browser-slot-set"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "claimProjectOwnership",
+      "line": 39,
+      "channels": [
+        "invoke:claim-project-ownership"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "closeSidetab",
+      "line": 617,
+      "channels": [
+        "invoke:close-sidetab"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "closeTestOverlay",
+      "line": 632,
+      "channels": [
+        "invoke:close-test-overlay"
+      ],
+      "rendererRefs": 0
+    },
+    {
+      "global": "twixy",
+      "path": "compileTskill",
+      "line": 494,
+      "channels": [
+        "invoke:compile-tskill"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "connectionsConnect",
+      "line": 569,
+      "channels": [
+        "invoke:connections-connect"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "connectionsDisconnect",
+      "line": 570,
+      "channels": [
+        "invoke:connections-disconnect"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "connectionsList",
+      "line": 568,
+      "channels": [
+        "invoke:connections-list"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "connectionsSetToken",
+      "line": 571,
+      "channels": [
+        "invoke:connections-set-token"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "correctLanguage",
+      "line": 602,
+      "channels": [
+        "invoke:correct-language"
+      ],
+      "rendererRefs": 4
+    },
+    {
+      "global": "twixy",
+      "path": "correctLanguageBatch",
+      "line": 607,
+      "channels": [
+        "invoke:correct-language-batch"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "dashboardSnapshot",
+      "line": 368,
+      "channels": [
+        "invoke:dashboard-snapshot"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "deleteFile",
+      "line": 364,
+      "channels": [
+        "invoke:delete-file"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "deleteSkill",
+      "line": 498,
+      "channels": [
+        "invoke:delete-skill"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "designatedPathsGetConfig",
+      "line": 530,
+      "channels": [
+        "invoke:designated-paths-get-config"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "designatedPathsSetConfig",
+      "line": 531,
+      "channels": [
+        "invoke:designated-paths-set-config"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "executionPlanImport",
+      "line": 342,
+      "channels": [
+        "invoke:execution-plan-import"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "exportMd",
+      "line": 376,
+      "channels": [
+        "invoke:export-md"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "exportPDF",
+      "line": 372,
+      "channels": [
+        "invoke:export-pdf"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "exportPdfBeside",
+      "line": 374,
+      "channels": [
+        "invoke:export-pdf-to"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "extractFileText",
+      "line": 366,
+      "channels": [
+        "invoke:extract-file-text"
+      ],
+      "rendererRefs": 4
+    },
+    {
+      "global": "twixy",
+      "path": "generateSessionSummary",
+      "line": 483,
+      "channels": [
+        "invoke:generate-session-summary"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "getAgentModel",
+      "line": 409,
+      "channels": [
+        "invoke:get-agent-model"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "getAppVersion",
+      "line": 31,
+      "channels": [
+        "invoke:get-app-version"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "getAuthProfiles",
+      "line": 408,
+      "channels": [
+        "invoke:get-auth-profiles"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "getChannels",
+      "line": 387,
+      "channels": [
+        "invoke:get-channels"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "getCollabMode",
+      "line": 36,
+      "channels": [
+        "invoke:get-collab-mode"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "getGatewayToken",
+      "line": 385,
+      "channels": [
+        "invoke:get-gateway-token"
+      ],
+      "rendererRefs": 7
+    },
+    {
+      "global": "twixy",
+      "path": "getOpenClawLog",
+      "line": 444,
+      "channels": [
+        "invoke:get-openclaw-log"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "getProjectConfig",
+      "line": 37,
+      "channels": [
+        "invoke:get-project-config"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "getProjectDir",
+      "line": 32,
+      "channels": [
+        "invoke:get-project-dir"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "getSkillStats",
+      "line": 502,
+      "channels": [
+        "invoke:get-skill-stats"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "getStartupError",
+      "line": 443,
+      "channels": [
+        "invoke:get-startup-error"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "getSubagentModel",
+      "line": 412,
+      "channels": [
+        "invoke:get-subagent-model"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "getTwixyMode",
+      "line": 404,
+      "channels": [
+        "invoke:get-twixy-mode"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "getWorkspace",
+      "line": 29,
+      "channels": [
+        "invoke:get-workspace"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "guardrailGetConfig",
+      "line": 516,
+      "channels": [
+        "invoke:guardrail-get-config"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "guardrailOverwriteRedirect",
+      "line": 521,
+      "channels": [
+        "invoke:guardrail-overwrite-redirect"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "guardrailPopupClose",
+      "line": 676,
+      "channels": [
+        "invoke:guardrail-popup-close"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "guardrailPopupDecide",
+      "line": 678,
+      "channels": [
+        "invoke:guardrail-popup-decide"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "guardrailPopupRequestSync",
+      "line": 677,
+      "channels": [
+        "invoke:guardrail-popup-request-sync"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "guardrailPopupShow",
+      "line": 675,
+      "channels": [
+        "invoke:guardrail-popup-show"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "guardrailRemoveAllowlistEntry",
+      "line": 518,
+      "channels": [
+        "invoke:guardrail-remove-allowlist-entry"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "guardrailSetConfig",
+      "line": 517,
+      "channels": [
+        "invoke:guardrail-set-config"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "importDroppedFile",
+      "line": 27,
+      "channels": [
+        "invoke:import-dropped-file"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "installNode22",
+      "line": 450,
+      "channels": [
+        "invoke:install-node22"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "installSkill",
+      "line": 496,
+      "channels": [
+        "invoke:install-skill"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "listDir",
+      "line": 378,
+      "channels": [
+        "invoke:list-dir"
+      ],
+      "rendererRefs": 4
+    },
+    {
+      "global": "twixy",
+      "path": "listSessionLogs",
+      "line": 479,
+      "channels": [
+        "invoke:list-session-logs"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "listSharedDir",
+      "line": 380,
+      "channels": [
+        "invoke:list-shared-dir"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "listSkills",
+      "line": 500,
+      "channels": [
+        "invoke:list-skills"
+      ],
+      "rendererRefs": 5
+    },
+    {
+      "global": "twixy",
+      "path": "logbookContext",
+      "line": 313,
+      "channels": [
+        "invoke:logbook-context"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "logUi",
+      "line": 446,
+      "channels": [
+        "invoke:log-ui"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "mainChatAppend",
+      "line": 171,
+      "channels": [
+        "invoke:main-chat-append"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "mainChatClear",
+      "line": 175,
+      "channels": [
+        "invoke:main-chat-clear"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "mainChatLoad",
+      "line": 159,
+      "channels": [
+        "invoke:main-chat-load"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "mainSessionGet",
+      "line": 176,
+      "channels": [
+        "invoke:main-session-get"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "mainSessionSet",
+      "line": 177,
+      "channels": [
+        "invoke:main-session-set"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "mcpList",
+      "line": 577,
+      "channels": [
+        "invoke:mcp-list"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "mcpOAuthConnect",
+      "line": 582,
+      "channels": [
+        "invoke:mcp-oauth-connect"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "mcpRemove",
+      "line": 579,
+      "channels": [
+        "invoke:mcp-remove"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "mcpUpsert",
+      "line": 578,
+      "channels": [
+        "invoke:mcp-upsert"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "memoryListNotes",
+      "line": 512,
+      "channels": [
+        "invoke:memory-list-notes"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "memoryRead",
+      "line": 510,
+      "channels": [
+        "invoke:memory-read"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "memoryReadNote",
+      "line": 513,
+      "channels": [
+        "invoke:memory-read-note"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "memoryWrite",
+      "line": 511,
+      "channels": [
+        "invoke:memory-write"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "moveFile",
+      "line": 363,
+      "channels": [
+        "invoke:move-file"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "mrCancel",
+      "line": 59,
+      "channels": [
+        "invoke:mr-cancel"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "mrComment",
+      "line": 57,
+      "channels": [
+        "invoke:mr-comment"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "mrCreate",
+      "line": 49,
+      "channels": [
+        "invoke:mr-create"
+      ],
+      "rendererRefs": 4
+    },
+    {
+      "global": "twixy",
+      "path": "mrCurrentActor",
+      "line": 46,
+      "channels": [
+        "invoke:mr-current-actor"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "mrList",
+      "line": 47,
+      "channels": [
+        "invoke:mr-list"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "mrMerge",
+      "line": 60,
+      "channels": [
+        "invoke:mr-merge"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "mrReadBlob",
+      "line": 61,
+      "channels": [
+        "invoke:mr-read-blob"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "mrReadShared",
+      "line": 63,
+      "channels": [
+        "invoke:mr-read-shared"
+      ],
+      "rendererRefs": 7
+    },
+    {
+      "global": "twixy",
+      "path": "mrReview",
+      "line": 55,
+      "channels": [
+        "invoke:mr-review"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "onAuthSession",
+      "line": 397,
+      "channels": [
+        "on:auth-session",
+        "removeListener:auth-session"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "onBrowserPreviewFrame",
+      "line": 663,
+      "channels": [
+        "on:browser-preview-frame",
+        "removeListener:browser-preview-frame"
+      ],
+      "rendererRefs": 0
+    },
+    {
+      "global": "twixy",
+      "path": "onBrowserPreviewTargetList",
+      "line": 668,
+      "channels": [
+        "on:browser-preview-target-list",
+        "removeListener:browser-preview-target-list"
+      ],
+      "rendererRefs": 0
+    },
+    {
+      "global": "twixy",
+      "path": "onExecutionPlanRun",
+      "line": 349,
+      "channels": [
+        "on:execution-plan-run",
+        "removeListener:execution-plan-run"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "onGuardrailConfigChanged",
+      "line": 523,
+      "channels": [
+        "on:guardrail-config-changed",
+        "removeListener:guardrail-config-changed"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "onGuardrailPopupDecide",
+      "line": 720,
+      "channels": [
+        "on:guardrail-popup-decide",
+        "removeListener:guardrail-popup-decide"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "onGuardrailPopupSync",
+      "line": 712,
+      "channels": [
+        "on:guardrail-popup-sync",
+        "removeListener:guardrail-popup-sync"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "onMainFullscreenChanged",
+      "line": 334,
+      "channels": [
+        "on:main-fullscreen-changed",
+        "removeListener:main-fullscreen-changed"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "onMRChanged",
+      "line": 64,
+      "channels": [
+        "on:mr-changed",
+        "removeListener:mr-changed"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "onNodeInstallProgress",
+      "line": 453,
+      "channels": [
+        "on:node-install-progress",
+        "removeListener:node-install-progress"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "onOpenClawError",
+      "line": 435,
+      "channels": [
+        "on:openclaw-error",
+        "removeListener:openclaw-error"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "onOpenClawReady",
+      "line": 430,
+      "channels": [
+        "on:openclaw-ready",
+        "removeListener:openclaw-ready"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "onOpenRouterKeyMissing",
+      "line": 418,
+      "channels": [
+        "on:openrouter-key-missing",
+        "removeListener:openrouter-key-missing"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "onOpenRouterLimitExceeded",
+      "line": 423,
+      "channels": [
+        "on:openrouter-limit-exceeded",
+        "removeListener:openrouter-limit-exceeded"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "onOverlayResume",
+      "line": 700,
+      "channels": [
+        "on:overlay-resume",
+        "removeListener:overlay-resume"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "onOverlaySend",
+      "line": 690,
+      "channels": [
+        "on:overlay-send",
+        "removeListener:overlay-send"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "onOverlayStart",
+      "line": 695,
+      "channels": [
+        "on:overlay-start",
+        "removeListener:overlay-start"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "onOverlayStop",
+      "line": 685,
+      "channels": [
+        "on:overlay-stop",
+        "removeListener:overlay-stop"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "onOverlaySync",
+      "line": 680,
+      "channels": [
+        "on:overlay-sync",
+        "removeListener:overlay-sync"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "onOverlayTogglePlanMode",
+      "line": 705,
+      "channels": [
+        "on:overlay-toggle-plan-mode",
+        "removeListener:overlay-toggle-plan-mode"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "onPlanChanged",
+      "line": 325,
+      "channels": [
+        "on:plan-changed",
+        "removeListener:plan-changed"
+      ],
+      "rendererRefs": 5
+    },
+    {
+      "global": "twixy",
+      "path": "onProjectDirChanged",
+      "line": 354,
+      "channels": [
+        "on:project-dir-changed",
+        "removeListener:project-dir-changed"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "onSkillsChanged",
+      "line": 469,
+      "channels": [
+        "on:skills-changed",
+        "removeListener:skills-changed"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "onTestOverlayReviewDecision",
+      "line": 639,
+      "channels": [
+        "on:test-overlay-review-decision",
+        "removeListener:test-overlay-review-decision"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "onTestOverlayStop",
+      "line": 634,
+      "channels": [
+        "on:test-overlay-stop",
+        "removeListener:test-overlay-stop"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "openExternal",
+      "line": 359,
+      "channels": [
+        "invoke:open-external"
+      ],
+      "rendererRefs": 11
+    },
+    {
+      "global": "twixy",
+      "path": "openFile",
+      "line": 449,
+      "channels": [
+        "invoke:open-file"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "openLogFile",
+      "line": 445,
+      "channels": [
+        "invoke:open-log-file"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "openSidetab",
+      "line": 616,
+      "channels": [
+        "invoke:open-sidetab"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "openTestOverlay",
+      "line": 631,
+      "channels": [
+        "invoke:open-test-overlay"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "orchestrationChatAppend",
+      "line": 240,
+      "channels": [
+        "invoke:orchestration-chat-append"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "orchestrationChatClear",
+      "line": 242,
+      "channels": [
+        "invoke:orchestration-chat-clear"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "orchestrationChatLoad",
+      "line": 231,
+      "channels": [
+        "invoke:orchestration-chat-load"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "orchestrationCreate",
+      "line": 203,
+      "channels": [
+        "invoke:orchestration-create"
+      ],
+      "rendererRefs": 4
+    },
+    {
+      "global": "twixy",
+      "path": "orchestrationDelete",
+      "line": 225,
+      "channels": [
+        "invoke:orchestration-delete"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "orchestrationList",
+      "line": 202,
+      "channels": [
+        "invoke:orchestration-list"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "orchestrationRestore",
+      "line": 226,
+      "channels": [
+        "invoke:orchestration-restore"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "orchestrationRunClear",
+      "line": 251,
+      "channels": [
+        "invoke:orchestration-run-clear"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "orchestrationRunLoad",
+      "line": 244,
+      "channels": [
+        "invoke:orchestration-run-load"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "orchestrationRunSave",
+      "line": 249,
+      "channels": [
+        "invoke:orchestration-run-save"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "orchestrationUpdate",
+      "line": 220,
+      "channels": [
+        "invoke:orchestration-update"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "overlayRequestSync",
+      "line": 619,
+      "channels": [
+        "invoke:overlay-request-sync"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "overlayResume",
+      "line": 623,
+      "channels": [
+        "invoke:overlay-resume"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "overlaySend",
+      "line": 621,
+      "channels": [
+        "invoke:overlay-send"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "overlaySetOpacity",
+      "line": 625,
+      "channels": [
+        "invoke:overlay-set-opacity"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "overlayStart",
+      "line": 622,
+      "channels": [
+        "invoke:overlay-start"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "overlayStop",
+      "line": 620,
+      "channels": [
+        "invoke:overlay-stop"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "overlaySyncPush",
+      "line": 618,
+      "channels": [
+        "invoke:overlay-sync-push"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "overlayTogglePlanMode",
+      "line": 624,
+      "channels": [
+        "invoke:overlay-toggle-plan-mode"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "pickOutputDir",
+      "line": 590,
+      "channels": [
+        "invoke:pick-output-dir"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "pickProjectDir",
+      "line": 34,
+      "channels": [
+        "invoke:pick-project-dir"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "planBeginRun",
+      "line": 268,
+      "channels": [
+        "invoke:plan-begin-run"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "planCreate",
+      "line": 78,
+      "channels": [
+        "invoke:plan-create"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "planDelete",
+      "line": 94,
+      "channels": [
+        "invoke:plan-delete"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "planFinalize",
+      "line": 304,
+      "channels": [
+        "invoke:plan-finalize"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "planGet",
+      "line": 75,
+      "channels": [
+        "invoke:plan-get"
+      ],
+      "rendererRefs": 12
+    },
+    {
+      "global": "twixy",
+      "path": "planList",
+      "line": 74,
+      "channels": [
+        "invoke:plan-list"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "planMarkPaused",
+      "line": 299,
+      "channels": [
+        "invoke:plan-mark-paused"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "planReadRun",
+      "line": 309,
+      "channels": [
+        "invoke:plan-read-run"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "planRequestPause",
+      "line": 294,
+      "channels": [
+        "invoke:plan-request-pause"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "planStepCompact",
+      "line": 283,
+      "channels": [
+        "invoke:plan-step-compact"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "planStepEnd",
+      "line": 278,
+      "channels": [
+        "invoke:plan-step-end"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "planStepReadRaw",
+      "line": 293,
+      "channels": [
+        "invoke:plan-step-read-raw"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "planStepStart",
+      "line": 273,
+      "channels": [
+        "invoke:plan-step-start"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "planUpdate",
+      "line": 89,
+      "channels": [
+        "invoke:plan-update"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "productInvoke",
+      "line": 361,
+      "channels": [
+        "invoke:product-invoke"
+      ],
+      "rendererRefs": 0
+    },
+    {
+      "global": "twixy",
+      "path": "pullShared",
+      "line": 505,
+      "channels": [
+        "invoke:pull-shared"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "pushTestOverlaySnapshot",
+      "line": 633,
+      "channels": [
+        "invoke:test-overlay-sync-push"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "readFile",
+      "line": 369,
+      "channels": [
+        "invoke:read-file"
+      ],
+      "rendererRefs": 10
+    },
+    {
+      "global": "twixy",
+      "path": "readFileBytes",
+      "line": 370,
+      "channels": [
+        "invoke:read-file-bytes"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "readImage",
+      "line": 377,
+      "channels": [
+        "invoke:read-image"
+      ],
+      "rendererRefs": 6
+    },
+    {
+      "global": "twixy",
+      "path": "readSessionLog",
+      "line": 481,
+      "channels": [
+        "invoke:read-session-log"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "readSkillSource",
+      "line": 492,
+      "channels": [
+        "invoke:read-skill-source"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "recentFiles",
+      "line": 365,
+      "channels": [
+        "invoke:recent-files"
+      ],
+      "rendererRefs": 4
+    },
+    {
+      "global": "twixy",
+      "path": "recordOpenRouterUsage",
+      "line": 487,
+      "channels": [
+        "invoke:record-openrouter-usage"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "refreshMarkup",
+      "line": 465,
+      "channels": [
+        "invoke:refresh-markup"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "retryOpenClaw",
+      "line": 451,
+      "channels": [
+        "invoke:retry-openclaw"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "revealInFinder",
+      "line": 362,
+      "channels": [
+        "invoke:reveal-in-finder"
+      ],
+      "rendererRefs": 6
+    },
+    {
+      "global": "twixy",
+      "path": "saveApiKeys",
+      "line": 410,
+      "channels": [
+        "invoke:save-api-keys"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "saveChannels",
+      "line": 388,
+      "channels": [
+        "invoke:save-channels"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "saveSubagentModel",
+      "line": 413,
+      "channels": [
+        "invoke:save-subagent-model"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "setProjectConfig",
+      "line": 38,
+      "channels": [
+        "invoke:set-project-config"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "setProjectDir",
+      "line": 33,
+      "channels": [
+        "invoke:set-project-dir"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "setTwixyMode",
+      "line": 405,
+      "channels": [
+        "invoke:set-twixy-mode"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixyTestOverlay",
+      "path": "close",
+      "line": 740,
+      "channels": [
+        "invoke:close-test-overlay"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixyTestOverlay",
+      "path": "focusMain",
+      "line": 739,
+      "channels": [
+        "invoke:test-overlay-focus-main"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixyTestOverlay",
+      "path": "onSync",
+      "line": 733,
+      "channels": [
+        "on:test-overlay-sync",
+        "removeListener:test-overlay-sync"
+      ],
+      "rendererRefs": 0
+    },
+    {
+      "global": "twixyTestOverlay",
+      "path": "requestSync",
+      "line": 732,
+      "channels": [
+        "invoke:test-overlay-request-sync"
+      ],
+      "rendererRefs": 0
+    },
+    {
+      "global": "twixyTestOverlay",
+      "path": "sendReviewDecision",
+      "line": 741,
+      "channels": [
+        "invoke:test-overlay-review-decision"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixyTestOverlay",
+      "path": "stop",
+      "line": 738,
+      "channels": [
+        "invoke:test-overlay-stop"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "tools.editPptx",
+      "line": 549,
+      "channels": [
+        "invoke:tool-edit-pptx"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "tools.googleClearClient",
+      "line": 560,
+      "channels": [
+        "invoke:google-clear-client"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "tools.googleConnect",
+      "line": 561,
+      "channels": [
+        "invoke:tool-google-connect"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "tools.googleDisconnect",
+      "line": 562,
+      "channels": [
+        "invoke:tool-google-disconnect"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "tools.googleGetClient",
+      "line": 557,
+      "channels": [
+        "invoke:google-get-client"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "tools.googleGetStatus",
+      "line": 556,
+      "channels": [
+        "invoke:google-get-status"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "tools.googleSetClient",
+      "line": 558,
+      "channels": [
+        "invoke:google-set-client"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "tools.readPptx",
+      "line": 546,
+      "channels": [
+        "invoke:tool-read-pptx"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "tools.renderPptxSketch",
+      "line": 552,
+      "channels": [
+        "invoke:pptx-render-sketch"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "tools.writePptx",
+      "line": 544,
+      "channels": [
+        "invoke:tool-write-pptx"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "twixyEnterpriseAdminLoad",
+      "line": 596,
+      "channels": [
+        "invoke:twixy-enterprise-admin-load"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "twixyEnterprisePickFolder",
+      "line": 595,
+      "channels": [
+        "invoke:twixy-enterprise-pick-folder"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "twixyEnterpriseReadRun",
+      "line": 597,
+      "channels": [
+        "invoke:twixy-enterprise-read-run"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "wfSlotClearAll",
+      "line": 142,
+      "channels": [
+        "invoke:wf-slot-clear-all"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "wfSlotLease",
+      "line": 138,
+      "channels": [
+        "invoke:wf-slot-lease"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "wfSlotRelease",
+      "line": 140,
+      "channels": [
+        "invoke:wf-slot-release"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "workflowChatAppend",
+      "line": 154,
+      "channels": [
+        "invoke:workflow-chat-append"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "workflowChatClear",
+      "line": 156,
+      "channels": [
+        "invoke:workflow-chat-clear"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "workflowChatLoad",
+      "line": 145,
+      "channels": [
+        "invoke:workflow-chat-load"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "workflowCreate",
+      "line": 100,
+      "channels": [
+        "invoke:workflow-create"
+      ],
+      "rendererRefs": 7
+    },
+    {
+      "global": "twixy",
+      "path": "workflowDelete",
+      "line": 126,
+      "channels": [
+        "invoke:workflow-delete"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "workflowList",
+      "line": 99,
+      "channels": [
+        "invoke:workflow-list"
+      ],
+      "rendererRefs": 4
+    },
+    {
+      "global": "twixy",
+      "path": "workflowRawScratchClear",
+      "line": 189,
+      "channels": [
+        "invoke:workflow-raw-scratch-clear"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "workflowRestore",
+      "line": 127,
+      "channels": [
+        "invoke:workflow-restore"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "workflowRunDetailLoad",
+      "line": 199,
+      "channels": [
+        "invoke:workflow-run-detail-load"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "workflowRunDetailSave",
+      "line": 197,
+      "channels": [
+        "invoke:workflow-run-detail-save"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "workflowRunHistoryAppend",
+      "line": 192,
+      "channels": [
+        "invoke:workflow-run-history-append"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "workflowRunHistoryList",
+      "line": 194,
+      "channels": [
+        "invoke:workflow-run-history-list"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "workflowTestRunClear",
+      "line": 187,
+      "channels": [
+        "invoke:workflow-test-run-clear"
+      ],
+      "rendererRefs": 1
+    },
+    {
+      "global": "twixy",
+      "path": "workflowTestRunLoad",
+      "line": 180,
+      "channels": [
+        "invoke:workflow-test-run-load"
+      ],
+      "rendererRefs": 3
+    },
+    {
+      "global": "twixy",
+      "path": "workflowTestRunSave",
+      "line": 185,
+      "channels": [
+        "invoke:workflow-test-run-save"
+      ],
+      "rendererRefs": 2
+    },
+    {
+      "global": "twixy",
+      "path": "workflowUpdate",
+      "line": 121,
+      "channels": [
+        "invoke:workflow-update"
+      ],
+      "rendererRefs": 4
+    },
+    {
+      "global": "twixy",
+      "path": "writeFile",
+      "line": 371,
+      "channels": [
+        "invoke:write-file"
+      ],
+      "rendererRefs": 3
+    }
+  ],
+  "preloadValues": [
+    {
+      "global": "twixy",
+      "path": "platform",
+      "line": 23
+    }
+  ],
+  "crossCheck": {
+    "preloadWithoutMain": [],
+    "mainWithoutPreload": [
+      "aiagent-get",
+      "aiagent-restore",
+      "aiagent-run-clear",
+      "aiagent-run-load",
+      "aiagent-run-save",
+      "check-node22",
+      "deck-render-sheet",
+      "get-analysis-meta",
+      "get-openclaw-status",
+      "get-project-root",
+      "get-tool-permissions",
+      "mark-analysis-done",
+      "mr-get",
+      "node-install-progress",
+      "orchestration-get",
+      "pick-folder",
+      "plan-mark-aborted",
+      "tool-fetch-to-file",
+      "tool-query-data",
+      "tool-read-gdoc",
+      "tool-read-gsheet",
+      "tool-read-xlsx",
+      "tool-send-email",
+      "tool-write-gdoc",
+      "tool-write-gsheet",
+      "tool-write-pdf",
+      "tool-write-xlsx",
+      "workflow-get",
+      "write-watch-file"
+    ],
+    "dupChannels": []
+  },
+  "distJs": null
+}

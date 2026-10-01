@@ -1,0 +1,96 @@
+{
+  "id": "wf_viral_bench_yt_outliers",
+  "title": "YT 아웃라이어 영상 발굴",
+  "description": "니치 채널들에서 구독자 대비 조회수가 비정상적으로 높은 아웃라이어 영상을 찾아 공통 성공 요인을 해부한다.",
+  "outputDir": "data/reports",
+  "tags": ["research"],
+  "inputs": [
+    { "id": "niche", "kind": "scalar", "valueType": "text", "label": "니치/주제", "observed": "", "confidence": "low" },
+    { "id": "seed_channels", "kind": "list", "valueType": "url", "label": "벤치마크 채널 URL 3~5개", "observed": "", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "채널별 최근 영상·구독자 수집",
+      "detail": "시드 채널 각각의 구독자 수를 기록하고, 채널당 최근 영상 3~4개(합계 12~15편)의 제목·URL·조회수·업로드 시점·영상 길이를 수집한다. 각 영상의 조회수/구독자 비율을 계산해 함께 기록한다.",
+      "acceptance": "12편 이상의 영상이 조회수·구독자·비율과 함께 수집됨.",
+      "tool": "chrome",
+      "toolSkills": ["youtube"],
+      "subtasks": [
+        { "id": "s1", "title": "채널 구독자 수 기록", "purpose": "비율 계산의 분모 확보" },
+        { "id": "s2", "title": "최근 영상 메타데이터 수집", "purpose": "제목·조회수·길이·업로드일 확보" },
+        { "id": "s3", "title": "조회수/구독자 비율 계산", "purpose": "아웃라이어 판별 지표 산출" }
+      ],
+      "inputScope": [
+        { "name": "seed_channels", "type": "url[]", "description": "탐색할 채널 목록" },
+        { "name": "niche", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "videos", "type": "json[]", "description": "영상별 url·title·views·channel·subscribers·ratio·length·uploaded_at" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "validation",
+      "title": "수집 데이터 검증",
+      "detail": "videos가 12편 이상인지, 각 항목에 views·subscribers·ratio가 숫자로 채워졌는지, 시드 채널 전부가 최소 1편 이상 포함됐는지 점검한다.",
+      "acceptance": "is_valid=true이고 issues가 비어 있음.",
+      "inputScope": [
+        { "name": "videos", "type": "json[]" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "문제 없으면 빈 배열" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "action",
+      "title": "아웃라이어 선정·성공 요인 분석",
+      "detail": "비율이 채널 평균의 3배 이상이거나 구독자 수를 넘는 조회수를 기록한 영상을 아웃라이어로 선정한다. 아웃라이어들의 제목 구조(숫자/질문/대립 구도), 주제 각도, 길이대를 비교해 공통 성공 요인을 3~5개 문장으로 도출하고, 우리가 만들 수 있는 유사 기획 3개를 제안한다.",
+      "acceptance": "아웃라이어 목록과 성공 요인, 기획 제안 3개가 도출됨.",
+      "tool": "read",
+      "toolSkills": [],
+      "subtasks": [
+        { "id": "s1", "title": "아웃라이어 필터링", "purpose": "비율 기준으로 이상치 영상 선별" },
+        { "id": "s2", "title": "공통 요인 비교 분석", "purpose": "제목·각도·길이 패턴 추출" },
+        { "id": "s3", "title": "유사 기획 제안", "purpose": "니치 적용 기획 3개 작성" }
+      ],
+      "inputScope": [
+        { "name": "videos", "type": "json[]", "description": "검증된 영상 데이터" },
+        { "name": "niche", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "outliers", "type": "json[]", "description": "선정된 아웃라이어 영상과 선정 근거" },
+        { "name": "success_factors", "type": "string[]", "description": "공통 성공 요인" },
+        { "name": "video_ideas", "type": "json[]", "description": "적용 기획 3개 (제목안 포함)" }
+      ]
+    },
+    {
+      "id": "n4",
+      "type": "action",
+      "title": "아웃라이어 리포트 시트 저장",
+      "detail": "xlsx로 저장한다. 시트1 '전체 영상': 수집 영상 전 행(비율 내림차순, 아웃라이어 표시 컬럼). 시트2 '분석': 성공 요인 목록과 적용 기획 3개(제목안·형식·예상 훅).",
+      "acceptance": "두 시트가 헤더와 데이터로 채워져 저장됨.",
+      "tool": "write",
+      "toolSkills": ["xlsx"],
+      "subtasks": [
+        { "id": "s1", "title": "전체 영상 시트 작성", "purpose": "비율 정렬과 아웃라이어 플래그" },
+        { "id": "s2", "title": "분석 시트 작성", "purpose": "요인과 기획 제안 정리" }
+      ],
+      "inputScope": [
+        { "name": "videos", "type": "json[]" },
+        { "name": "outliers", "type": "json[]" },
+        { "name": "success_factors", "type": "string[]" },
+        { "name": "video_ideas", "type": "json[]" }
+      ],
+      "outputScope": [
+        { "name": "sheet_name", "type": "text", "description": "작성된 시트 이름들" },
+        { "name": "row_count", "type": "number", "description": "전체 영상 시트 데이터 행 수" },
+        { "name": "header_row", "type": "text[]", "description": "전체 영상 시트 헤더" },
+        { "name": "outlier_count", "type": "number", "description": "아웃라이어로 표시된 행 수" }
+      ]
+    }
+  ]
+}

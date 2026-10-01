@@ -1,0 +1,103 @@
+{
+  "id": "wf_agency_create_seo_blog_post",
+  "title": "SEO Blog Post That Outranks",
+  "description": "Tear down the top Google results for a target keyword, design an outline that beats them, and write a 1,500+ word draft ready for the client's blog.",
+  "outputDir": "content/drafts",
+  "tags": ["content"],
+  "inputs": [
+    { "id": "target_keyword", "kind": "scalar", "valueType": "query", "label": "Target keyword to rank for", "observed": "", "confidence": "low" },
+    { "id": "client_name", "kind": "scalar", "valueType": "text", "label": "Client name", "observed": "", "confidence": "low" },
+    { "id": "target_audience", "kind": "scalar", "valueType": "text", "label": "Target reader in one line", "observed": "", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "Tear down the top 5–7 Google results",
+      "detail": "Search Google for the target keyword and open the top 5–7 organic results. For each page record: title pattern, estimated word count, heading count and structure, where the keyword appears (title / first paragraph / headings), and the subtopics covered. Then identify the content gaps — things searchers want that none of the top pages cover well.",
+      "acceptance": "5+ pages analyzed structurally and 2+ content gaps identified.",
+      "tool": "chrome",
+      "toolSkills": ["seo-crawl"],
+      "subtasks": [
+        { "id": "s1", "title": "Collect and dissect top results", "purpose": "Title, length, headings, keyword placement per page" },
+        { "id": "s2", "title": "List shared subtopics", "purpose": "What every ranking page must cover" },
+        { "id": "s3", "title": "Find the content gaps", "purpose": "Differentiators no competitor covers" }
+      ],
+      "inputScope": [
+        { "name": "target_keyword", "type": "query", "description": "Keyword to search" }
+      ],
+      "outputScope": [
+        { "name": "serp_analysis", "type": "json[]", "description": "Per-page title_pattern, length, headings, keyword_placement" },
+        { "name": "common_topics", "type": "text[]", "description": "Subtopics shared by top results" },
+        { "name": "content_gaps", "type": "text[]", "description": "Underserved angles to win with" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "action",
+      "title": "Design the winning outline",
+      "detail": "Build an outline that covers every shared subtopic AND fills the gaps: 5 title options (keyword-forward with a click driver), 6–8 headings with each section's core message and target word count, a keyword and related-term placement plan, and image slots with text descriptions of what each image should show.",
+      "acceptance": "5 title options and 6+ planned sections completed.",
+      "tool": "read",
+      "toolSkills": [],
+      "subtasks": [
+        { "id": "s1", "title": "Draft 5 title options", "purpose": "Keyword placement plus click motivation" },
+        { "id": "s2", "title": "Structure sections and lengths", "purpose": "Cover common topics and gaps" },
+        { "id": "s3", "title": "Plan keyword placement", "purpose": "Natural distribution, no stuffing" }
+      ],
+      "inputScope": [
+        { "name": "serp_analysis", "type": "json[]" },
+        { "name": "common_topics", "type": "text[]" },
+        { "name": "content_gaps", "type": "text[]" },
+        { "name": "target_keyword", "type": "query" }
+      ],
+      "outputScope": [
+        { "name": "title_options", "type": "text[]", "description": "5 title candidates" },
+        { "name": "outline", "type": "json[]", "description": "Per-section heading, core message, target words" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "action",
+      "title": "Write and save the 1,500+ word draft",
+      "detail": "Write the full draft in markdown following the outline: 1,500+ words, keyword naturally in the first paragraph, first-hand practitioner tone, image slots marked as [Image: description] text directions. End the file with 5 title options and a meta description draft (under 160 characters).",
+      "acceptance": "1,500+ words, 6+ headings, image directions, titles, and meta description saved.",
+      "tool": "write",
+      "toolSkills": ["md"],
+      "subtasks": [
+        { "id": "s1", "title": "Write each section to plan", "purpose": "Follow the outline's messages and lengths" },
+        { "id": "s2", "title": "Place keywords and related terms", "purpose": "Apply the placement plan without over-optimizing" },
+        { "id": "s3", "title": "Add image slots and meta", "purpose": "Publish-ready completeness" }
+      ],
+      "inputScope": [
+        { "name": "outline", "type": "json[]" },
+        { "name": "title_options", "type": "text[]" },
+        { "name": "client_name", "type": "text" },
+        { "name": "target_audience", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "word_count", "type": "number", "description": "Body word count (1500+)" },
+        { "name": "sections_written", "type": "text[]", "description": "Headings written" },
+        { "name": "keyword_occurrences", "type": "number", "description": "Times the target keyword appears in the body" },
+        { "name": "image_slots", "type": "number", "description": "Image direction count" }
+      ]
+    },
+    {
+      "id": "n4",
+      "type": "validation",
+      "title": "Verify draft quality",
+      "detail": "Check that word_count is 1,500+, sections_written has 6+ headings, keyword_occurrences sits in the 5–15 range (no stuffing, no absence), and there are 3+ image slots.",
+      "acceptance": "is_valid=true and issues is empty.",
+      "inputScope": [
+        { "name": "word_count", "type": "number" },
+        { "name": "sections_written", "type": "text[]" },
+        { "name": "keyword_occurrences", "type": "number" },
+        { "name": "image_slots", "type": "number" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "Empty when valid" }
+      ]
+    }
+  ]
+}

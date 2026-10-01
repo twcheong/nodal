@@ -1,0 +1,106 @@
+{
+  "graph": {
+    "nodal_version": "1",
+    "id": "1e234712-0000-4000-8000-000000000000",
+    "nodes": {
+      "1e234712-0000-4000-8000-000000000001": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-DcvQpQfJ6EB/frame-033.0.png"
+        }
+      },
+      "1e234712-0000-4000-8000-000000000002": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/woman.png"
+        }
+      },
+      "1e234712-0000-4000-8000-000000000003": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/man.png"
+        }
+      },
+      "1e234712-0000-4000-8000-000000000004": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png"
+        }
+      },
+      "1e234712-0000-4000-8000-000000000008": {
+        "type": "diffusion.QwenImage21",
+        "inputs": {
+          "model_path": "C:/Users/nexta/Desktop/nodal/models/Qwen-Image-2.1",
+          "prompt": "EDIT IMAGE 1 and preserve its EXACT WIDE CAMERA COMPOSITION, room geometry, lens, perspective, person sizes and positions. Replace only the two original actors with the approved cast: woman from IMAGE 2 and man from IMAGE 3. IMAGE 4 confirms only their identity, hair and COSTUMES, not the camera. Woman wears ivory lace camisole with ruffled peplum and dark jeans, dry layered black bob and gold hoop earrings. Man has short tousled black hair, plain navy polo and faded jeans. No tattoos, no necklace or finger rings, no logos or polo patches. Keep IMAGE 1 arrangement precisely: seated man low LEFT, face centered near x=30%, y=53%; standing woman RIGHT, face centered near x=60%, y=32%; both actors' feet close to y=90%. Coffee table at lower center, tabletop around y=74%. Large single rectangular bright window is behind them, hanging plants and full olive sofa left, antique cabinet and open mirror doorway right, carved ceiling above, broad room view with floor and foreground objects. Keep source camera height, not a higher view; do not raise the man or woman in the composition. Their body poses and gaze toward one another follow IMAGE 1. REMOVE every Korean central title and subtitle, replace with natural unobstructed scene. Remove red foreground clothing clutter but retain the room depth and perspective. Preserve the architecture and placement from IMAGE 1, with warm walnut and olive sofa textures from IMAGE 4. Add one small plain yellow mug on the table. This is the FINAL wide pull-back frame of the same scene, no extra people, no text, no watermark. Clearly the IMAGE 2 woman and IMAGE 3 man, never the original actors from IMAGE 1. Do not reconstruct the camera from IMAGE 4.",
+          "width": 1536,
+          "height": 864,
+          "steps": 40,
+          "seed": 923712,
+          "reference_resolution": 768,
+          "memory_profile": "group_offload",
+          "reference_1": {
+            "$link": [
+              "1e234712-0000-4000-8000-000000000001",
+              "image"
+            ]
+          },
+          "reference_2": {
+            "$link": [
+              "1e234712-0000-4000-8000-000000000002",
+              "image"
+            ]
+          },
+          "reference_3": {
+            "$link": [
+              "1e234712-0000-4000-8000-000000000003",
+              "image"
+            ]
+          },
+          "reference_4": {
+            "$link": [
+              "1e234712-0000-4000-8000-000000000004",
+              "image"
+            ]
+          }
+        }
+      },
+      "1e234712-0000-4000-8000-000000000009": {
+        "type": "image.Save",
+        "inputs": {
+          "image": {
+            "$link": [
+              "1e234712-0000-4000-8000-000000000008",
+              "image"
+            ]
+          },
+          "embed_workflow": true
+        }
+      }
+    },
+    "outputs": [
+      "1e234712-0000-4000-8000-000000000009"
+    ]
+  },
+  "save_outputs": {
+    "1e234712-0000-4000-8000-000000000009": "frames/shot-11-end-camera.png"
+  },
+  "provenance": {
+    "shot": 11,
+    "source_frame_range": [
+      729,
+      1015
+    ],
+    "references": [
+      "../reel-DcvQpQfJ6EB/frame-033.0.png",
+      "references/woman.png",
+      "references/man.png",
+      "../original-couple-qwen21/01-first-frame.png"
+    ],
+    "reference_roles": "Image1 fixes exact original camera and person scale; image2 and image3 fix approved cast; image4 confirms costumes and room style only.",
+    "original_source_pixels_used": true,
+    "identity_master": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png",
+    "prompt": "EDIT IMAGE 1 and preserve its EXACT WIDE CAMERA COMPOSITION, room geometry, lens, perspective, person sizes and positions. Replace only the two original actors with the approved cast: woman from IMAGE 2 and man from IMAGE 3. IMAGE 4 confirms only their identity, hair and COSTUMES, not the camera. Woman wears ivory lace camisole with ruffled peplum and dark jeans, dry layered black bob and gold hoop earrings. Man has short tousled black hair, plain navy polo and faded jeans. No tattoos, no necklace or finger rings, no logos or polo patches. Keep IMAGE 1 arrangement precisely: seated man low LEFT, face centered near x=30%, y=53%; standing woman RIGHT, face centered near x=60%, y=32%; both actors' feet close to y=90%. Coffee table at lower center, tabletop around y=74%. Large single rectangular bright window is behind them, hanging plants and full olive sofa left, antique cabinet and open mirror doorway right, carved ceiling above, broad room view with floor and foreground objects. Keep source camera height, not a higher view; do not raise the man or woman in the composition. Their body poses and gaze toward one another follow IMAGE 1. REMOVE every Korean central title and subtitle, replace with natural unobstructed scene. Remove red foreground clothing clutter but retain the room depth and perspective. Preserve the architecture and placement from IMAGE 1, with warm walnut and olive sofa textures from IMAGE 4. Add one small plain yellow mug on the table. This is the FINAL wide pull-back frame of the same scene, no extra people, no text, no watermark. Clearly the IMAGE 2 woman and IMAGE 3 man, never the original actors from IMAGE 1. Do not reconstruct the camera from IMAGE 4.",
+    "endpoint": "last frame of final continuous pull-back"
+  },
+  "priority": 100
+}

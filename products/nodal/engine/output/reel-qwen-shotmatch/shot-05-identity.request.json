@@ -1,0 +1,92 @@
+{
+  "graph": {
+    "nodal_version": "1",
+    "id": "1e234705-0000-4000-8000-000000000000",
+    "nodes": {
+      "1e234705-0000-4000-8000-000000000001": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/frames/shot-05.png"
+        }
+      },
+      "1e234705-0000-4000-8000-000000000002": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/woman.png"
+        }
+      },
+      "1e234705-0000-4000-8000-000000000003": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png"
+        }
+      },
+      "1e234705-0000-4000-8000-000000000008": {
+        "type": "diffusion.QwenImage21",
+        "inputs": {
+          "model_path": "C:/Users/nexta/Desktop/nodal/models/Qwen-Image-2.1",
+          "prompt": "Edit IMAGE 1 by replacing ONLY its actress with the DIFFERENT required actress from IMAGE 2, reinforced by IMAGE 3. IMAGE 2 is the exact required face, eyes, nose, lips, cheeks, dry layered black bob hairstyle and small gold hoop earrings. IMAGE 3 confirms this actress in the approved room. The existing face in IMAGE 1 is wrong and too similar to the original film actress: REPLACE her face and hairstyle completely with IMAGE 2, not a blend. Maintain the exact background, camera, lighting, pose and costume from IMAGE 1. Keep the white halter top with black polka dots from IMAGE 1. Preserve the extreme 8mm FISHEYE CLOSE-UP: camera very low and extremely close to her face, face filling nearly all the frame, enlarged nose and lips from lens perspective, round curved timber ceiling and window at edges, torso leaning into lens. Maintain her upward sideways glance and lips gently parted. Apply the SAME lens distortion to the NEW actress from IMAGE 2. Remove the necklace. Do not change to a normal portrait, do not change lens, do not make a wider shot, and do not change her outfit to IMAGE 3 camisole. The result must clearly be the woman from IMAGE 2 playing this shot. Natural warm skin, normal adult anatomy, no tattoos, no text or captions, one woman only.",
+          "width": 1536,
+          "height": 864,
+          "steps": 40,
+          "seed": 923705,
+          "reference_resolution": 768,
+          "memory_profile": "group_offload",
+          "reference_1": {
+            "$link": [
+              "1e234705-0000-4000-8000-000000000001",
+              "image"
+            ]
+          },
+          "reference_2": {
+            "$link": [
+              "1e234705-0000-4000-8000-000000000002",
+              "image"
+            ]
+          },
+          "reference_3": {
+            "$link": [
+              "1e234705-0000-4000-8000-000000000003",
+              "image"
+            ]
+          }
+        }
+      },
+      "1e234705-0000-4000-8000-000000000009": {
+        "type": "image.Save",
+        "inputs": {
+          "image": {
+            "$link": [
+              "1e234705-0000-4000-8000-000000000008",
+              "image"
+            ]
+          },
+          "embed_workflow": true
+        }
+      }
+    },
+    "outputs": [
+      "1e234705-0000-4000-8000-000000000009"
+    ]
+  },
+  "save_outputs": {
+    "1e234705-0000-4000-8000-000000000009": "frames/shot-05-identity.png"
+  },
+  "provenance": {
+    "shot": 5,
+    "source_frame_range": [
+      289,
+      354
+    ],
+    "references": [
+      "frames/shot-05.png",
+      "references/woman.png",
+      "../original-couple-qwen21/01-first-frame.png"
+    ],
+    "reference_roles": "Replace rejected source-like actress in image1 with approved woman from image2 and image3, keeping only camera and background from image1.",
+    "original_source_pixels_used": true,
+    "identity_master": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png",
+    "prompt": "Edit IMAGE 1 by replacing ONLY its actress with the DIFFERENT required actress from IMAGE 2, reinforced by IMAGE 3. IMAGE 2 is the exact required face, eyes, nose, lips, cheeks, dry layered black bob hairstyle and small gold hoop earrings. IMAGE 3 confirms this actress in the approved room. The existing face in IMAGE 1 is wrong and too similar to the original film actress: REPLACE her face and hairstyle completely with IMAGE 2, not a blend. Maintain the exact background, camera, lighting, pose and costume from IMAGE 1. Keep the white halter top with black polka dots from IMAGE 1. Preserve the extreme 8mm FISHEYE CLOSE-UP: camera very low and extremely close to her face, face filling nearly all the frame, enlarged nose and lips from lens perspective, round curved timber ceiling and window at edges, torso leaning into lens. Maintain her upward sideways glance and lips gently parted. Apply the SAME lens distortion to the NEW actress from IMAGE 2. Remove the necklace. Do not change to a normal portrait, do not change lens, do not make a wider shot, and do not change her outfit to IMAGE 3 camisole. The result must clearly be the woman from IMAGE 2 playing this shot. Natural warm skin, normal adult anatomy, no tattoos, no text or captions, one woman only."
+  },
+  "priority": 100
+}

@@ -1,0 +1,143 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Twixy Design Tokens — Paper / Petrol 테마 (2026-08 리디자인)
+   single source of truth (mirrored in tokens.ts, sync enforced by
+   scripts/check-tokens.mjs)
+
+   성격: "잘 인쇄된 종이 문서" — 크림 페이퍼 배경, 화이트 카드, 플랫(그림자
+   없음), 얇은 헤어라인 보더. 채도를 낮추고 색은 의미로만 쓴다.
+     긍정/활성/정보 → petrol   문제/에러 → clay   예정/개발중 → ochre
+
+   구조 (2-tier):
+     Tier 1 primitives  — 리브랜딩 시 이 블록의 값만 교체한다
+     Tier 2 semantic    — 컴포넌트는 반드시 이것만 참조한다
+     Legacy aliases     — 기존 호출부 호환용. 신규 코드 사용 금지
+
+   이전 다크/퍼플 테마로 복귀: feature/design-system 브랜치 (ac27a7b)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Tier 1: primitives ────────────────────────────────────────────── */
+  --paper:       #fafaf6;   /* 앱 전체 배경 (크림) */
+  --card-white:  #ffffff;   /* 카드·패널 표면 */
+  --place:       #eff4f1;   /* 입력/플레이스홀더 배경 */
+  --mint:        #e4f0e9;   /* 하이라이트·선택 배경 */
+  --hairline:    #d9e1da;   /* 헤어라인 보더 */
+  --soft-hairline: #cfdbd3; /* 진한 헤어라인 */
+
+  --ink-900:     #14201b;   /* 주요 텍스트 (딥그린 블랙) */
+  --ink-600:     #4a594f;   /* 보조 텍스트 */
+  --ink-400:     #8a968d;   /* 캡션·disabled */
+  --white:       #ffffff;
+
+  --petrol-500:  #0d5c50;   /* 주 액센트 */
+  --petrol-700:  #093f37;   /* 민트 위 강조 텍스트 */
+  --clay-500:    #b5482f;   /* 문제/에러 전용 */
+  --clay-700:    #93391f;
+  --ochre-500:   #b07d18;   /* 예정/개발중 전용 */
+  --ochre-700:   #8f6513;
+
+  /* ── Tier 2: semantic ──────────────────────────────────────────────── */
+  --bg-base:     var(--paper);
+  --bg-surface:  var(--card-white);
+  --bg-elevated: var(--card-white);
+  --bg-hover:    var(--place);
+  --bg-active:   var(--mint);
+  --bg-input:    var(--place);
+
+  --border:        var(--hairline);
+  --border-subtle: var(--hairline);
+
+  --text-primary:   var(--ink-900);
+  --text-secondary: var(--ink-600);
+  --text-muted:     var(--ink-400);
+  --text-inverse:   var(--white);
+
+  --accent:      var(--petrol-500);
+  --accent-deep: var(--petrol-700);
+  --accent-dim:  var(--mint);
+  --accent-glow: rgba(13, 92, 80, 0.10);
+
+  --success:        var(--petrol-500);
+  --success-strong: var(--petrol-700);
+  --danger:         var(--clay-500);
+  --danger-strong:  var(--clay-700);
+  --warning:        var(--ochre-500);
+  --warning-strong: var(--ochre-700);
+  --info:           var(--petrol-500);
+  --info-strong:    var(--petrol-700);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+
+  --font-sans: 'Pretendard Variable', 'Pretendard', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-serif: 'Source Serif 4 Variable', 'Source Serif 4', 'Noto Serif KR', Cambria, Georgia, serif;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', ui-monospace, 'Fira Code', monospace;
+  --track-eyebrow: 0.1em;
+
+  /* ── Legacy aliases — 신규 코드 사용 금지 ──────────────────────────── */
+  --text:   var(--text-primary);
+  --radius: var(--radius-md);
+  --bg:     var(--bg-base);
+  --green:  var(--success);
+  --red:    var(--danger);
+  --yellow: var(--warning);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   다크 모드 = 기존 다크/퍼플 디자인.
+   기본(라이트) = Paper/Petrol. OS 다크 설정을 자동으로 따르고,
+   html[data-theme='light'|'dark'] 로 수동 오버라이드 가능 (src/design/theme.ts).
+   semantic 층만 뒤집는다 — radius/spacing/폰트는 두 모드 공통.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root[data-theme='dark'] {
+  --bg-base: #0f0f0f; --bg-surface: #171717; --bg-elevated: #1e1e1e;
+  --bg-hover: #242424; --bg-active: #2a2a2a; --bg-input: #171717;
+  --border: #2a2a2a; --border-subtle: #1e1e1e;
+  --text-primary: #e8e8e8; --text-secondary: #888888;
+  --text-muted: #555555; --text-inverse: #ffffff;
+  --accent: #7c6aff; --accent-deep: #a99cff; --accent-dim: #3d3366;
+  --accent-glow: rgba(124, 106, 255, 0.15);
+  --success: #4ade80; --success-strong: #10b981;
+  --danger: #f87171; --danger-strong: #ef4444;
+  --warning: #facc15; --warning-strong: #f59e0b;
+  --info: #60a5fa; --info-strong: #3b82f6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg-base: #0f0f0f; --bg-surface: #171717; --bg-elevated: #1e1e1e;
+    --bg-hover: #242424; --bg-active: #2a2a2a; --bg-input: #171717;
+    --border: #2a2a2a; --border-subtle: #1e1e1e;
+    --text-primary: #e8e8e8; --text-secondary: #888888;
+    --text-muted: #555555; --text-inverse: #ffffff;
+    --accent: #7c6aff; --accent-deep: #a99cff; --accent-dim: #3d3366;
+    --accent-glow: rgba(124, 106, 255, 0.15);
+    --success: #4ade80; --success-strong: #10b981;
+    --danger: #f87171; --danger-strong: #ef4444;
+    --warning: #facc15; --warning-strong: #f59e0b;
+    --info: #60a5fa; --info-strong: #3b82f6;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   부록: 다크/퍼플 → 페이퍼/피트롤 매핑 (스펙 §1.3 — hex 일괄 치환에 사용)
+
+   #0f0f0f/#000 → paper      #171717/#181818 → card-white
+   #1e1e1e      → mint       #141414         → place
+   #2a2a2a      → hairline   #333            → soft-hairline
+   #7c6aff + 보라 계열, #4ade80 + 초록 계열, 파랑 계열 → petrol-500
+   #e8e8e8 → ink-900   #888/#999/#9ca3af → ink-600   #555/#aaa → ink-400
+   #f87171/#ef4444/#f85149 → clay-500
+   #facc15/#f59e0b/#fbbf24/#eab308/#d29922 → ochre-500
+
+   예외: src/components/workflow/, src/components/orchestration/ 의
+   하드코딩 색은 치환하지 않음 — WF 노드 디자인은 불가침 표준
+   ═══════════════════════════════════════════════════════════════════════ */

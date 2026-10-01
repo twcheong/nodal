@@ -1,0 +1,134 @@
+{
+  "id": "wf_agency_strategy_hook_library",
+  "title": "Verified Hook Library (100 Hooks)",
+  "description": "Harvest 40 proven hooks from Instagram, YouTube, and Threads, then expand to 100 via pattern templates — a reusable hook library CSV the whole team pulls from.",
+  "outputDir": "data/insights",
+  "tags": ["campaign"],
+  "inputs": [
+    { "id": "niche", "kind": "scalar", "valueType": "text", "label": "Client niche", "observed": "", "confidence": "low" },
+    { "id": "client_name", "kind": "scalar", "valueType": "text", "label": "Client name", "observed": "", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "Harvest 15 high-performing IG Reels hooks",
+      "detail": "On Instagram, browse niche hashtags and the explore surface to find 15 high-engagement Reels. Record each one's opening line (on-screen text or first caption line) verbatim, with the source URL and approximate engagement.",
+      "acceptance": "15 Reels hooks captured verbatim with sources.",
+      "tool": "chrome",
+      "toolSkills": ["instagram"],
+      "subtasks": [
+        { "id": "s1", "title": "Find high-engagement niche Reels", "purpose": "Select by likes and comments" },
+        { "id": "s2", "title": "Transcribe hooks verbatim", "purpose": "No paraphrasing — exact opening lines" }
+      ],
+      "inputScope": [
+        { "name": "niche", "type": "text", "description": "Niche to scan" }
+      ],
+      "outputScope": [
+        { "name": "ig_hooks", "type": "json[]", "description": "15 of hook, source_url, engagement" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "action",
+      "title": "Harvest 15 YouTube title and intro hooks",
+      "detail": "Search the niche on YouTube for Shorts and high-view videos. Capture 15 hooks from titles and opening lines, with view counts and source URLs. Avoid duplicating hooks already collected from Instagram.",
+      "acceptance": "15 YouTube hooks captured with sources and view counts.",
+      "tool": "chrome",
+      "toolSkills": ["youtube"],
+      "subtasks": [
+        { "id": "s1", "title": "Search high-view niche videos", "purpose": "Select top content by views" },
+        { "id": "s2", "title": "Capture title and intro hooks", "purpose": "Both title-style and spoken-style hooks" }
+      ],
+      "inputScope": [
+        { "name": "niche", "type": "text" },
+        { "name": "ig_hooks", "type": "json[]", "description": "For duplicate avoidance" }
+      ],
+      "outputScope": [
+        { "name": "yt_hooks", "type": "json[]", "description": "15 of hook, source_url, views" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "action",
+      "title": "Harvest 10 Threads post hooks",
+      "detail": "On Threads, browse niche conversations and capture the first lines of 10 high-engagement posts. Prioritize text-native hook styles (confession, hot take, plot twist).",
+      "acceptance": "10 Threads hooks captured verbatim with sources.",
+      "tool": "chrome",
+      "toolSkills": ["threads"],
+      "subtasks": [
+        { "id": "s1", "title": "Find high-engagement posts", "purpose": "Select by reposts and replies" },
+        { "id": "s2", "title": "Transcribe first lines", "purpose": "Capture text-native hook styles" }
+      ],
+      "inputScope": [
+        { "name": "niche", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "threads_hooks", "type": "json[]", "description": "10 of hook, source_url, engagement" }
+      ]
+    },
+    {
+      "id": "n4",
+      "type": "validation",
+      "title": "Verify harvested hooks",
+      "detail": "Check that the three channels total 35+ hooks, no near-duplicate pairs exist, and every entry has a source URL.",
+      "acceptance": "is_valid=true and issues is empty.",
+      "inputScope": [
+        { "name": "ig_hooks", "type": "json[]" },
+        { "name": "yt_hooks", "type": "json[]" },
+        { "name": "threads_hooks", "type": "json[]" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "Empty when valid" }
+      ]
+    },
+    {
+      "id": "n5",
+      "type": "action",
+      "title": "Classify patterns and expand to 100",
+      "detail": "Classify the ~40 harvested hooks by psychological trigger (curiosity gap, numbered promise, relatable callout, plot twist, warning, social proof, secret reveal, etc.) and turn each type's sentence structure into a reusable template. Apply the templates to the niche and client context to generate 60 derived hooks, reaching 100 total. Derived hooks inherit their source type's tag.",
+      "acceptance": "Types assigned; 40 harvested + 60 derived = 100 hooks.",
+      "tool": "read",
+      "toolSkills": [],
+      "subtasks": [
+        { "id": "s1", "title": "Classify by trigger type", "purpose": "Label all harvested hooks into 7–8 types" },
+        { "id": "s2", "title": "Template the structures", "purpose": "Reusable hook formulas per type" },
+        { "id": "s3", "title": "Generate 60 niche-fit variants", "purpose": "Template × niche expansion" }
+      ],
+      "inputScope": [
+        { "name": "ig_hooks", "type": "json[]" },
+        { "name": "yt_hooks", "type": "json[]" },
+        { "name": "threads_hooks", "type": "json[]" },
+        { "name": "niche", "type": "text" },
+        { "name": "client_name", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "hook_library", "type": "json[]", "description": "100 of hook, trigger_type, origin (harvested/derived), source_url, suggested_channel" },
+        { "name": "trigger_types", "type": "text[]", "description": "Trigger types used" }
+      ]
+    },
+    {
+      "id": "n6",
+      "type": "action",
+      "title": "Save the hook library CSV",
+      "detail": "Write the 100 hooks to a CSV. Columns: number, hook line, trigger type, origin (harvested/derived), source URL, suggested channel, usage log (blank — updated later by the performance retro workflow). Sort by trigger type.",
+      "acceptance": "CSV saved with all 100 rows filled.",
+      "tool": "write",
+      "toolSkills": ["csv"],
+      "subtasks": [
+        { "id": "s1", "title": "Map rows to the schema", "purpose": "Library entries into the column layout" },
+        { "id": "s2", "title": "Sort and save", "purpose": "Type-grouped order for easy browsing" }
+      ],
+      "inputScope": [
+        { "name": "hook_library", "type": "json[]" },
+        { "name": "trigger_types", "type": "text[]" }
+      ],
+      "outputScope": [
+        { "name": "row_count", "type": "number", "description": "Data rows excluding header (must be 100)" },
+        { "name": "header_row", "type": "text[]", "description": "CSV headers" },
+        { "name": "type_distribution", "type": "json", "description": "Hook count per trigger type" }
+      ]
+    }
+  ]
+}

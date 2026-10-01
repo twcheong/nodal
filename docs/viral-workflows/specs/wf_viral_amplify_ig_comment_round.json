@@ -1,0 +1,71 @@
+{
+  "id": "wf_viral_amplify_ig_comment_round",
+  "title": "IG 타겟 댓글 참여 라운드",
+  "description": "니치 해시태그 상위 포스트를 스카우트해 맞춤 댓글 초안을 만들고, 검증 후 자사 계정으로 가치 있는 댓글 10~12개를 게시한다.",
+  "outputDir": "data/reports",
+  "tags": ["social"],
+  "inputs": [
+    { "id": "hashtags", "kind": "list", "valueType": "text", "label": "타겟 해시태그 2~3개 (# 없이)", "observed": "", "confidence": "low" },
+    { "id": "brand_name", "kind": "scalar", "valueType": "text", "label": "브랜드명", "observed": "", "confidence": "low" },
+    { "id": "brand_voice", "kind": "scalar", "valueType": "text", "label": "브랜드 말투 한 줄 설명 (예: 친근한 반말 전문가)", "observed": "", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "타겟 포스트 스카우트 + 댓글 초안",
+      "detail": "로그인된 자사 계정으로 각 해시태그의 최근·인기 포스트를 훑어, 댓글 반응이 활발하고 우리 니치와 맞는 포스트 12개를 고른다. 포스트마다 내용을 실제로 읽고 그 내용에 구체적으로 반응하는 맞춤 댓글 초안을 1개씩 작성한다. 규칙: 복붙형 문구·이모지 도배·노골적 홍보·링크 금지, 포스트 내용을 언급하는 가치형(질문/공감/추가 팁) 댓글만.",
+      "acceptance": "포스트 12개가 URL·요지·맞춤 댓글 초안과 함께 준비됨.",
+      "tool": "chrome",
+      "toolSkills": ["instagram"],
+      "subtasks": [
+        { "id": "s1", "title": "해시태그별 후보 포스트 탐색", "purpose": "활성 댓글창·니치 적합성 기준 선별" },
+        { "id": "s2", "title": "포스트 내용 파악", "purpose": "맞춤 댓글의 근거가 될 요지 기록" },
+        { "id": "s3", "title": "맞춤 댓글 초안 작성", "purpose": "포스트별 고유 문장, 브랜드 말투 적용" }
+      ],
+      "inputScope": [
+        { "name": "hashtags", "type": "text[]", "description": "탐색할 해시태그" },
+        { "name": "brand_voice", "type": "text", "description": "댓글 톤 기준" }
+      ],
+      "outputScope": [
+        { "name": "targets", "type": "json[]", "description": "12개: post_url·post_summary·draft_comment" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "validation",
+      "title": "댓글 초안 안전성 검증",
+      "detail": "targets가 10개 이상인지, 댓글 초안끼리 문장이 겹치지 않는지(복붙 감지), 홍보 문구·링크·과도한 이모지가 없는지, 각 댓글이 해당 포스트 요지를 실제로 언급하는지 점검한다.",
+      "acceptance": "is_valid=true이고 issues가 비어 있음.",
+      "inputScope": [
+        { "name": "targets", "type": "json[]" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "문제 없으면 빈 배열" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "action",
+      "title": "댓글 10~12개 게시·결과 보고",
+      "detail": "검증된 초안을 순서대로 게시한다. 포스트를 열어 초안 댓글을 남기되, 게시 사이에 자연스러운 간격을 두고 한 라운드 최대 12개를 넘기지 않는다. 게시 실패(댓글 제한/삭제된 포스트)는 건너뛰고 사유를 기록한다. 마지막에 게시 성공 목록(포스트 URL·댓글 내용)과 실패 목록을 보고한다.",
+      "acceptance": "10개 이상 게시 성공, 성공·실패 내역이 전부 보고됨.",
+      "tool": "chrome",
+      "toolSkills": ["instagram"],
+      "subtasks": [
+        { "id": "s1", "title": "초안 순차 게시", "purpose": "간격을 두고 최대 12개 게시" },
+        { "id": "s2", "title": "실패 건 처리", "purpose": "건너뛰고 사유 기록, 재시도 남발 금지" },
+        { "id": "s3", "title": "라운드 결과 정리", "purpose": "성공/실패 목록 자체 보고" }
+      ],
+      "inputScope": [
+        { "name": "targets", "type": "json[]", "description": "검증 통과한 댓글 초안 목록" }
+      ],
+      "outputScope": [
+        { "name": "posted", "type": "json[]", "description": "게시 성공: post_url·comment" },
+        { "name": "skipped", "type": "json[]", "description": "실패/건너뜀: post_url·reason" },
+        { "name": "posted_count", "type": "number", "description": "게시 성공 개수" }
+      ]
+    }
+  ]
+}

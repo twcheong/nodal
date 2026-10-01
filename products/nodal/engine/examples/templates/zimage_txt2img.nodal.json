@@ -1,0 +1,125 @@
+{
+  "nodal_version": "1",
+  "id": "018f2c00-0000-7000-8000-0000000e0008",
+
+  "definitions": {
+    "zimage_txt2img": {
+      "doc": "로컬 Z-Image 모델로 텍스트 설명만으로 새 이미지를 만든다. 참고 이미지가 없을 때의 기본 이미지 생성 도구다 — 인물·장면·배경·제품 컷 모두. 모델 파일 인자는 이미지 기본 팩의 파일이 기본값이라 비워 두면 된다. 16:9 는 1280×720, 세로 3:4 는 768×1024 처럼 16의 배수로 준다.",
+      "params": {
+        "prompt": {
+          "type": "STRING",
+          "doc": "만들 이미지 설명. 영어로 구체적으로 쓸수록 잘 따른다."
+        },
+        "negative_prompt": {
+          "type": "STRING",
+          "default": "",
+          "doc": "피할 요소. 비워 두어도 된다."
+        },
+        "width": {
+          "type": "INT",
+          "default": 1024,
+          "doc": "가로 픽셀. 16의 배수.",
+          "widget": { "min": 256, "max": 2048, "step": 16 }
+        },
+        "height": {
+          "type": "INT",
+          "default": 1024,
+          "doc": "세로 픽셀. 16의 배수.",
+          "widget": { "min": 256, "max": 2048, "step": 16 }
+        },
+        "steps": {
+          "type": "INT",
+          "default": 30,
+          "doc": "디노이즈 스텝 수. 시안은 20 정도로 빠르게, 최종은 30~40.",
+          "widget": { "min": 1, "max": 150, "step": 1 }
+        },
+        "guidance_scale": {
+          "type": "FLOAT",
+          "default": 4.0,
+          "doc": "프롬프트를 얼마나 강하게 따를지.",
+          "widget": { "min": 0.0, "max": 20.0, "step": 0.1 }
+        },
+        "seed": {
+          "type": "INT",
+          "default": 0,
+          "doc": "같은 시드·같은 입력이면 같은 결과가 나온다.",
+          "widget": { "seed": true, "control": "randomize", "min": 0, "max": 9007199254740991, "step": 1 }
+        },
+        "transformer": {
+          "type": "STRING",
+          "default": "z_image_bf16.safetensors",
+          "doc": "models/diffusion_models의 Z-Image transformer 파일명. 보통 기본값 그대로."
+        },
+        "text_encoder": {
+          "type": "STRING",
+          "default": "qwen_3_4b.safetensors",
+          "doc": "models/text_encoders의 Qwen3 encoder 파일명. 보통 기본값 그대로."
+        },
+        "vae": {
+          "type": "STRING",
+          "default": "ae.safetensors",
+          "doc": "models/vae의 Z-Image VAE 파일명. 보통 기본값 그대로."
+        },
+        "config_repo": {
+          "type": "STRING",
+          "default": "Tongyi-MAI/Z-Image",
+          "doc": "config/tokenizer/scheduler 메타데이터 출처. 바꾸지 않는다."
+        }
+      },
+      "nodes": {
+        "load": {
+          "type": "diffusion.ZImageLoader",
+          "inputs": {
+            "transformer": { "$param": "transformer" },
+            "text_encoder": { "$param": "text_encoder" },
+            "vae": { "$param": "vae" },
+            "config_repo": { "$param": "config_repo" }
+          },
+          "meta": { "title": "Z-Image 모델" }
+        },
+        "generate": {
+          "type": "diffusion.ZImageTxt2Img",
+          "inputs": {
+            "model": { "$link": ["load", "model"] },
+            "prompt": { "$param": "prompt" },
+            "negative_prompt": { "$param": "negative_prompt" },
+            "width": { "$param": "width" },
+            "height": { "$param": "height" },
+            "steps": { "$param": "steps" },
+            "guidance_scale": { "$param": "guidance_scale" },
+            "seed": { "$param": "seed" }
+          },
+          "meta": { "title": "텍스트로 생성" }
+        },
+        "save": {
+          "type": "image.Save",
+          "inputs": {
+            "image": { "$link": ["generate", "image"] },
+            "embed_workflow": true
+          },
+          "meta": { "title": "에셋으로 저장" }
+        }
+      },
+      "returns": {
+        "image": { "$link": ["save", "asset"] }
+      }
+    }
+  },
+
+  "nodes": {
+    "call": {
+      "type": "subgraph.zimage_txt2img",
+      "inputs": {
+        "prompt": "a k-pop male idol performing on a concert stage, dramatic white spotlights, haze, LED screens, cinematic",
+        "width": 1280,
+        "height": 720,
+        "steps": 20,
+        "seed": 7
+      }
+    }
+  },
+  "outputs": ["call"],
+  "ui": {
+    "$comment": "Z-Image split weights -> official Diffusers ZImagePipeline (text only). The loader's img2img pipeline components are shared, not reloaded."
+  }
+}

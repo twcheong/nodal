@@ -1,0 +1,92 @@
+{
+  "id": "wf_viral_signal_naver_datalab",
+  "title": "네이버 데이터랩 검색어 트렌드 리포트",
+  "description": "니치 핵심 키워드의 검색 추이를 네이버 데이터랩에서 조회하고 연관·급상승 키워드로 확장해 기회 키워드 시트를 만든다.",
+  "outputDir": "data/reports",
+  "tags": ["research"],
+  "inputs": [
+    { "id": "niche", "kind": "scalar", "valueType": "text", "label": "니치/업종", "observed": "", "confidence": "low" },
+    { "id": "seed_keywords", "kind": "list", "valueType": "text", "label": "조회할 시드 키워드 3~5개", "observed": "", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "데이터랩 검색어 추이 조회",
+      "detail": "datalab.naver.com 검색어트렌드에서 시드 키워드(최대 5개)를 주제어로 등록하고 최근 1년, 전체 기기·성별·연령 기준으로 조회한다. 그래프의 월별 상대 수치를 화면 텍스트에서 읽어 키워드별 추이 배열로 기록하고, 피크 시점과 최근 3개월 방향(상승/하락/유지)을 판정한다.",
+      "acceptance": "시드 키워드 전부에 대해 월별 추이와 최근 방향이 기록됨.",
+      "tool": "chrome",
+      "toolSkills": [],
+      "subtasks": [
+        { "id": "s1", "title": "검색어트렌드에 키워드 등록·조회", "purpose": "최근 1년 조건으로 결과 그래프 로드" },
+        { "id": "s2", "title": "월별 수치 판독", "purpose": "키워드별 월 단위 상대값 추출" },
+        { "id": "s3", "title": "피크·방향 판정", "purpose": "시즌성 피크와 최근 3개월 추세 기록" }
+      ],
+      "inputScope": [
+        { "name": "seed_keywords", "type": "text[]", "description": "조회할 시드 키워드" }
+      ],
+      "outputScope": [
+        { "name": "keyword_trends", "type": "json[]", "description": "키워드별 monthly_values·peak_month·direction" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "action",
+      "title": "연관·급상승 키워드 확장",
+      "detail": "네이버 통합검색에서 각 시드 키워드를 검색해 자동완성어와 연관검색어를 수집하고, 니치와 관련된 확장 키워드를 키워드당 3~5개, 총 15개 내외로 추린다. 각 확장 키워드에 대해 어떤 검색 의도(정보/구매/비교/후기)인지 라벨링한다.",
+      "acceptance": "확장 키워드 12개 이상이 출처 시드·의도 라벨과 함께 수집됨.",
+      "tool": "chrome",
+      "toolSkills": [],
+      "subtasks": [
+        { "id": "s1", "title": "자동완성·연관검색어 수집", "purpose": "시드별 확장 후보 확보" },
+        { "id": "s2", "title": "니치 관련성 필터링", "purpose": "무관한 키워드 제거, 15개 내외 유지" },
+        { "id": "s3", "title": "검색 의도 라벨링", "purpose": "정보/구매/비교/후기 중 하나로 분류" }
+      ],
+      "inputScope": [
+        { "name": "seed_keywords", "type": "text[]" },
+        { "name": "niche", "type": "text", "description": "관련성 필터 기준" }
+      ],
+      "outputScope": [
+        { "name": "related_keywords", "type": "json[]", "description": "keyword·source_seed·intent 배열" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "validation",
+      "title": "수집 결과 검증",
+      "detail": "keyword_trends가 시드 키워드 수와 일치하는지, 각 추이에 수치가 6개월치 이상 있는지, related_keywords가 12개 이상이고 전부 intent 라벨을 갖는지 점검한다.",
+      "acceptance": "is_valid=true이고 issues가 비어 있음.",
+      "inputScope": [
+        { "name": "keyword_trends", "type": "json[]" },
+        { "name": "related_keywords", "type": "json[]" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "문제 없으면 빈 배열" }
+      ]
+    },
+    {
+      "id": "n4",
+      "type": "action",
+      "title": "트렌드 리포트 시트 저장",
+      "detail": "수집 결과를 xlsx로 저장한다. 시트1 '추이': 행=키워드, 열=월별 수치+피크월+방향. 시트2 '기회 키워드': 확장 키워드별 출처 시드·검색 의도·추천 활용(블로그 주제/릴스 주제/광고)과 우선순위(상/중/하). 우선순위는 추세 방향과 의도를 근거로 매긴다.",
+      "acceptance": "두 시트가 헤더와 전 행 데이터로 채워져 저장됨.",
+      "tool": "write",
+      "toolSkills": ["xlsx"],
+      "subtasks": [
+        { "id": "s1", "title": "추이 시트 구성", "purpose": "키워드×월 매트릭스와 판정 컬럼 작성" },
+        { "id": "s2", "title": "기회 키워드 시트 구성", "purpose": "확장 키워드 우선순위화와 활용 제안" }
+      ],
+      "inputScope": [
+        { "name": "keyword_trends", "type": "json[]" },
+        { "name": "related_keywords", "type": "json[]" }
+      ],
+      "outputScope": [
+        { "name": "sheet_name", "type": "text", "description": "작성된 시트 이름들" },
+        { "name": "row_count", "type": "number", "description": "헤더 제외 총 데이터 행 수" },
+        { "name": "header_row", "type": "text[]", "description": "기회 키워드 시트의 헤더" },
+        { "name": "rows_written", "type": "json[]", "description": "기회 키워드 시트에 쓴 행" }
+      ]
+    }
+  ]
+}

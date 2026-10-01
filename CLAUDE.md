@@ -1,32 +1,21 @@
-# nodal — Claude Code
+# CLAUDE.md — Twixy 개발 하네스
 
-**프로젝트 규칙 전체는 `AGENTS.md`에 있다. 반드시 먼저 읽을 것.**
+> 이 파일은 **개발 도구 Claude Code**용이다. 제품 런타임(OpenClaw)의 서브에이전트 라우팅은 `AGENTS.md`, 시스템 프롬프트는 `SOUL.md`를 본다 — 혼동하지 말 것.
 
-@AGENTS.md
+## 하네스: Twixy 개발 (Electron + React 마케팅 코파일럿)
 
----
+**목표:** Electron main ↔ renderer IPC 경계와 LLM↔툴브릿지 경계에서 발생하는 정합성 버그를 막으며 기능을 안전하게 개발한다.
 
-## Claude Code 전용 메모
+**트리거:** Twixy 개발 작업(기능 추가/수정, 에이전트 툴 추가, IPC, React 패널/훅, .tskill 제품 스킬 저작, 경계면 QA) 요청 시 `twixy-dev` 스킬을 사용하라. 후속 요청(다시 실행/보완/이 부분만 다시)도 포함. 단순 질문·단일 파일 조회는 직접 응답 가능.
 
-이 저장소는 **Claude Code와 Codex가 함께** 작업한다. `AGENTS.md`의 "멀티 에이전트 협업 규칙"이 그래서 존재한다. 요약하면:
+**핵심 리스크(왜 하네스인가):** 에이전트 툴 추가는 `내부함수→IPC핸들러→브릿지핸들러→openclaw패치(patch-package)→preload→global.d.ts` **6지점**을 모두 거쳐야 한다. 하나라도 빠지면 "LLM에게 보이지 않는 툴" 또는 렌더러 타입 오류. 상세: `docs/ADDING_A_NEW_AGENT_TOOL.md`.
 
-- 작업 시작 전 `git log --oneline -20` — **이 저장소의 커밋 대부분은 당신이 쓰지 않았다**
-- 작업 종료 시 반드시 커밋 (미완성이면 `WIP:`)
-- Codex가 만든 파일을 스타일 이유로 재작성하지 않는다
-- `types.json` · 그래프 스키마 · API 스키마는 두 에이전트 사이의 **계약**이다. 변경 전 사용자 확인
+**제품 변형(한 레포, 여러 제품):** `APP_MODE=twixy|twixy-enterprise|nodal` 로 빌드 대상을 고른다. 제품마다 다른 값(appId·포트·상태 폴더·Supabase·웹 URL·켜진 기능)은 **`products/<id>/profile.ts` 에만** 적는다 — 코어(`electron/`·`src/`·`shared/`)에 리터럴로 적거나 제품 id 로 분기하지 않는다. 코어는 `shared/product/current.generated`(빌드 시 `scripts/write-product.ts` 가 생성)의 `PRODUCT` 만 읽는다. `products/nodal/` 은 Nodal 팀 소유, 그 밖은 Twixy 팀. `npm run check:boundary` 가 강제한다.
 
-### 규칙 파일을 수정할 때
+**구성:** 에이전트 5종(`.claude/agents/`) + 전문 스킬 5종 + 오케스트레이터 1종(`.claude/skills/`). 상세 로스터·데이터 흐름은 `twixy-dev` 스킬이 관리한다.
 
-공통 규칙은 **`AGENTS.md`에만** 쓴다. 이 파일(`CLAUDE.md`)에는 Claude Code 고유 사항만 둔다.
-같은 내용을 양쪽에 복사하면 반드시 어긋난다 — Codex는 `AGENTS.md`만 읽으므로, 여기에만 쓴 규칙은 Codex에게 존재하지 않는다.
-
-### 서브에이전트 사용
-
-`packages/core` 구현 중 병렬 탐색이 필요하면 Explore/Plan 에이전트를 쓴다.
-단, **코드를 쓰는 서브에이전트를 여러 개 동시에 돌리지 않는다.** Codex가 이미 다른 워크트리에서 작업 중일 수 있다.
-
-### 이 프로젝트에서 특히 주의할 것
-
-`AGENTS.md`의 절대 규칙 1(ComfyUI 코드 복사 금지)은 **웹 검색·fetch 도구를 쓸 때 가장 쉽게 깨진다.**
-"ComfyUI가 이 부분을 어떻게 구현했는지 확인해볼게요"라고 생각되는 순간 — 하지 말 것.
-필요한 개념은 `docs/design.md`에 전부 서술되어 있다. 그것으로 부족하면 사용자에게 물어본다.
+**변경 이력:**
+| 날짜 | 변경 내용 | 대상 | 사유 |
+|------|----------|------|------|
+| 2026-07-03 | 초기 구성 (에이전트 5 + 스킬 5 + 오케스트레이터 1) | 전체 | 하네스 최초 구축 |
+| 2026-09-18 | 제품 프로필 도입 + `products/` 폴더 + 경계 검사 | 전체 | Nodal(영상 생성 B2C) 스핀오프를 같은 레포 빌드 변형으로 |

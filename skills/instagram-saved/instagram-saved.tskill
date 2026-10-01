@@ -1,0 +1,118 @@
+@workspace twixy
+
+SKILL "Instagram Saved Reels"
+  version: 1.0
+  description: "Navigate to the user's Instagram saved posts, extract the 5 most recently saved reels, and collect likes/comments for each."
+  tags: [instagram, saved, reels, data-collection, browser]
+
+PLATFORMS {
+  INSTAGRAM
+}
+
+GOAL "Extract saved reels with engagement data" {
+  objective: "Open the user's Instagram saved/all-posts grid, extract the 5 most recently saved reel/post URLs (sorted by visual position), then visit each post and collect likes and comments."
+  kpi: posts_collected
+}
+
+COLLECT "Navigate to saved posts grid" {
+  USE instagram WITH profile = "openclaw" AS ig
+
+  🚨 "Twixy" is THIS APP'S NAME — NOT an Instagram username. NEVER go to instagram.com/twixy or search for "twixy" on Instagram.
+  🚨 You are a sub-agent. Run all browser calls yourself directly. Do NOT spawn further sub-agents.
+  Always use profile: "openclaw" for all browser calls.
+  browser status running: false does NOT mean not logged in. Cookies persist in the openclaw profile.
+
+  URL format: https://www.instagram.com/{username}/saved/{collection name}
+  Default collection: if the user did not specify a collection/list name, {collection name} = "all-posts"
+
+  PHASE 1 — Navigate to saved posts:
+
+  Step 1: Determine username.
+    - Check ~/.openclaw/workspace/twixy/USER.md for an Instagram username field.
+    - If found → use it directly. Skip to Step 3.
+    - If not found → proceed to Step 2 to navigate manually.
+
+  Step 2: Open https://www.instagram.com/
+    → FIRST: wait 1 second (browser act kind=wait timeMs=1000).
+    → THEN: run evaluate to extract username — pass the function as-is, no extra escaping needed:
+    browser act kind=evaluate fn='() => { const m = [...document.querySelectorAll("a[href]")].map(a => a.href.match(/instagram\.com\/([a-zA-Z0-9_.]+)\/?$/)).find(m => m && !["accounts","explore","reels","direct","stories","p","reel","saved"].includes(m[1])); return m ? m[1] : null; }'
+    → If evaluate returns null: wait 1 more second, retry evaluate once. If still null → fall back to Step 3 (unknown path).
+    → Do NOT take a full-page snapshot to find the username. Snapshots of instagram.com homepage are 30k–80k tokens and cause severe slowdown.
+
+  Step 3 (username known): Go directly to https://www.instagram.com/{username}/saved/{collection name}/
+  Step 3 (username unknown): Take a snapshot first (snapshotFormat=aria, refs=role, labels=false, depth=4, limit=50) to see what nav elements are present. Then try these paths in order:
+    Option A — Profile link: find an <a> element whose href contains your username (visible in the left sidebar) → click it → on profile page click the Saved tab
+    Option B — More/hamburger menu: look for a "More" button or hamburger in the sidebar → click → find "Saved" in the menu → click
+    ✅ Snapshots ARE fine in the unknown path — you need them to find UI elements.
+
+  FORBIDDEN: Do NOT use https://www.instagram.com/saved/ (broken URL)
+  FORBIDDEN: Do NOT search for any username
+  FORBIDDEN: Do NOT click Switch, Log in, or any account-related button
+
+  Snapshot errors ≠ not logged in.
+  If a snapshot call fails with a parameter error (e.g. "labels require format=ai", "mode=efficient requires format=ai"), that is a tool call mistake — fix the parameters and retry. It says nothing about login state. Never conclude "not logged in" from a snapshot tool error.
+
+  EXTRACT Post FROM ig
+    LIMIT 5
+    ORDER BY saved_at DESC
+    INTO $saved_posts
+}
+
+ANALYZE "Extract post URLs from grid using evaluate" {
+  PHASE 2 — Extract Post URLs from Grid
+  🚨 Grid thumbnails are image-only — ARIA sees nothing here. After the 1 mandatory snapshot, ALL further actions must use evaluate. No more snapshots in Phase 2.
+
+  Step 1: Wait 5 seconds — browser act kind=wait timeMs=5000 — grid takes time to render.
+  Step 2: Take EXACTLY 1 snapshot — only to establish page context. Use snapshotFormat=aria, refs=role, NO selector, NO labels.
+  Step 3: Run evaluate using Method A first, then Method C as fallback.
+
+  METHOD A (default) — visual position sort. Top-left = most recently saved. Instagram pre-loads off-screen posts so DOM order alone is unreliable.
+  browser act kind=evaluate fn='() => { const seen = new Set(); const results = []; const links = [...document.querySelectorAll("a")].filter(a => a.href && (a.href.includes("/p/") || a.href.includes("/reel/"))).map(a => ({ a, rect: a.getBoundingClientRect() })).filter(({ rect }) => rect.width > 0 && rect.height > 0).sort((x, y) => x.rect.top !== y.rect.top ? x.rect.top - y.rect.top : x.rect.left - y.rect.left); for (const { a } of links) { const m = a.href.match(/instagram\.com\/(p|reel)\/([A-Za-z0-9_-]+)\//); if (m && !seen.has(m[2])) { seen.add(m[2]); results.push("https://www.instagram.com/" + m[1] + "/" + m[2] + "/"); if (results.length >= 5) break; } } return results; }'
+
+  METHOD C (fallback — only if Method A returns empty after retries) — DOM order deduped.
+  browser act kind=evaluate fn='() => { const seen = new Set(); const results = []; for (const a of document.querySelectorAll("a")) { if (!a.href) continue; const m = a.href.match(/instagram\.com\/(p|reel)\/([A-Za-z0-9_-]+)\//); if (m && !seen.has(m[2])) { seen.add(m[2]); results.push("https://www.instagram.com/" + m[1] + "/" + m[2] + "/"); if (results.length >= 5) break; } } return results; }'
+
+  FALLBACK if both methods fail: do NOT extract from snapshot text — snapshot captions look like URLs and cause wrong results. Instead scroll down 300px and retry Method A once more.
+  If evaluate returns empty array — scroll then retry up to 3 times. No confirmation needed.
+  🚨 NEVER click thumbnail ARIA refs — thumbnails are image-only with no ARIA label.
+  🚨 Always report FULL URLs — never truncate, never use ellipsis. Each URL must be complete: https://www.instagram.com/p/FULL_POST_ID/
+  Open each URL with browser open directly. Extract all 5 URLs first, then open each one.
+
+  STORE $saved_posts AS "instagram_saved_{date}" IN $RAW
+}
+
+EXECUTE "Open each post and collect engagement data" {
+  PHASE 3 — Extract Engagement Data per post
+
+  For each of the 5 post URLs:
+  1. Open with browser open (NOT thumbnail ARIA clicks).
+  2. Wait 2 seconds — browser act kind=wait timeMs=2000.
+  3. Take a snapshot: snapshotFormat=aria, refs=role, labels=false, depth=6, limit=100. No selector.
+     → Save the raw snapshot text to ~/.openclaw/workspace/twixy/data/raw/post_snapshot_{postId}_{date}.txt using the write_file tool. This preserves the data regardless of what else fails.
+     → Parse the snapshot for likes and comments: look for text patterns like "X likes", "X,XXX likes", "Liked by", "View all X comments", "X comments". Extract the numbers.
+  4. If the snapshot does not contain clear like/comment counts — run this evaluate as a secondary attempt:
+     browser act kind=evaluate fn='() => { const texts = [...document.querySelectorAll("*")].filter(el => !el.children.length && el.innerText).map(el => el.innerText.trim()).filter(Boolean); const likes = texts.find(t => /^\d[\d,]*$/.test(t) && el?.closest && el.closest("[aria-label]")?.getAttribute("aria-label")?.toLowerCase().includes("like")); return { likes: likes || null, allTexts: texts.slice(0, 30) }; }'
+     → If allTexts is returned, scan it for like/comment patterns manually.
+  5. Additional fields (comment texts, caption, etc.) are collected only when explicitly requested in the briefing.
+
+  LOOP: process post 1 through 5 sequentially. Complete ALL 5.
+  🚨 Do NOT stop after the first post. Do NOT ask for confirmation mid-way.
+  If likes or comments cannot be found after both snapshot parse and evaluate — record as N/A and move on. The snapshot file is already saved so data is not lost.
+
+  After each post: if you navigated via browser open (full-page URL), there is no modal — do NOT click X. Simply open the next URL directly with browser open.
+  Only click X to close a modal if you arrived at the post by clicking a thumbnail (not via browser open).
+}
+
+TRACK "Save results and report" {
+  LOAD "instagram_saved_{date}" FROM $RAW AS $posts
+
+  Report collected posts in a table: URL, likes, comments for each of the 5 posts.
+  Record N/A for any null likes or comments fields.
+  🚨 Show FULL URLs in the report — never truncate, never use ellipsis.
+
+  STORE $posts AS "instagram_saved_engagement_{date}" IN $RAW
+
+  EMIT "scout_complete"
+    WITH payload = $posts
+    TO SKILL "Analytics"
+}

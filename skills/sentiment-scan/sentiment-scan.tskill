@@ -1,0 +1,52 @@
+@workspace twixy
+
+SKILL "Sentiment Scan"
+  version: 1.0
+  summary: "수집된 댓글·리뷰·DM의 긍/부정 톤 비율과 반복되는 주요 불만을 요약한다."
+  description: "Reads comment/review/DM text already collected in the workspace (data/raw, data/insights) and produces a sentiment read: positive/negative/neutral ratio, the top recurring complaints and praises, and representative quotes for each. Pure LLM reasoning — no new tools, no external API: the read tool (or tool-read-xlsx for tabular exports) sources the text, an LLM sub-agent scores tone and clusters themes. The marketer supplies which file/dataset to scan and optionally a channel filter; the skill returns the sentiment breakdown plus an actionable summary of what to fix first. Trigger phrases: 감성 분석, 반응 분석, 평판 분석, 댓글 긍부정, 불만 요약, sentiment analysis, sentiment scan, 리뷰 분석, VOC 요약."
+  tags: [sentiment, analysis, reviews, comments, voc, llm]
+  trigger: "감성 분석, 반응 분석, 평판 분석, 댓글 긍부정, 긍정 부정 비율, 불만 요약, 리뷰 분석, VOC 분석, sentiment analysis, sentiment scan"
+  output: "sentiment breakdown + top complaints/praises + fix-first summary (chat); optional report in $INSIGHTS; emits sentiment_ready"
+
+GOAL "Read tone and surface recurring themes" {
+  objective: "Score collected customer text for sentiment, cluster the recurring complaints and praises with representative quotes, and tell the marketer the single most important thing to address."
+  kpi: sentiment_scans_shipped
+  window: 30 days
+}
+
+PHASE "Source" {
+  COLLECT "Load the text to analyze" {
+    // Decide the source before reading. Prefer files the user names; else latest collected.
+    - Resolve scope from the user's request:
+      source: which file/dataset holds the text (reviews, comments, DMs). Default: latest under data/insights/, then data/raw/.
+      channel: optional platform filter (instagram / naver / appstore, etc.). Default: all.
+
+    LOAD "latest" FROM $INSIGHTS AS $text_data
+    - If the source is an .xlsx export, call tool-read-xlsx with relPath = the file under data/raw/ or data/insights/.
+    - If the source is markdown/JSON, read the relevant files under $RAW / $INSIGHTS directly.
+    - If no text is found, tell the user to collect comments/reviews first (Data Scout) and stop — do NOT invent feedback.
+  }
+}
+
+PHASE "Score" {
+  ANALYZE "Score tone and cluster themes" {
+    SPAWN sentiment_scorer
+      TASK "Analyze this collection of customer text (comments/reviews/DMs). Classify each item's tone as positive / negative / neutral and compute the overall ratio. Cluster the negative items into the top recurring complaints and the positive items into the top recurring praises; for each cluster give a label, an approximate count, and 1-2 representative verbatim quotes. Then name the single highest-priority issue to fix and why. Return { ratio: { positive, negative, neutral }, complaints:[{label,count,quotes}], praises:[{label,count,quotes}], fix_first: 'one line', headline: 'one line' }. Base everything on the provided text — do not add feedback that is not there."
+      USING $text_data
+      OUTPUT $sentiment
+      AWAIT
+
+    STORE $sentiment AS "sentiment_{date}" IN $INSIGHTS
+  }
+}
+
+PHASE "Deliver" {
+  TRACK "Present the sentiment read" {
+    - Present in chat: headline first, then the positive/negative/neutral ratio, the top complaints and praises (label + count + a quote each), and the fix-first recommendation.
+    - If the user asked to save: call the write tool to persist a markdown report at "$INSIGHTS/sentiment_{date}.md" and report the relative path.
+
+    EMIT "sentiment_ready"
+      WITH payload = { ratio: $sentiment.ratio, fix_first: $sentiment.fix_first }
+      TO SKILL "Watchtower"
+  }
+}

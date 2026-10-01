@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Twixy 워크플로우 카탈로그 — Print (KO)</title>
+<style>
+  @page { size: A4; margin: 13mm 14mm; }
+  :root {
+    --paper: #FFFFFF;
+    --ink: #14201B;
+    --ink-soft: #4A594F;
+    --petrol: #0D5C50;
+    --petrol-deep: #093F37;
+    --mint: #EAF3EE;
+    --line: #D9E1DA;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 10.5px;
+    line-height: 1.6;
+    word-break: keep-all;
+  }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+  /* ── Cover ── */
+  .cover { break-after: page; padding-top: 30mm; }
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--petrol); margin: 0 0 10mm;
+  }
+  .cover h1 {
+    font-size: 31px; line-height: 1.28; font-weight: 800; letter-spacing: -0.02em;
+    margin: 0 0 8mm; max-width: 150mm;
+  }
+  .cover h1 em { font-style: normal; color: var(--petrol); }
+  .cover .lede { font-size: 12px; color: var(--ink-soft); max-width: 125mm; margin: 0 0 12mm; line-height: 1.7; }
+  .cover .stats { display: flex; gap: 14mm; margin-bottom: 16mm; }
+  .stat .n { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 22px; display: block; line-height: 1.1; }
+  .stat .l { font-size: 8.5px; letter-spacing: 0.1em; color: var(--ink-soft); }
+  .dots { display: grid; grid-template-columns: repeat(20, 5.4mm); gap: 1.8mm; margin-bottom: 5mm; }
+  .dots span { width: 5.4mm; height: 5.4mm; border-radius: 1.2mm; background: var(--mint); border: 0.4mm solid var(--line); }
+  .dots span.on { background: var(--petrol); border-color: var(--petrol); }
+  .dots-cap { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 8.5px; color: var(--ink-soft); letter-spacing: 0.02em; }
+  .dots-cap b { color: var(--petrol); }
+  .cover-foot { margin-top: 24mm; padding-top: 4mm; border-top: 0.5px solid var(--line); display: flex; justify-content: space-between; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 8px; color: var(--ink-soft); letter-spacing: 0.03em; }
+
+  /* ── Intro page ── */
+  .intro-page { break-after: page; }
+  h2.page-title { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 2mm; }
+  .page-sub { color: var(--ink-soft); font-size: 10.5px; margin: 0 0 7mm; max-width: 135mm; }
+  .probs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4mm; margin-bottom: 10mm; }
+  .prob { border: 0.5px solid var(--line); border-radius: 2.5mm; padding: 5mm; break-inside: avoid; }
+  .prob .tagline { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 7.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--petrol); display: block; margin-bottom: 2.5mm; }
+  .prob h3 { font-size: 12.5px; font-weight: 700; margin: 0 0 2mm; }
+  .prob p { margin: 0; color: var(--ink-soft); font-size: 9.5px; line-height: 1.6; }
+  .steps { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6mm; counter-reset: step; }
+  .step::before {
+    counter-increment: step; content: counter(step, decimal-leading-zero);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 9px; color: var(--petrol); letter-spacing: 0.08em; display: block; margin-bottom: 2mm;
+  }
+  .step h3 { font-size: 11.5px; margin: 0 0 1.5mm; font-weight: 700; }
+  .step p { margin: 0; color: var(--ink-soft); font-size: 9.5px; }
+
+  /* ── Category pages ── */
+  .cat-page { break-before: page; }
+  .cat-top { display: flex; align-items: baseline; gap: 5mm; border-bottom: 1.2px solid var(--ink); padding-bottom: 2.5mm; margin-bottom: 2.5mm; }
+  .cat-letter {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 26px; line-height: 1; color: var(--petrol); font-style: italic; font-weight: 500;
+  }
+  .cat-top h2 { font-size: 16.5px; font-weight: 800; letter-spacing: -0.01em; margin: 0; }
+  .cat-range { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 9px; color: var(--ink-soft); margin-left: auto; letter-spacing: 0.06em; }
+  .cat-blurb { color: var(--ink-soft); font-size: 10px; margin: 0 0 6mm; max-width: 145mm; }
+
+  .spot-label {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--petrol);
+    margin: 0 0 3mm;
+  }
+  .spot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; margin-bottom: 7mm; }
+  .spot { background: var(--mint); border-radius: 2.5mm; padding: 4.5mm 5mm; break-inside: avoid; }
+  .spot-head { display: flex; align-items: baseline; gap: 2.5mm; margin-bottom: 1.5mm; }
+  .spot-head .no { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 8.5px; color: var(--petrol); font-variant-numeric: tabular-nums; }
+  .spot-head h3 { font-size: 11.5px; font-weight: 800; margin: 0; line-height: 1.35; }
+  .spot .one { margin: 0 0 2.5mm; font-size: 9.5px; color: var(--petrol-deep); font-weight: 700; }
+  .spot .how { margin: 0 0 2.5mm; font-size: 8.8px; color: var(--ink-soft); line-height: 1.65; }
+  .spot .io { margin: 0; font-size: 8.5px; color: var(--ink); border-top: 0.5px solid rgba(13,92,80,0.25); padding-top: 2mm; }
+  .spot .io b { color: var(--petrol); font-weight: 700; }
+
+  .rest-label {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft);
+    margin: 0 0 2.5mm;
+  }
+  .rest-list { column-count: 2; column-gap: 8mm; }
+  .rest-item { display: flex; gap: 2.5mm; padding: 1.4mm 0; border-top: 0.5px solid var(--line); break-inside: avoid; }
+  .rest-item .no { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 8px; color: var(--ink-soft); flex: 0 0 7mm; padding-top: 0.5mm; font-variant-numeric: tabular-nums; }
+  .rest-item b { font-size: 9.3px; font-weight: 700; }
+  .rest-item span.d { font-size: 8.8px; color: var(--ink-soft); }
+
+  /* ── Playbooks + CTA page ── */
+  .end-page { break-before: page; }
+  .plays { display: grid; gap: 3mm; margin-bottom: 10mm; }
+  .play { border: 0.5px solid var(--line); border-radius: 2.5mm; padding: 3.5mm 5mm; display: flex; gap: 6mm; align-items: baseline; break-inside: avoid; }
+  .play h3 { font-size: 11px; font-weight: 800; margin: 0; flex: 0 0 42mm; }
+  .play .chain { font-size: 9.3px; color: var(--ink-soft); }
+  .play .chain b { color: var(--ink); font-weight: 700; }
+  .play .chain .sep { color: var(--petrol); padding: 0 1mm; }
+  .cta-box { background: var(--petrol); color: #F4FAF7; border-radius: 3.5mm; padding: 9mm 10mm; break-inside: avoid; }
+  .cta-box h2 { font-size: 16px; font-weight: 800; margin: 0 0 2.5mm; color: inherit; }
+  .cta-box p { margin: 0 0 2mm; max-width: 145mm; opacity: 0.93; font-size: 10.5px; }
+  .cta-box .fine { font-size: 9px; opacity: 0.75; margin-top: 4mm; }
+</style>
+</head>
+<body>
+
+<!-- ═══ COVER ═══ -->
+<div class="cover">
+  <p class="eyebrow">Twixy Marketing Copilot · Workflow Catalog</p>
+  <h1>에이전시가 손으로 하던 모든 일이,<br><em>워크플로우로 돌아갑니다.</em></h1>
+  <p class="lede">소셜미디어 에이전시를 위한 100개의 AI 워크플로우 — 클라이언트 리서치, 콘텐츠 제작, 발행, 모니터링, 리포팅까지. 누가 Run을 눌러도 같은 프로세스, 같은 퀄리티로, 모든 클라이언트에게.</p>
+  <div class="stats">
+    <div class="stat"><span class="n">100</span><span class="l">워크플로우</span></div>
+    <div class="stat"><span class="n">8</span><span class="l">단계</span></div>
+    <div class="stat"><span class="n">12+</span><span class="l">채널</span></div>
+    <div class="stat"><span class="n">24</span><span class="l">Top picks</span></div>
+  </div>
+  <div class="dots">
+    <span class="on"></span><span></span><span></span><span></span><span></span><span></span><span class="on"></span><span></span><span></span><span></span><span></span><span class="on"></span><span></span><span></span><span class="on"></span><span></span><span></span><span></span><span class="on"></span><span></span>
+    <span></span><span></span><span class="on"></span><span></span><span></span><span></span><span></span><span class="on"></span><span></span><span></span><span class="on"></span><span></span><span></span><span></span><span></span><span class="on"></span><span></span><span></span><span></span><span class="on"></span>
+    <span></span><span></span><span></span><span class="on"></span><span></span><span></span><span class="on"></span><span></span><span></span><span></span><span></span><span class="on"></span><span></span><span></span><span class="on"></span><span></span><span></span><span class="on"></span><span></span><span></span>
+    <span></span><span></span><span class="on"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="on"></span><span></span><span></span><span class="on"></span><span></span><span></span><span></span><span></span><span class="on"></span><span></span>
+    <span></span><span class="on"></span><span></span><span></span><span class="on"></span><span></span><span class="on"></span><span></span><span></span><span></span><span></span><span class="on"></span><span></span><span></span><span></span><span class="on"></span><span></span><span></span><span></span><span></span>
+  </div>
+  <p class="dots-cap">워크플로우 100개 · <b>에이전시가 가장 먼저 돌리는 Top pick 24개</b></p>
+  <div class="cover-foot">
+    <span>Workflow Catalog · KO</span>
+    <span>2–10인 소셜미디어 에이전시를 위한 자료</span>
+  </div>
+</div>
+
+<!-- ═══ INTRO ═══ -->
+<div class="intro-page">
+  <h2 class="page-title">작은 에이전시가 무너지는 지점들을 위해 만들어졌습니다</h2>
+  <p class="page-sub">Twixy는 2–10인 소셜미디어 에이전시가 성장하며 반드시 부딪히는 세 가지 문제를 중심으로 설계됐습니다.</p>
+  <div class="probs">
+    <div class="prob"><span class="tagline">Problem 01</span><h3>쳇바퀴 도는 반복 업무</h3><p>새 클라이언트를 받을 때마다 같은 리서치, 같은 스프레드시트, 열 개의 탭과 AI 챗 사이의 복사-붙여넣기가 반복됩니다. 작업은 오래 걸리고, 실수가 끼어들고, 다음 클라이언트에서 처음부터 다시 시작됩니다.</p></div>
+    <div class="prob"><span class="tagline">Problem 02</span><h3>퇴사와 함께 사라지는 노하우</h3><p>가장 좋은 프롬프트와 일하는 방식이 개인 노트와 기억 속에 있습니다. 결과물 퀄리티가 담당자에 따라 달라지고 — 경력자가 떠나면 그 프로세스도 함께 떠납니다.</p></div>
+    <div class="prob"><span class="tagline">Problem 03</span><h3>대표라는 병목</h3><p>검토, 진행 확인, 클라이언트 리포팅이 전부 한 사람을 거칩니다. 승인은 쌓이고, 놓친 마감은 너무 늦게 드러나고, 클라이언트가 늘수록 대표의 업무만 늘어납니다.</p></div>
+  </div>
+  <h2 class="page-title">Twixy는 이렇게 일합니다</h2>
+  <p class="page-sub">워크플로우는 에이전시의 프로세스를 실행 가능한 자산으로 만든 것입니다 — 단계가 눈에 보이고, 품질 검증이 내장돼 있고, 끝에는 결과물이 나옵니다.</p>
+  <div class="steps">
+    <div class="step"><h3>워크플로우 선택</h3><p>카탈로그의 100개 중 하나로 시작하거나, 여러분의 프로세스를 채팅으로 설명하면 Twixy가 워크플로우로 만들어줍니다. 복제하고 수정하면 여러분의 것이 됩니다.</p></div>
+    <div class="step"><h3>클라이언트 지정</h3><p>클라이언트, 업종, 프로필 링크 같은 입력 몇 개만 채우면, AI가 훈련된 어시스턴트처럼 브라우저를 직접 조작합니다 — 리서치, 초안, 발행, 리포팅까지 단계별로.</p></div>
+    <div class="step"><h3>과정이 아니라 결과물만 검토</h3><p>모든 실행은 진단 시트, 콘텐츠 뱃치, 리포트 같은 구체적 결과물로 끝나고, 중간엔 검증 단계가 있습니다. 몇 시간의 과정 감독 대신 몇 분의 결과 검토면 됩니다.</p></div>
+  </div>
+</div>
+
+<!-- ═══ A ═══ -->
+<div class="cat-page">
+  <div class="cat-top"><span class="cat-letter">A</span><h2>클라이언트 온보딩 &amp; 리서치</h2><span class="cat-range">001–012</span></div>
+  <p class="cat-blurb">정신없는 첫 주를 반복 가능한 진단·브리프 배터리로 — 어떤 클라이언트를 받아도 같은 퀄리티로.</p>
+  <p class="spot-label">Spotlight · 에이전시가 가장 먼저 돌리는 것들</p>
+  <div class="spot-grid">
+    <div class="spot">
+      <div class="spot-head"><span class="no">003</span><h3>인스타그램 계정 정밀 진단</h3></div>
+      <p class="one">최근 30개 포스트 분석: 뭐가 통하고 뭐가 안 통하는지, 그리고 퀵윈 5개.</p>
+      <p class="how">Twixy가 실제 브라우저로 클라이언트 프로필을 열어 최근 30개 포스트를 수집합니다 — 형식, 첫 훅, 해시태그, 좋아요·댓글, 정확한 게시 시각까지. 팔로워 대비 참여율을 계산한 뒤 시트 2장짜리 진단을 만듭니다: 원본 데이터, 그리고 형식별 평균 참여율, 상위 10% 포스트의 공통점, 그만둬야 할 습관, 첫 주에 실행할 퀵윈 5개.</p>
+      <p class="io"><b>준비물</b> 프로필 링크 &nbsp;·&nbsp; <b>결과물</b> 킥오프 미팅에 바로 쓰는 진단 스프레드시트</p>
+    </div>
+    <div class="spot">
+      <div class="spot-head"><span class="no">010</span><h3>온보딩 종합 팩</h3></div>
+      <p class="one">모든 진단을 하나의 킥오프 덱으로.</p>
+      <p class="how">온보딩 진단들이 끝나면 결과물이 파일 여기저기 흩어져 있습니다. 이 워크플로우가 전부 읽어 — 계정 진단, 사이트 스냅샷, 경쟁사 세트, 보이스 가이드 — 하나의 킥오프 팩으로 합칩니다: 무엇을 발견했고, 무슨 의미이고, 어떤 방향을 제안하는지. "이만큼 철저히 분석했습니다"라는 첫인상 문서가 자동으로 나옵니다.</p>
+      <p class="io"><b>준비물</b> 클라이언트 이름 &nbsp;·&nbsp; <b>결과물</b> 킥오프 미팅용 리포트 팩</p>
+    </div>
+    <div class="spot">
+      <div class="spot-head"><span class="no">012</span><h3>퀵윈 스캔</h3></div>
+      <p class="one">바이오, 링크, 고정 포스트 — 첫 주에 바로 고칠 수 있는 것들.</p>
+      <p class="how">시니어 전략가가 보듯 프로필을 읽습니다 — 바이오, 링크인바이오(실제로 클릭해 랜딩까지 확인), 고정 포스트, 하이라이트, 최근 그리드 — 내장된 점검 체크리스트와 대조하면서. 새 콘텐츠 제작이 필요 없는 수정만 골라내고, 발견마다 현재 상태 → 수정안(바이오 리라이트 문안 포함) → 적용 방법과 소요 시간이 붙습니다.</p>
+      <p class="io"><b>준비물</b> 프로필 링크 &nbsp;·&nbsp; <b>결과물</b> 근거가 붙은 첫 주 수정 리스트</p>
+    </div>
+  </div>
+  <p class="rest-label">이 단계의 다른 워크플로우</p>
+  <div class="rest-list">
+    <div class="rest-item"><span class="no">001</span><span><b>인테이크 → 킥오프 브리프</b> — <span class="d">뒤죽박죽 설문·메모를 구조화된 브리프로.</span></span></div>
+    <div class="rest-item"><span class="no">002</span><span><b>소셜 채널 전체 진단</b> — <span class="d">모든 핸들·바이오·링크를 한 번에 일관성 점검.</span></span></div>
+    <div class="rest-item"><span class="no">004</span><span><b>브랜드 보이스 &amp; 톤 가이드</b> — <span class="d">기존 콘텐츠에서 보이스 가이드 추출.</span></span></div>
+    <div class="rest-item"><span class="no">005</span><span><b>오디언스 페르소나 빌더</b> — <span class="d">실제 고객의 온라인 언어로 만든 페르소나.</span></span></div>
+    <div class="rest-item"><span class="no">006</span><span><b>웹사이트 &amp; SEO 스냅샷</b> — <span class="d">첫 전략 미팅 전에 사이트 크롤·채점.</span></span></div>
+    <div class="rest-item"><span class="no">007</span><span><b>해시태그 지형 베이스라인</b> — <span class="d">첫날에 해시태그 영토 지도화.</span></span></div>
+    <div class="rest-item"><span class="no">008</span><span><b>콘텐츠 인벤토리 &amp; 톱 퍼포머</b> — <span class="d">있는 걸 목록화하고 이미 통하는 걸 발굴.</span></span></div>
+    <div class="rest-item"><span class="no">009</span><span><b>구글 비즈니스 프로필 진단</b> — <span class="d">로컬 클라이언트의 리스팅·리뷰·포스트 점검.</span></span></div>
+    <div class="rest-item"><span class="no">011</span><span><b>경쟁사 세트 선정</b> — <span class="d">진짜 중요한 경쟁사 5곳 발굴·프로파일링.</span></span></div>
+  </div>
+</div>
+
+<!-- ═══ B ═══ -->
+<div class="cat-page">
+  <div class="cat-top"><span class="cat-letter">B</span><h2>경쟁사·시장 인텔리전스</h2><span class="cat-range">013–024</span></div>
+  <p class="cat-blurb">니치에서 지금 뭐가 통하는지 정확히 파악 — 하루 종일 탭을 오가는 사람 없이.</p>
+  <p class="spot-label">Spotlight · 에이전시가 가장 먼저 돌리는 것들</p>
+  <div class="spot-grid">
+    <div class="spot">
+      <div class="spot-head"><span class="no">013</span><h3>경쟁사 인스타그램 해부</h3></div>
+      <p class="one">경쟁사 포스트 30개를 훔쳐올 전술로 분해.</p>
+      <p class="how">30포스트 수집 엔진을 경쟁사에 겨눈 버전입니다. 분석 관점이 뒤집힙니다: 어떤 형식에서 이기는지, 어떤 훅을 반복하는지, 업로드 리듬은 어떤지 — 그리고 클라이언트에 이식할 가치가 있는 전술 3개로 마무리합니다. 각 전술엔 경쟁사 자신의 숫자가 근거로 붙습니다. "경쟁사는 왜 더 빨리 크나요?"라는 질문에 데이터로 답하게 됩니다.</p>
+      <p class="io"><b>준비물</b> 경쟁사 프로필 링크 &nbsp;·&nbsp; <b>결과물</b> 해부 시트 + 이식 가능한 전술 3개</p>
+    </div>
+    <div class="spot">
+      <div class="spot-head"><span class="no">019</span><h3>메타 광고 라이브러리 스캔</h3></div>
+      <p class="one">경쟁사의 현재 광고, 앵글, 그리고 오래 살아남은 위너들.</p>
+      <p class="how">경쟁사가 돌리는 모든 광고는 메타 광고 라이브러리에 공개돼 있습니다 — 확인할 시간이 없을 뿐. Twixy가 경쟁사별로 훑어 현재 광고의 앵글·훅·오퍼, 그리고 결정적으로 각 광고가 얼마나 오래 돌아가고 있는지를 기록합니다. 몇 달째 살아있는 광고는 돈이 되고 있는 광고입니다 — 검증된 메시지를 공짜로 배우는 방법.</p>
+      <p class="io"><b>준비물</b> 경쟁사 이름 &nbsp;·&nbsp; <b>결과물</b> 장수-위너 표시가 붙은 라이브 광고 시트</p>
+    </div>
+    <div class="spot">
+      <div class="spot-head"><span class="no">021</span><h3>니치 트렌드 &amp; 포맷 스캔</h3></div>
+      <p class="one">지금 니치에서 이기고 있는 포맷과 훅.</p>
+      <p class="how">니치 해시태그 2~3개를 탐색해 상위 릴스 12~15개를 수집합니다 — 훅 문장, 포맷 유형, 오디오, 반응까지. 그리고 트렌드 브리프를 씁니다: 이번 주 지배 포맷 5개와 대표 사례, 반복되는 훅 패턴(실제 문장 인용), 바로 제작에 넘길 수 있는 콘텐츠 아이디어 5개. 주간 콘텐츠 회의 전에 돌리면 회의 준비가 이미 끝나 있습니다.</p>
+      <p class="io"><b>준비물</b> 니치 + 해시태그 &nbsp;·&nbsp; <b>결과물</b> 아이디어 5개가 붙은 트렌드 브리프</p>
+    </div>
+  </div>
+  <p class="rest-label">이 단계의 다른 워크플로우</p>
+  <div class="rest-list">
+    <div class="rest-item"><span class="no">014</span><span><b>콘텐츠 믹스 매트릭스</b> — <span class="d">상위 5개 계정 × 형식 비율을 한 장에.</span></span></div>
+    <div class="rest-item"><span class="no">015</span><span><b>경쟁사 유튜브 전략</b> — <span class="d">업로드 주기·제목 패턴·조회 분포 해독.</span></span></div>
+    <div class="rest-item"><span class="no">016</span><span><b>유튜브 아웃라이어 발굴</b> — <span class="d">채널 체급 대비 폭발한 영상들, 그리고 이유.</span></span></div>
+    <div class="rest-item"><span class="no">017</span><span><b>경쟁사 링크드인 분석</b> — <span class="d">경쟁사 페이지에서 반응을 만드는 요인.</span></span></div>
+    <div class="rest-item"><span class="no">018</span><span><b>경쟁사 틱톡 스캔</b> — <span class="d">형식 선택, 리듬, 눈에 띄는 영상들.</span></span></div>
+    <div class="rest-item"><span class="no">020</span><span><b>릴스 훅 수확</b> — <span class="d">경쟁사의 첫 3초 훅 수집·분류.</span></span></div>
+    <div class="rest-item"><span class="no">022</span><span><b>레딧 커뮤니티 인텔리전스</b> — <span class="d">실제 스레드에서 캐낸 페인포인트와 고객 언어.</span></span></div>
+    <div class="rest-item"><span class="no">023</span><span><b>SERP 콘텐츠 갭 분석</b> — <span class="d">상위 노출 페이지들이 못 다룬 주제들.</span></span></div>
+    <div class="rest-item"><span class="no">024</span><span><b>바이럴 사례 해부</b> — <span class="d">바이럴 히트 1건의 타임라인·확산 경로 재구성.</span></span></div>
+  </div>
+</div>
+
+<!-- ═══ C ═══ -->
+<div class="cat-page">
+  <div class="cat-top"><span class="cat-letter">C</span><h2>전략 &amp; 기획</h2><span class="cat-range">025–036</span></div>
+  <p class="cat-blurb">에이전시의 사고방식을 팀 누구나 실행할 수 있는 프로세스로 — 시니어 개인의 비법이 아니라.</p>
+  <p class="spot-label">Spotlight · 에이전시가 가장 먼저 돌리는 것들</p>
+  <div class="spot-grid">
+    <div class="spot">
+      <div class="spot-head"><span class="no">026</span><h3>30일 콘텐츠 캘린더</h3></div>
+      <p class="one">날짜 × 채널 × 훅 — 클라이언트 승인만 받으면 되는 30행.</p>
+      <p class="how">먼저 틀을 설계합니다: 콘텐츠 필러 4~5개와 배분 비율, 채널별 주간 리듬 — 트렌드 브리프가 있으면 반영해서. 그다음 30행 캘린더를 채웁니다: 채널, 필러, 형식, 주제, 훅 초안, CTA, 제작 난이도까지. 마지막 검증 단계가 30행 완성, 훅 중복 없음, 필러 비율 준수를 자동 확인합니다.</p>
+      <p class="io"><b>준비물</b> 클라이언트·니치·타겟 &nbsp;·&nbsp; <b>결과물</b> 승인용 30행 캘린더</p>
+    </div>
+    <div class="spot">
+      <div class="spot-head"><span class="no">027</span><h3>검증된 훅 라이브러리</h3></div>
+      <p class="one">훅 100개: 실전에서 터진 40개 + 패턴 변형 60개.</p>
+      <p class="how">실제로 성과 낸 훅을 수확합니다 — 인스타 릴스에서 15개, 유튜브에서 15개, Threads에서 10개, 출처와 함께 원문 그대로. 심리 트리거별로 분류하고, 유형별 문장 구조를 템플릿화한 뒤, 니치 맞춤 변형 60개를 생성해 100개를 완성합니다. 릴스 스크립트 워크플로우가 이 파일을 직접 읽습니다. 시니어 작가의 감각이 팀 자산이 되는 순간입니다.</p>
+      <p class="io"><b>준비물</b> 니치 &nbsp;·&nbsp; <b>결과물</b> 제작에 바로 연결되는 100개 훅 라이브러리</p>
+    </div>
+    <div class="spot">
+      <div class="spot-head"><span class="no">030</span><h3>크리에이터 숏리스트 &amp; 아웃리치 플랜</h3></div>
+      <p class="one">우선순위와 개인화 접근 각도가 붙은 크리에이터 리스트.</p>
+      <p class="how">발굴해둔 크리에이터 목록을 받아 캠페인 전 노가다를 대신합니다: 니치 적합도·규모·참여 퀄리티로 채점하고, 티어를 나누고, 크리에이터마다 개인화된 아웃리치 앵글 초안을 답니다 — 뭘로 시작할지, 뭘 제안할지, 뭘 피할지. 계정 매니저가 그날 오후부터 보낼 수 있습니다.</p>
+      <p class="io"><b>준비물</b> 크리에이터 리스트 파일 &nbsp;·&nbsp; <b>결과물</b> 크리에이터별 앵글이 붙은 티어 플랜</p>
+    </div>
+  </div>
+  <p class="rest-label">이 단계의 다른 워크플로우</p>
+  <div class="rest-list">
+    <div class="rest-item"><span class="no">025</span><span><b>콘텐츠 필러 프레임워크</b> — <span class="d">채널별 배분 비율이 붙은 필러 4~5개.</span></span></div>
+    <div class="rest-item"><span class="no">028</span><span><b>캠페인 컨셉 브리프</b> — <span class="d">훅·CTA·성공 지표가 붙은 컨셉 3안.</span></span></div>
+    <div class="rest-item"><span class="no">029</span><span><b>UGC &amp; 해시태그 캠페인 설계</b> — <span class="d">참여 규칙, 리워드, 시딩 플랜.</span></span></div>
+    <div class="rest-item"><span class="no">031</span><span><b>티저→공개 런칭 시퀀스</b> — <span class="d">D-14부터 D+7까지 채널별 플랜.</span></span></div>
+    <div class="rest-item"><span class="no">032</span><span><b>트렌드 &amp; 뉴스재킹 플레이북</b> — <span class="d">트렌드 검증, 앵글 선택, 24시간 내 대응.</span></span></div>
+    <div class="rest-item"><span class="no">033</span><span><b>포지셔닝 &amp; 바이오 리라이트</b> — <span class="d">프로필 진단 + 바로 붙여넣는 수정안.</span></span></div>
+    <div class="rest-item"><span class="no">034</span><span><b>분기 소셜 로드맵</b> — <span class="d">월별 테마, 목표, 채널 배분.</span></span></div>
+    <div class="rest-item"><span class="no">035</span><span><b>위기 대응 플레이북</b> — <span class="d">시나리오와 대응 문안 — 필요해지기 전에.</span></span></div>
+    <div class="rest-item"><span class="no">036</span><span><b>리퍼포징 시스템 설계</b> — <span class="d">필러 콘텐츠 1개를 파생 자산 10개로 매핑.</span></span></div>
+  </div>
+</div>
+
+<!-- ═══ D ═══ -->
+<div class="cat-page">
+  <div class="cat-top"><span class="cat-letter">D</span><h2>콘텐츠 제작</h2><span class="cat-range">037–058</span></div>
+  <p class="cat-blurb">누가 실행해도 시니어 퀄리티의 뱃치 생산 — 스크립트, 캡션, 아티클, 리퍼포징 팩까지.</p>
+  <p class="spot-label">Spotlight · 에이전시가 가장 먼저 돌리는 것들</p>
+  <div class="spot-grid">
+    <div class="spot">
+      <div class="spot-head"><span class="no">037</span><h3>릴스 스크립트 뱃치</h3></div>
+      <p class="one">스크립트 10편: 3초 훅, 본문, CTA, 촬영 지시문.</p>
+      <p class="how">훅 라이브러리를 읽고 타겟에 맞는 미사용 훅 10개를 고릅니다 — 한 가지 심리 유형이 독점하지 않도록 다양성을 강제하면서. 그리고 완성 스크립트 10편을 씁니다: 0~3초 훅과 화면 자막, 장면 단위 본문, CTA, 촬영자가 이것만 보고 찍을 수 있는 촬영 지시문, 캡션 첫 줄까지. 검증 단계가 편마다 4요소 완비를 확인합니다. 주니어가 돌려도 시니어 결과물이 나옵니다.</p>
+      <p class="io"><b>준비물</b> 클라이언트 + 훅 라이브러리 &nbsp;·&nbsp; <b>결과물</b> 촬영 가능한 스크립트 10편</p>
+    </div>
+    <div class="spot">
+      <div class="spot-head"><span class="no">048</span><h3>링크드인 포스트 뱃치</h3></div>
+      <p class="one">대표의 목소리로 쓴 포스트 5개.</p>
+      <p class="how">"우리 대표 개인 브랜딩도 해주세요"는 요즘 B2B 인접 에이전시가 가장 많이 듣는 요청입니다. 대표의 말투 메모와 브랜드 맥락을 받아, 대표가 직접 쓴 것처럼 읽히는 링크드인 포스트 5개를 씁니다 — 훅으로 시작하고, 스토리 중심이고, 상투적 문구가 없고, 프로필이 템플릿처럼 보이지 않게 형식을 섞어서.</p>
+      <p class="io"><b>준비물</b> 대표 말투 한 줄 + 주제 &nbsp;·&nbsp; <b>결과물</b> 대표 보이스 포스트 5개</p>
+    </div>
+    <div class="spot">
+      <div class="spot-head"><span class="no">051</span><h3>상위노출 SEO 블로그 글</h3></div>
+      <p class="one">SERP 해부 → 이기는 아웃라인 → 1,500단어+ 초안.</p>
+      <p class="how">세 수로 진행됩니다. 타겟 키워드의 구글 상위 5~7개 결과를 열어 해부합니다 — 구조, 분량, 키워드 배치 — 아무도 못 다룬 갭을 찾으면서. 전부 커버하면서 갭까지 채우는 아웃라인을 설계하고, 이미지 지시문과 메타 디스크립션까지 붙은 1,500단어 이상의 완성 초안을 씁니다. 검증이 분량·소제목 수·건강한 키워드 빈도를 강제합니다.</p>
+      <p class="io"><b>준비물</b> 타겟 키워드 &nbsp;·&nbsp; <b>결과물</b> 상위노출을 노리는 발행 준비 초안</p>
+    </div>
+    <div class="spot">
+      <div class="spot-head"><span class="no">057</span><h3>영상 → 자산 10개 리퍼포징 팩</h3></div>
+      <p class="one">롱폼 영상 1개가 포스트, 타래, 쇼츠 아이디어가 됩니다.</p>
+      <p class="how">유튜브 링크 하나면 됩니다. 자막을 추출해 가장 강한 순간과 인용할 문장들을 지도화하고, 파생 자산 10개를 기획합니다 — 인스타 포스트, X 타래, 쇼츠 컨셉, 뉴스레터 앵글 — 각각 고유의 훅과 아웃라인, 영상의 어느 부분에서 나왔는지 표시까지. 제작 1회가 한 달치 채널 콘텐츠가 됩니다.</p>
+      <p class="io"><b>준비물</b> 영상 URL 1개 &nbsp;·&nbsp; <b>결과물</b> 훅·아웃라인이 붙은 10개 자산 플랜</p>
+    </div>
+  </div>
+  <p class="rest-label">이 단계의 다른 워크플로우</p>
+  <div class="rest-list">
+    <div class="rest-item"><span class="no">038</span><span><b>캡션 &amp; 해시태그 세트</b> — <span class="d">스크립트 뱃치 전체의 캡션·태그 세트.</span></span></div>
+    <div class="rest-item"><span class="no">039</span><span><b>카루셀 카피 뱃치</b> — <span class="d">카루셀 3세트, 장당 카피.</span></span></div>
+    <div class="rest-item"><span class="no">040</span><span><b>스토리 인터랙션 시리즈</b> — <span class="d">7일치 투표·퀴즈·슬라이더.</span></span></div>
+    <div class="rest-item"><span class="no">041</span><span><b>Threads 포스트 뱃치</b> — <span class="d">최신 트렌드 스캔 기반 대화 유발 포스트 10개.</span></span></div>
+    <div class="rest-item"><span class="no">042</span><span><b>X 스레드 뱃치</b> — <span class="d">장문 스토리텔링 타래 3편.</span></span></div>
+    <div class="rest-item"><span class="no">043</span><span><b>한 줄 훅 뱅크</b> — <span class="d">심리 트리거별 한 줄 훅 30개.</span></span></div>
+    <div class="rest-item"><span class="no">044</span><span><b>쇼츠 스크립트 뱃치</b> — <span class="d">2초 훅과 루프 엔딩의 스크립트 10편.</span></span></div>
+    <div class="rest-item"><span class="no">045</span><span><b>롱폼 영상 대본</b> — <span class="d">레퍼런스 분석 기반, 챕터 포함 대본.</span></span></div>
+    <div class="rest-item"><span class="no">046</span><span><b>제목 &amp; 썸네일 카피 A/B</b> — <span class="d">영상당 제목 10안 + 썸네일 문구.</span></span></div>
+    <div class="rest-item"><span class="no">047</span><span><b>틱톡 스크립트 뱃치</b> — <span class="d">현재 트렌드에 매핑된 10편.</span></span></div>
+    <div class="rest-item"><span class="no">049</span><span><b>링크드인 아티클 초안</b> — <span class="d">훅 먼저 시작하는 소트리더십 장문.</span></span></div>
+    <div class="rest-item"><span class="no">050</span><span><b>페이스북 포스트 뱃치</b> — <span class="d">공유·댓글에 최적화된 5개.</span></span></div>
+    <div class="rest-item"><span class="no">052</span><span><b>뉴스레터 원고</b> — <span class="d">제목 5안, 스토리 본문, CTA.</span></span></div>
+    <div class="rest-item"><span class="no">053</span><span><b>보도자료 &amp; 기자 피칭</b> — <span class="d">보도자료 + 개인화 피칭 노트.</span></span></div>
+    <div class="rest-item"><span class="no">054</span><span><b>UGC &amp; 후기 리믹스</b> — <span class="d">고객 리뷰를 영상 스크립트로.</span></span></div>
+    <div class="rest-item"><span class="no">055</span><span><b>리뷰 마이닝 → 소셜 프루프</b> — <span class="d">실제 리뷰를 설득 카피로 변환.</span></span></div>
+    <div class="rest-item"><span class="no">056</span><span><b>랜딩페이지 카피 세트</b> — <span class="d">페이지 분석 기반 헤드라인 10안 + 섹션 카피.</span></span></div>
+    <div class="rest-item"><span class="no">058</span><span><b>클라이언트 보이스 리라이트</b> — <span class="d">범용 초안을 보이스 가이드에 맞게 변환.</span></span></div>
+  </div>
+</div>
+
+<!-- ═══ E ═══ -->
+<div class="cat-page">
+  <div class="cat-top"><span class="cat-letter">E</span><h2>발행 &amp; 참여</h2><span class="cat-range">059–070</span></div>
+  <p class="cat-blurb">클라이언트 계정에서의 실제 발행과 참여 — 라운드 상한, 투명한 운영, 스팸 제로.</p>
+  <p class="spot-label">Spotlight · 에이전시가 가장 먼저 돌리는 것들</p>
+  <div class="spot-grid">
+    <div class="spot">
+      <div class="spot-head"><span class="no">062</span><h3>크로스포스팅 라운드</h3></div>
+      <p class="one">콘텐츠 1개를 인스타·Threads·X에 맞게 변형해 발행.</p>
+      <p class="how">승인된 초안 하나를 읽고 채널별로 다시 씁니다 — 복붙이 아니라 플랫폼마다 길이·톤·형식을 따로. 그리고 사람이 하듯 브라우저를 조작해 순서대로 실제 발행하고, 라이브 URL 3개를 보고합니다. 누군가 매일 하던 15분짜리 "여기저기 올리기"가 사라집니다.</p>
+      <p class="io"><b>준비물</b> 승인된 초안 &nbsp;·&nbsp; <b>결과물</b> 채널별로 변형된 라이브 포스트 3개</p>
+    </div>
+    <div class="spot">
+      <div class="spot-head"><span class="no">063</span><h3>타겟 댓글 라운드</h3></div>
+      <p class="one">니치 상위 포스트에 진짜 가치 있는 댓글 10~12개.</p>
+      <p class="how">가드레일이 내장된 성장 전술입니다. 클라이언트 계정으로 니치 해시태그의 활발한 포스트 12개를 정찰하고, 각 포스트를 실제로 읽고 그 내용에 반응하는 맞춤 댓글을 작성합니다. 검증 단계가 모든 초안을 검사합니다 — 복붙 문구, 홍보, 링크 금지 — 그 후에야 자연스러운 간격으로, 라운드당 최대 12개, 전체 로그와 함께 게시합니다. 스팸 리스크 없는 노출 확대.</p>
+      <p class="io"><b>준비물</b> 해시태그 + 브랜드 보이스 &nbsp;·&nbsp; <b>결과물</b> 전체 로그가 붙은 댓글 10~12개</p>
+    </div>
+    <div class="spot">
+      <div class="spot-head"><span class="no">067</span><h3>인바운드 댓글 응대</h3></div>
+      <p class="one">클라이언트 포스트의 댓글에 브랜드 보이스로 답글.</p>
+      <p class="how">계정 매니저의 시간을 조용히 가장 많이 잡아먹는 방향의 참여입니다. 클라이언트 최근 포스트의 새 댓글을 수집하고, 브랜드 보이스로 답글 초안을 만듭니다 — 질문엔 답을, 칭찬엔 감사를, 스레드가 이어지게 되묻기도. 게시하고 라운드를 보고합니다. 모두가 저가로 책정하는 리테이너 항목, 커뮤니티 관리가 하루 15분 라운드가 됩니다.</p>
+      <p class="io"><b>준비물</b> 계정 + 브랜드 보이스 &nbsp;·&nbsp; <b>결과물</b> 응답 완료된 댓글과 라운드 리포트</p>
+    </div>
+  </div>
+  <p class="rest-label">이 단계의 다른 워크플로우</p>
+  <div class="rest-list">
+    <div class="rest-item"><span class="no">059</span><span><b>인스타그램 포스트 발행</b> — <span class="d">승인된 초안 발행, URL 보고.</span></span></div>
+    <div class="rest-item"><span class="no">060</span><span><b>Threads 발행</b> — <span class="d">승인된 초안으로 발행, URL 보고.</span></span></div>
+    <div class="rest-item"><span class="no">061</span><span><b>X 발행 &amp; 참여</b> — <span class="d">발행 후 관련 대화 5~10건 참여.</span></span></div>
+    <div class="rest-item"><span class="no">064</span><span><b>Threads 대화 라운드</b> — <span class="d">니치 대화 속 답글 10~12개.</span></span></div>
+    <div class="rest-item"><span class="no">065</span><span><b>크리에이터 DM 아웃리치</b> — <span class="d">승인된 숏리스트에서 개인화 DM 10~15개.</span></span></div>
+    <div class="rest-item"><span class="no">066</span><span><b>멘션 &amp; 답글 라운드</b> — <span class="d">브랜드 멘션 발견·응답.</span></span></div>
+    <div class="rest-item"><span class="no">068</span><span><b>유튜브 커뮤니티 포스트</b> — <span class="d">커뮤니티 탭에 투표·포스트 발행.</span></span></div>
+    <div class="rest-item"><span class="no">069</span><span><b>구글 비즈니스 포스트</b> — <span class="d">리스팅에 소식·오퍼 발행.</span></span></div>
+    <div class="rest-item"><span class="no">070</span><span><b>UGC 감사 라운드</b> — <span class="d">캠페인 태그 게시자 전원에게 개인화된 감사.</span></span></div>
+  </div>
+</div>
+
+<!-- ═══ F ═══ -->
+<div class="cat-page">
+  <div class="cat-top"><span class="cat-letter">F</span><h2>모니터링 &amp; 리스닝</h2><span class="cat-range">071–078</span></div>
+  <p class="cat-blurb">문제는 아침 리포트에서 드러나야 합니다 — 화난 클라이언트의 전화가 아니라.</p>
+  <p class="spot-label">Spotlight · 에이전시가 가장 먼저 돌리는 것들</p>
+  <div class="spot-grid">
+    <div class="spot">
+      <div class="spot-head"><span class="no">071</span><h3>브랜드 멘션 스윕</h3></div>
+      <p class="one">X·Threads·레딧 멘션을 답변 초안과 함께 분류.</p>
+      <p class="how">X와 Threads에서 브랜드·제품명을 검색하고 — 답글과 인용 포스트까지 — 이어서 레딧을 훑으며 질문·불만 스레드를 우선합니다. 모든 멘션에 라벨 2개가 붙습니다: 감성(긍정/중립/부정), 그리고 긴급도(오늘 응답 / 이번 주 / 조치 불요). 리포트는 긴급 건부터, 각각 바로 다듬어 쓸 답변 초안과 함께. 아침에 한 번 읽으면 계정 매니저가 뭘 답해야 할지 정확히 압니다.</p>
+      <p class="io"><b>준비물</b> 브랜드 + 제품명 &nbsp;·&nbsp; <b>결과물</b> 답변 초안이 붙은 분류 리포트</p>
+    </div>
+    <div class="spot">
+      <div class="spot-head"><span class="no">076</span><h3>부정 신호 조기 경보</h3></div>
+      <p class="one">불만 급증과 커지는 이슈를 미리 포착.</p>
+      <p class="how">멘션 스윕의 방어 특화 버전입니다. 문제만 노려 스캔합니다: 같은 이슈로 뭉치기 시작한 불만들, 부정 감성으로 확산 중인 스레드, 달라지고 있는 리뷰 패턴. 발견은 파급력 순으로, 최악부터, 첫 대응안과 함께 정리됩니다. 클라이언트의 "이거 보셨어요?"를 "오늘 아침 저희가 먼저 발견했습니다 — 대응안입니다"로 뒤집습니다.</p>
+      <p class="io"><b>준비물</b> 브랜드명 &nbsp;·&nbsp; <b>결과물</b> 최악 우선 정렬된 조기 경보 리포트</p>
+    </div>
+  </div>
+  <p class="rest-label">이 단계의 다른 워크플로우</p>
+  <div class="rest-list">
+    <div class="rest-item"><span class="no">072</span><span><b>리뷰 사이트 스윕</b> — <span class="d">구글·옐프·트러스트파일럿 새 리뷰 + 응답 초안.</span></span></div>
+    <div class="rest-item"><span class="no">073</span><span><b>경쟁사 활동 주간 스윕</b> — <span class="d">이번 주 경쟁사들이 내놓은 것 요약.</span></span></div>
+    <div class="rest-item"><span class="no">074</span><span><b>멀티 클라이언트 트렌드 알림</b> — <span class="d">한 번의 스윕, 클라이언트 니치별 라우팅.</span></span></div>
+    <div class="rest-item"><span class="no">075</span><span><b>댓글 감성 분석</b> — <span class="d">최근 댓글 분류, 반복 테마 발굴.</span></span></div>
+    <div class="rest-item"><span class="no">077</span><span><b>캠페인 해시태그 트래커</b> — <span class="d">참여 수와 상위 UGC 추적.</span></span></div>
+    <div class="rest-item"><span class="no">078</span><span><b>팔로워 성장 트래커</b> — <span class="d">모든 클라이언트·경쟁 계정 주간 스냅샷.</span></span></div>
+  </div>
+</div>
+
+<!-- ═══ G ═══ -->
+<div class="cat-page">
+  <div class="cat-top"><span class="cat-letter">G</span><h2>리포팅 &amp; 클라이언트 커뮤니케이션</h2><span class="cat-range">079–092</span></div>
+  <p class="cat-blurb">주말을 갈아 넣지 않는 클라이언트 리포팅 — 그리고 다음 클라이언트를 따내는 영업 자산까지.</p>
+  <p class="spot-label">Spotlight · 에이전시가 가장 먼저 돌리는 것들</p>
+  <div class="spot-grid">
+    <div class="spot">
+      <div class="spot-head"><span class="no">082</span><h3>월간 클라이언트 리포트 팩</h3></div>
+      <p class="one">한 달 전체를 다음 단계까지 붙은 발송용 팩으로.</p>
+      <p class="how">한 달간 만들어진 모든 것을 읽습니다 — 주간 리포트, 트래커, 브리프 — 채널별로 집계한 뒤 팩을 생성합니다: 클라이언트 언어로 쓴 1페이지 경영 요약(3줄 결론 + 핵심 숫자), 승자 콘텐츠와 성공 이유·실패와 교훈이 담긴 채널별 섹션, 이달 검증된 것들(훅·포맷·시간대), 다음 달 우선순위 액션 5개. 월말 밤샘이 검토 한 번으로 바뀝니다.</p>
+      <p class="io"><b>준비물</b> 클라이언트 + 월 &nbsp;·&nbsp; <b>결과물</b> 바로 보내는 월간 리포트 팩</p>
+    </div>
+    <div class="spot">
+      <div class="spot-head"><span class="no">089</span><h3>클라이언트 주간 이메일 초안</h3></div>
+      <p class="one">리포트를 바로 보낼 수 있는 친근한 업데이트로.</p>
+      <p class="how">한 클라이언트의 주간 리포트를 읽고 짧고 따뜻한 업데이트 이메일로 바꿉니다: 하이라이트 3개, 이 클라이언트에게 중요한 숫자, 의견이 필요한 것, 다음 주 계획. 스프레드시트만 첨부하는 에이전시와 매주 금요일 유용한 세 문단을 써 보내는 에이전시의 차이가 리텐션입니다 — 후자를 5분짜리 일로 만듭니다.</p>
+      <p class="io"><b>준비물</b> 클라이언트 이름 &nbsp;·&nbsp; <b>결과물</b> 붙여넣고 보내면 되는 주간 이메일</p>
+    </div>
+    <div class="spot">
+      <div class="spot-head"><span class="no">091</span><h3>잠재고객 진단 티저</h3></div>
+      <p class="one">어떤 잠재고객이든 채점된 진단을 피치용 PDF로.</p>
+      <p class="how">에이전시의 영업 무기입니다. 잠재고객의 프로필과 최근 10개 포스트를 빠르게 진단하고, 5개 항목(프로필 최적화·일관성·포맷 믹스·훅 퀄리티·참여율)을 1~10점으로 채점합니다 — 각 점수엔 관찰 근거 한 줄. 그리고 가장 임팩트 큰 기회 3개를 고릅니다 — 상대가 "맞네"라고 인정할 수밖에 없는 표현으로. 검증 단계가 근거 없는 주장을 전부 걸러냅니다. 결과물은 스코어카드와 20분 통화 제안이 담긴 2~3페이지 PDF. 콜드 아웃리치에 첨부하면 답장률이 달라집니다.</p>
+      <p class="io"><b>준비물</b> 잠재고객 프로필 링크 &nbsp;·&nbsp; <b>결과물</b> 피치 준비 완료된 진단 PDF</p>
+    </div>
+  </div>
+  <p class="rest-label">이 단계의 다른 워크플로우</p>
+  <div class="rest-list">
+    <div class="rest-item"><span class="no">079</span><span><b>주간 인스타그램 리포트</b> — <span class="d">계정 인사이트를 클라이언트용 시트로.</span></span></div>
+    <div class="rest-item"><span class="no">080</span><span><b>주간 멀티채널 스냅샷</b> — <span class="d">전 채널 상태를 한 페이지에.</span></span></div>
+    <div class="rest-item"><span class="no">081</span><span><b>월간 유튜브 리포트</b> — <span class="d">스튜디오 지표, 톱 영상, 시청 지속 노트.</span></span></div>
+    <div class="rest-item"><span class="no">083</span><span><b>콘텐츠 위너 &amp; 교훈</b> — <span class="d">상위 10% 포스트, 그리고 그 이유.</span></span></div>
+    <div class="rest-item"><span class="no">084</span><span><b>최적 발행 시간 분석</b> — <span class="d">게시 시각 × 반응 상관관계.</span></span></div>
+    <div class="rest-item"><span class="no">085</span><span><b>SOV 리포트</b> — <span class="d">채널별 클라이언트 vs 경쟁사 언급 점유율.</span></span></div>
+    <div class="rest-item"><span class="no">086</span><span><b>캠페인 랩업 리포트</b> — <span class="d">목표 대비 결과, 교훈, 다음 단계.</span></span></div>
+    <div class="rest-item"><span class="no">087</span><span><b>크리에이터 캠페인 ROI</b> — <span class="d">크리에이터별 도달·반응·전환.</span></span></div>
+    <div class="rest-item"><span class="no">088</span><span><b>GA4 소셜 트래픽 리포트</b> — <span class="d">소셜발 세션과 전환, 해설 포함.</span></span></div>
+    <div class="rest-item"><span class="no">090</span><span><b>분기 리뷰(QBR) 덱</b> — <span class="d">분기 결과와 다음 분기 계획을 슬라이드로.</span></span></div>
+    <div class="rest-item"><span class="no">092</span><span><b>클라이언트 케이스 스터디</b> — <span class="d">성과를 에이전시의 마케팅 자산으로.</span></span></div>
+  </div>
+</div>
+
+<!-- ═══ H ═══ -->
+<div class="cat-page">
+  <div class="cat-top"><span class="cat-letter">H</span><h2>에이전시 운영 &amp; 지식 자산화</h2><span class="cat-range">093–100</span></div>
+  <p class="cat-blurb">개인의 노하우가 회사의 자산이 되는 곳.</p>
+  <p class="spot-label">Spotlight · 에이전시가 가장 먼저 돌리는 것들</p>
+  <div class="spot-grid">
+    <div class="spot">
+      <div class="spot-head"><span class="no">093</span><h3>완료된 작업 → SOP 문서화</h3></div>
+      <p class="one">잘 끝낸 프로세스를 단계별 플레이북으로.</p>
+      <p class="how">일이 잘 풀렸을 때, 그 지식은 보통 증발합니다. 이 워크플로우는 끝난 프로세스의 기록과 메모를 읽고 누구나 따라 할 수 있는 플레이북으로 다시 씁니다: 순서대로의 단계, 단계별 체크, 함정과 회피법까지. 잘한 일이 일회성 사건으로 끝나지 않고 회사 매뉴얼이 됩니다 — "노하우가 한 사람 머릿속에만 있다"는 문제의 정면 해결책.</p>
+      <p class="io"><b>준비물</b> 프로세스 기록 &nbsp;·&nbsp; <b>결과물</b> 반복 가능한 단계별 플레이북</p>
+    </div>
+    <div class="spot">
+      <div class="spot-head"><span class="no">096</span><h3>발행 전 QA 체크리스트</h3></div>
+      <p class="one">초안을 보이스 가이드와 대조해 발행 전 검수.</p>
+      <p class="how">무엇이든 나가기 전에, 초안을 클라이언트 보이스 가이드와 QA 규칙에 대조합니다: 톤이 맞는지, 금지어는 없는지, 필수 요소가 빠지지 않았는지, 주장이 안전한지. 항목별 통과/수정 리스트가 수정 제안과 함께 돌아옵니다. 기계가 1차 검수, 사람은 최종 승인만 — 신입의 결과물도 첫 주부터 안심하고 내보냅니다.</p>
+      <p class="io"><b>준비물</b> 초안 + 보이스 가이드 &nbsp;·&nbsp; <b>결과물</b> 항목별 통과/수정 리포트</p>
+    </div>
+    <div class="spot">
+      <div class="spot-head"><span class="no">097</span><h3>전 클라이언트 주간 다이제스트</h3></div>
+      <p class="one">모든 클라이언트를 대표용 한 페이지로.</p>
+      <p class="how">모든 클라이언트의 한 주 리포트와 산출물을 훑어 대표용 한 페이지를 만듭니다: 클라이언트별 상태 한 줄, 잘된 것, 주의가 필요한 것 — 묻히지 않게 플래그로 표시해서. Slack 스레드와 스프레드시트를 뒤지며 회사 상태를 짜맞추던 시간이 월요일 아침 한 번의 읽기로 압축됩니다. 클라이언트가 5개에서 15개가 되어도 대표의 파악력은 깨지지 않습니다.</p>
+      <p class="io"><b>준비물</b> 없음 — 있는 걸 읽습니다 &nbsp;·&nbsp; <b>결과물</b> 대표용 한 페이지 다이제스트</p>
+    </div>
+  </div>
+  <p class="rest-label">이 단계의 다른 워크플로우</p>
+  <div class="rest-list">
+    <div class="rest-item"><span class="no">094</span><span><b>프롬프트 라이브러리 통합</b> — <span class="d">흩어진 프롬프트를 하나의 팀 라이브러리로.</span></span></div>
+    <div class="rest-item"><span class="no">095</span><span><b>신입 온보딩 가이드</b> — <span class="d">SOP들을 첫 2주 가이드로 편집.</span></span></div>
+    <div class="rest-item"><span class="no">098</span><span><b>업무량 &amp; 캐파 스냅샷</b> — <span class="d">클라이언트별 산출물 vs 팀 캐파를 한눈에.</span></span></div>
+    <div class="rest-item"><span class="no">099</span><span><b>미팅 노트 → 액션</b> — <span class="d">날 것의 메모를 담당자와 마감으로 구조화.</span></span></div>
+    <div class="rest-item"><span class="no">100</span><span><b>지식 베이스 동기화</b> — <span class="d">검증된 배움을 팀 위키로 푸시.</span></span></div>
+  </div>
+</div>
+
+<!-- ═══ PLAYBOOKS + CTA ═══ -->
+<div class="end-page">
+  <h2 class="page-title">플레이북: 워크플로우가 이어지면 루틴이 됩니다</h2>
+  <p class="page-sub">워크플로우 하나는 몇 시간을 아낍니다. 이어 붙이면 운영 루틴 전체를 대체합니다.</p>
+  <div class="plays">
+    <div class="play"><h3>신규 클라이언트 첫 주</h3><p class="chain"><b>인테이크 브리프</b><span class="sep">→</span><b>IG 진단</b><span class="sep">→</span><b>경쟁사 세트</b><span class="sep">→</span><b>해부</b><span class="sep">→</span><b>필러</b><span class="sep">→</span><b>캘린더</b><span class="sep">→</span><b>온보딩 팩</b> — 계약부터 킥오프 준비까지, 몇 주가 아니라 며칠로.</p></div>
+    <div class="play"><h3>주간 콘텐츠 엔진</h3><p class="chain"><b>트렌드 스캔</b><span class="sep">→</span><b>릴스 스크립트</b><span class="sep">→</span><b>캡션</b><span class="sep">→</span><b>발행</b><span class="sep">→</span><b>댓글 라운드</b><span class="sep">→</span><b>주간 리포트</b> — 클라이언트 한 곳의 주간 루프 전체가 레일 위로.</p></div>
+    <div class="play"><h3>대표 병목 킬러</h3><p class="chain"><b>QA 체크</b><span class="sep">→</span><b>운영 다이제스트</b><span class="sep">→</span><b>클라이언트 이메일</b><span class="sep">→</span><b>월간 팩</b> — 일주일 내내 상황을 쫓는 대신, 몇 분의 결과 검토로.</p></div>
+    <div class="play"><h3>신규 영업 머신</h3><p class="chain"><b>잠재고객 진단</b><span class="sep">→</span><b>케이스 스터디</b><span class="sep">→</span><b>보도자료</b><span class="sep">→</span><b>크리에이터 숏리스트</b> — 클라이언트를 서비스하는 같은 엔진으로 영업 자산 생산.</p></div>
+    <div class="play"><h3>지식 플라이휠</h3><p class="chain"><b>SOP 문서화</b><span class="sep">→</span><b>프롬프트 라이브러리</b><span class="sep">→</span><b>온보딩 가이드</b><span class="sep">→</span><b>위키 동기화</b> — 잘된 실행 하나하나가 팀 전체를 영구히 강하게.</p></div>
+  </div>
+  <div class="cta-box">
+    <h2>여러분의 클라이언트로 직접 보세요</h2>
+    <p>이 카탈로그에서 아무 워크플로우나 고르시면, 여러분의 실제 계정으로 라이브 실행해 보여드립니다 — 진단 전체, 콘텐츠 뱃치, 클라이언트 리포트가 20분 워크스루 안에서 눈앞에서 만들어집니다.</p>
+    <p class="fine">모든 워크플로우는 템플릿이기도 합니다: 복제하고, 채팅으로 수정하면, 여러분 에이전시만의 프로세스가 됩니다 — 팀 전체와 공유할 수 있습니다.</p>
+  </div>
+</div>
+
+</body>
+</html>

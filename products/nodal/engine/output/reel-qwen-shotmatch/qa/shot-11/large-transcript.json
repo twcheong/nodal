@@ -1,0 +1,138 @@
+{
+  "method": "Korean forced, beam 10, VAD; no expected text or initial prompt",
+  "audio": "C:\\Users\\nexta\\Desktop\\nodal\\output\\reel-qwen-shotmatch\\qa\\shot-11\\generated-audio.wav",
+  "model": "C:\\Users\\nexta\\Desktop\\nodal\\models\\asr\\whisper-large-v3-turbo",
+  "language": "ko",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 2.74,
+      "text": " 아니 뭐, 컬러가 이쁘다, 이런 표현 있잖아.",
+      "words": [
+        {
+          "word": " 아니",
+          "start": 0.0,
+          "end": 0.5
+        },
+        {
+          "word": " 뭐,",
+          "start": 0.5,
+          "end": 0.68
+        },
+        {
+          "word": " 컬러가",
+          "start": 1.0,
+          "end": 1.22
+        },
+        {
+          "word": " 이쁘다,",
+          "start": 1.22,
+          "end": 1.68
+        },
+        {
+          "word": " 이런",
+          "start": 1.9,
+          "end": 2.02
+        },
+        {
+          "word": " 표현",
+          "start": 2.02,
+          "end": 2.26
+        },
+        {
+          "word": " 있잖아.",
+          "start": 2.26,
+          "end": 2.74
+        }
+      ]
+    },
+    {
+      "start": 3.4,
+      "end": 4.58,
+      "text": " 컬러가 귀여워.",
+      "words": [
+        {
+          "word": " 컬러가",
+          "start": 3.4,
+          "end": 4.06
+        },
+        {
+          "word": " 귀여워.",
+          "start": 4.06,
+          "end": 4.58
+        }
+      ]
+    },
+    {
+      "start": 4.88,
+      "end": 6.46,
+      "text": " 컬러 조합이 어떻다, 이런 거?",
+      "words": [
+        {
+          "word": " 컬러",
+          "start": 4.88,
+          "end": 5.34
+        },
+        {
+          "word": " 조합이",
+          "start": 5.34,
+          "end": 5.72
+        },
+        {
+          "word": " 어떻다,",
+          "start": 5.72,
+          "end": 6.1
+        },
+        {
+          "word": " 이런",
+          "start": 6.24,
+          "end": 6.32
+        },
+        {
+          "word": " 거?",
+          "start": 6.32,
+          "end": 6.46
+        }
+      ]
+    },
+    {
+      "start": 6.6,
+      "end": 7.54,
+      "text": " 조합이 귀여워.",
+      "words": [
+        {
+          "word": " 조합이",
+          "start": 6.6,
+          "end": 7.04
+        },
+        {
+          "word": " 귀여워.",
+          "start": 7.04,
+          "end": 7.54
+        }
+      ]
+    },
+    {
+      "start": 8.6,
+      "end": 9.38,
+      "text": " 아이씨, 그거 말고!",
+      "words": [
+        {
+          "word": " 아이씨,",
+          "start": 8.6,
+          "end": 8.88
+        },
+        {
+          "word": " 그거",
+          "start": 8.94,
+          "end": 9.04
+        },
+        {
+          "word": " 말고!",
+          "start": 9.04,
+          "end": 9.38
+        }
+      ]
+    }
+  ]
+}

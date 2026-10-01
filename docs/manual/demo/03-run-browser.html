@@ -1,0 +1,108 @@
+<!doctype html>
+<html data-theme="light"><head><meta charset="utf-8"><link rel="stylesheet" href="tokens.css"></head>
+<body>
+<div class="app">
+  <div class="titlebar"><span class="lights"><i></i><i></i><i></i></span>TWIXY</div>
+  <div class="body">
+    <aside class="sidebar"><div class="col">
+      <button class="logo active"><img src="../../../assets/icon-petrol-64.png" alt="Twixy"></button>
+      <button>◇</button><button>⊟</button><button>⊞</button><button>⚙</button>
+    </div></aside>
+    <div class="main">
+      <div class="cop-header">
+        <button class="hbtn">☰</button><button class="hbtn">＋</button>
+        <div class="tabstrip">
+          <span class="chattab active"><span style="color:var(--accent);font-size:9px">●</span> 경쟁사 블로그 조사 <span class="x">×</span></span>
+        </div>
+        <button class="hbtn">⚠ Report</button>
+        <span class="projbadge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg> maple-cafe</span>
+        <button class="hbtn">⚙</button>
+      </div>
+      <div style="flex:1;min-height:0;display:flex;overflow:hidden">
+        <!-- 좌: Simple 플랜 스택 -->
+        <aside class="aside l" style="width:340px">
+          <div class="sec-head">Plans</div>
+          <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+            <div style="background:var(--bg-elevated);border:1px solid var(--accent);border-radius:var(--radius-md);padding:10px 12px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-family:var(--font-mono);font-size:11px;color:var(--accent);font-weight:600">#1</span>
+                <span style="font-size:12px;color:var(--text-primary);font-weight:500;flex:1">경쟁사 블로그 3곳 최근 글 조사</span>
+                <span style="font-size:10px;padding:1px 8px;border-radius:999px;background:rgba(59,130,246,.13);color:#3b82f6;font-weight:600">Running…</span>
+              </div>
+              <div style="margin-top:8px;font-size:11px;color:var(--text-secondary);line-height:1.6">
+                1. 블로그 3곳 방문해 최근 글 5개씩 수집<br>
+                2. 제목·날짜·주제 정리<br>
+                3. 표로 저장 (Reports)
+              </div>
+              <div style="margin-top:8px;display:flex;gap:6px">
+                <button style="background:var(--red);border:none;color:#fff;border-radius:var(--radius-sm);padding:3px 10px;font-size:11px;font-weight:600">■ Stop</button>
+              </div>
+            </div>
+          </div>
+        </aside>
+        <!-- 중앙: 채팅 -->
+        <div class="chatcol">
+          <div class="msgs" style="overflow:hidden">
+            <div class="msgs-inner">
+              <div class="bubble user">경쟁사 블로그 세 곳에 들어가서 최근 글 5개씩 확인해줘. 제목, 올린 날짜, 어떤 주제인지 정리해서 표로 저장해줘.</div>
+              <div class="bubble ai">세 곳을 차례로 확인해서 표로 정리하겠습니다. 진행 상황은 오른쪽 화면에서 보실 수 있습니다.</div>
+              <div style="font-size:11px;font-style:italic;color:var(--text-muted);display:flex;align-items:center;gap:8px">Thinking…
+                <span style="font-size:10px;font-family:var(--font-mono);color:var(--accent);font-style:normal">⚙ browser</span>
+              </div>
+            </div>
+          </div>
+          <div class="chiprow-outer">
+            <form class="composer">
+              <div class="box"><textarea rows="3" placeholder="Describe the one-time task (e.g. fix the broken links in @data/raw/….xlsx)…"></textarea><span class="charcount">0 / 8,000</span></div>
+              <button class="sendbtn" style="background:var(--red)" type="button">■ Stop</button>
+            </form>
+          </div>
+        </div>
+        <!-- 우: 브라우저 패널 -->
+        <aside class="aside r" style="width:400px">
+          <div class="sec-head">Browser (headless)</div>
+          <div style="flex:1;min-height:120px;padding:8px;display:flex;flex-direction:column">
+            <div style="display:flex;flex-direction:column;height:100%;background:var(--bg-base);border:1px solid var(--border-subtle);border-radius:var(--radius-md);overflow:hidden">
+              <div style="padding:6px 10px;border-bottom:1px solid var(--border-subtle);font-size:11px;font-family:var(--font-mono);color:var(--text-muted);display:flex;gap:8px;align-items:center">
+                <span style="color:var(--text-primary);font-weight:500">카페온도 매거진</span>
+                <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">cafeondo.co.kr/magazine</span>
+                <span style="padding:2px 6px;border:1px solid var(--border-subtle);border-radius:var(--radius-sm)">⧉</span>
+                <span style="padding:2px 6px;border:1px solid var(--border-subtle);border-radius:var(--radius-sm)">⤢</span>
+              </div>
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;background:#000;overflow:hidden;min-height:0">
+                <!-- 가짜 경쟁사 블로그 페이지 -->
+                <div style="width:94%;height:94%;background:#fff;border-radius:2px;overflow:hidden;font-family:var(--font-sans)">
+                  <div style="background:#2d4a3e;color:#fff;padding:10px 16px;font-size:12px;font-weight:700;display:flex;justify-content:space-between;align-items:center">카페온도 <span style="font-weight:400;font-size:9px;opacity:.8">매거진 · 스토어 · 매장안내</span></div>
+                  <div style="padding:12px 16px">
+                    <div style="height:52px;background:linear-gradient(120deg,#e8dfd2,#d5e3da);border-radius:6px;display:flex;align-items:center;padding:0 14px;font-size:11px;font-weight:700;color:#2d4a3e">여름 시즌 콜드브루 라인업 출시</div>
+                    <div style="display:flex;gap:8px;margin-top:10px">
+                      <div style="flex:1"><div style="height:34px;background:#eee9e1;border-radius:4px"></div><div style="font-size:8.5px;margin-top:4px;color:#333;font-weight:600">원두 로스팅의 온도 이야기</div><div style="font-size:7.5px;color:#999">8월 12일</div></div>
+                      <div style="flex:1"><div style="height:34px;background:#e3e9e4;border-radius:4px"></div><div style="font-size:8.5px;margin-top:4px;color:#333;font-weight:600">여름 신메뉴 비하인드</div><div style="font-size:7.5px;color:#999">8월 5일</div></div>
+                      <div style="flex:1"><div style="height:34px;background:#ece5da;border-radius:4px"></div><div style="font-size:8.5px;margin-top:4px;color:#333;font-weight:600">바리스타 인터뷰 #12</div><div style="font-size:7.5px;color:#999">7월 29일</div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Live activity -->
+          <div style="height:190px;border-top:1px solid var(--border-subtle);display:flex;flex-direction:column">
+            <div style="padding:6px 12px" class="mono-eyebrow">Live activity</div>
+            <div style="padding:0 12px 6px;display:flex;gap:6px">
+              <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:var(--font-mono);padding:2px 8px;border-radius:var(--radius-sm);background:#0d5c5022;color:var(--accent);border:1px solid #0d5c5044"><span style="width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 4px var(--accent)"></span> browser <span style="color:var(--text-muted)">· cafeondo.co.kr</span></span>
+            </div>
+            <div style="flex:1;min-height:0;overflow:hidden;padding:4px 12px 10px;display:flex;flex-direction:column;gap:6px">
+              <div style="font-size:11px;line-height:1.5;color:var(--text-secondary);background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:5px 8px">첫 번째 블로그에 접속했습니다. 최근 글 목록을 확인합니다.</div>
+              <div style="font-size:11px;line-height:1.5;color:var(--text-secondary);background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:5px 8px">최근 글 5개의 제목과 날짜를 수집했습니다. (1/3)</div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+  <div class="statusbar">
+    <span class="dot"></span><span style="color:var(--green)">Twixy · Ready</span>
+    <span class="usage"><span class="eyebrow">tok</span><span class="track"><span class="fill" style="width:31%;display:block"></span></span><span class="val">54.7K tok</span></span>
+  </div>
+</div>
+</body></html>

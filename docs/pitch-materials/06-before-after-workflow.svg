@@ -1,0 +1,74 @@
+<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+  <rect width="1280" height="720" fill="#0f0f0f"/>
+
+  <text x="60" y="64" fill="#7c6aff" font-size="15" letter-spacing="3" font-weight="600">BUSINESS IMPACT</text>
+  <text x="60" y="104" fill="#e8e8e8" font-size="34" font-weight="600">The same task, before and after Twixy</text>
+
+  <!-- BEFORE panel -->
+  <rect x="60" y="140" width="555" height="440" rx="12" fill="#171717" stroke="#2a2a2a"/>
+  <text x="90" y="182" fill="#f87171" font-size="18" font-weight="700" letter-spacing="2">BEFORE</text>
+  <text x="90" y="212" fill="#e8e8e8" font-size="16">Competitor research for a new client</text>
+
+  <g font-size="14">
+    <rect x="90" y="236" width="495" height="40" rx="6" fill="#0f0f0f" stroke="#2a2a2a"/>
+    <text x="106" y="261" fill="#888">1 · Manager opens ~12 tabs, reads, takes notes</text>
+    <rect x="90" y="284" width="495" height="40" rx="6" fill="#0f0f0f" stroke="#2a2a2a"/>
+    <text x="106" y="309" fill="#888">2 · Copies data into a spreadsheet by hand</text>
+    <rect x="90" y="332" width="495" height="40" rx="6" fill="#0f0f0f" stroke="#2a2a2a"/>
+    <text x="106" y="357" fill="#888">3 · Re-types prompts into AI chat from personal notes</text>
+    <rect x="90" y="380" width="495" height="40" rx="6" fill="#0f0f0f" stroke="#2a2a2a"/>
+    <text x="106" y="405" fill="#888">4 · Formats the report, sends to founder</text>
+    <rect x="90" y="428" width="495" height="40" rx="6" fill="#0f0f0f" stroke="#2a2a2a"/>
+    <text x="106" y="453" fill="#888">5 · Founder reviews with no view of how it was made</text>
+  </g>
+
+  <g font-size="15">
+    <text x="90" y="516" fill="#f87171" font-weight="600">≈ 2.5 hrs per client · process in one person's head</text>
+    <text x="90" y="544" fill="#555" font-size="14">next client: start again from zero</text>
+  </g>
+
+  <!-- Arrow between panels -->
+  <g>
+    <line x1="625" y1="360" x2="655" y2="360" stroke="#7c6aff" stroke-width="3"/>
+    <path d="M 655 352 L 671 360 L 655 368 Z" fill="#7c6aff"/>
+  </g>
+
+  <!-- AFTER panel -->
+  <rect x="681" y="140" width="539" height="440" rx="12" fill="#171717" stroke="#7c6aff" stroke-width="1.5"/>
+  <text x="711" y="182" fill="#4ade80" font-size="18" font-weight="700" letter-spacing="2">AFTER</text>
+  <text x="711" y="212" fill="#e8e8e8" font-size="16">Same research as a Twixy workflow</text>
+
+  <g font-size="14">
+    <rect x="711" y="236" width="479" height="40" rx="6" fill="#0f0f0f" stroke="#3d3366"/>
+    <text x="727" y="261" fill="#e8e8e8">1 · Anyone on the team enters the client name</text>
+    <rect x="711" y="284" width="479" height="40" rx="6" fill="#0f0f0f" stroke="#3d3366"/>
+    <text x="727" y="309" fill="#e8e8e8">2 · Workflow runs the browser research in Chrome</text>
+    <rect x="711" y="332" width="479" height="40" rx="6" fill="#0f0f0f" stroke="#3d3366"/>
+    <text x="727" y="357" fill="#e8e8e8">3 · Summary document is generated and saved</text>
+    <rect x="711" y="380" width="479" height="40" rx="6" fill="#0f0f0f" stroke="#3d3366"/>
+    <text x="727" y="405" fill="#e8e8e8">4 · Manager reviews &amp; refines — instead of assembling</text>
+    <rect x="711" y="428" width="479" height="40" rx="6" fill="#0f0f0f" stroke="#3d3366"/>
+    <text x="727" y="453" fill="#e8e8e8">5 · Founder sees status &amp; execution log on the dashboard</text>
+  </g>
+
+  <g font-size="15">
+    <text x="711" y="516" fill="#4ade80" font-weight="600">Minutes of hands-on time · process owned by the agency</text>
+    <text x="711" y="544" fill="#888" font-size="14">next client: duplicate, rename, run</text>
+  </g>
+
+  <!-- Bottom impact strip -->
+  <g font-size="15" text-anchor="middle">
+    <rect x="60" y="608" width="360" height="72" rx="10" fill="#1e1e1e" stroke="#2a2a2a"/>
+    <text x="240" y="638" fill="#7c6aff" font-size="20" font-weight="700">Hours → minutes</text>
+    <text x="240" y="662" fill="#888" font-size="13">hands-on time per recurring task*</text>
+
+    <rect x="460" y="608" width="360" height="72" rx="10" fill="#1e1e1e" stroke="#2a2a2a"/>
+    <text x="640" y="638" fill="#7c6aff" font-size="20" font-weight="700">1 person → whole team</text>
+    <text x="640" y="662" fill="#888" font-size="13">best process becomes a shared asset</text>
+
+    <rect x="860" y="608" width="360" height="72" rx="10" fill="#1e1e1e" stroke="#2a2a2a"/>
+    <text x="1040" y="638" fill="#7c6aff" font-size="20" font-weight="700">Asking → seeing</text>
+    <text x="1040" y="662" fill="#888" font-size="13">founder monitors via dashboard &amp; logs</text>
+  </g>
+  <text x="60" y="704" fill="#555" font-size="12">*after workflow configuration; results measured per customer in the pilot — see measurement framework</text>
+</svg>

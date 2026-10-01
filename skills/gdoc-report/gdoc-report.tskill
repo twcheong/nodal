@@ -1,0 +1,55 @@
+@workspace twixy
+
+SKILL "Google Docs Report"
+  version: 1.0
+  summary: "분석 결과를 Google Docs 문서로 발행해서 공유 링크까지 돌려준다."
+  description: "When a stakeholder lives in Google Workspace, a local PDF is friction. This skill takes the most recent analytics insight (or a user-provided source), normalizes it into Docs blocks, and creates the document via tool-write-gdoc. Returns the share URL so the orchestrator can drop it into chat."
+  tags: [reporting, google, docs, deliverable]
+  trigger: "구글 닥스, google docs, 닥스 리포트, gdoc 으로 발행, 공유 링크"
+  output: "Google Docs URL"
+
+PLATFORMS {
+  INSTAGRAM
+  TIKTOK
+  LINKEDIN
+  TWITTER
+  YOUTUBE
+}
+
+GOAL "Publish one insight to Google Docs" {
+  objective: "Convert an analytics insight into a properly headed Google Docs document and surface the URL."
+  kpi: gdoc_reports_shipped
+}
+
+PHASE "Source" {
+  ANALYZE "Resolve the source insight" {
+    LOAD "latest" FROM $INSIGHTS AS $insight
+
+    SPAWN structurer
+      TASK "Convert the insight markdown into Docs blocks for tool-write-gdoc — array of { type:'title'|'h1'|'h2'|'h3'|'p'|'bullet', text }. Map the headline to a single 'title' block. Flatten nested bullets to one level (Docs renders cleaner). Strip raw URLs out of headings."
+      USING $insight
+      OUTPUT $payload
+      AWAIT
+  }
+}
+
+PHASE "Connect" {
+  TRACK "Make sure Google is connected" {
+    // Hard precondition. The user wires Google in Settings → Google Workspace.
+    // tool-google-status returns { ok, connected, email, scopes }.
+    - Call tool-google-status. If !connected, abort with a friendly message that points the user to Settings → Google Workspace → Connect.
+  }
+}
+
+PHASE "Emit" {
+  TRACK "Create the Google Doc and announce the URL" {
+    LET $title = "{insight.title} — {date}"
+
+    - Call tool-write-gdoc with payload = { title: $title, blocks: $payload.blocks }
+    - The handler returns { ok, documentId, url, title }. Use $url verbatim — do not rewrite.
+
+    EMIT "gdoc_report_ready"
+      WITH payload = { documentId: $documentId, url: $url, title: $title }
+      TO SKILL "Watchtower"
+  }
+}

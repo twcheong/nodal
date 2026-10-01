@@ -1,0 +1,22 @@
+{
+  "tool": "run_template_h3_image_video",
+  "arguments": {
+    "source": "C:/Users/nexta/Desktop/nodal/output/original-couple-v2/01-corrected-wide.png",
+    "prompt": "A natural live-action Korean romantic comedy, one continuous five-second wide two-shot based exactly on the supplied first frame. Lock the camera completely: same framing, lens, height, perspective, window, orange sofa on the LEFT, low wooden table in the CENTER, and standing woman on the RIGHT. Preserve both adult characters' exact facial identities, hair, clothing, natural anatomy and relative body scale. Their heads remain the same relative size throughout. The man remains seated on the LEFT sofa with both feet on the floor and hands on his knees. The woman remains standing on the RIGHT, her feet planted on the same floor. Keep her standing head clearly higher than his seated head. They face each other across the table. Small natural breathing and subtle facial movement only. In the first half, the WOMAN on the RIGHT gently tilts her head and asks in a clear natural adult female Korean voice: '이건 어때?' Only her lips move while she speaks. A short conversational pause. In the second half, the MAN on the LEFT looks up at her with a fond small smile and replies in a calm adult male Korean voice: '귀여워.' Only his lips move during his reply. End with a brief quiet affectionate smile from both. Exactly these two Korean sentences, in that order, no overlap, no narrator, no extra speech, no music, only very quiet indoor ambience. Accurate speaker-specific Korean lip synchronization. Keep faces, body dimensions, clothing and all furniture stable. Do not stand the man up, do not sit the woman down, do not change camera or cut. No subtitles, no captions, no title, no text, no watermark or logo in any frame.",
+    "seed": 921271,
+    "steps": 20,
+    "width": 1024,
+    "height": 576
+  },
+  "provenance": {
+    "approved_composition": "User accepted the corrected wide shot and requested video on 2026-09-21",
+    "model": "MiniMax-H3-Pruned",
+    "model_path": "C:/Users/nexta/Desktop/nodal/models/MiniMax-H3-Pruned",
+    "memory_profile": "pruned_convrot_int8_offload",
+    "num_frames": 124,
+    "fps": 24,
+    "encoder": "VP9 CRF 18 + Opus",
+    "reference_video_pixels_used": false,
+    "purpose": "Animate the accepted corrected-scale couple two-shot with a short Korean exchange; no captions"
+  }
+}

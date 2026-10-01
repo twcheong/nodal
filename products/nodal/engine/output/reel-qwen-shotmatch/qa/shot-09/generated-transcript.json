@@ -1,0 +1,45 @@
+{
+  "detected_language": "ko",
+  "language_probability": 0.9990273714065552,
+  "segments": [
+    {
+      "start": 2.12,
+      "end": 4.34,
+      "text": " 아이씨 귀여워 말고 다른 표현 없어?",
+      "avg_logprob": -0.4605091554777963,
+      "no_speech_prob": 0.007860892452299595,
+      "words": [
+        {
+          "word": " 아이씨",
+          "start": 2.12,
+          "end": 2.84
+        },
+        {
+          "word": " 귀여워",
+          "start": 2.84,
+          "end": 3.36
+        },
+        {
+          "word": " 말고",
+          "start": 3.36,
+          "end": 3.52
+        },
+        {
+          "word": " 다른",
+          "start": 3.52,
+          "end": 3.8
+        },
+        {
+          "word": " 표현",
+          "start": 3.8,
+          "end": 3.98
+        },
+        {
+          "word": " 없어?",
+          "start": 3.98,
+          "end": 4.34
+        }
+      ]
+    }
+  ]
+}

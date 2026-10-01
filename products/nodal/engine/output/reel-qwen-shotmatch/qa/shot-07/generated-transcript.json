@@ -1,0 +1,25 @@
+{
+  "detected_language": "ko",
+  "language_probability": 0.9666493535041809,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 1.42,
+      "text": " 이건 어때?",
+      "avg_logprob": -0.5557692547639211,
+      "no_speech_prob": 0.03363741189241409,
+      "words": [
+        {
+          "word": " 이건",
+          "start": 0.0,
+          "end": 1.1
+        },
+        {
+          "word": " 어때?",
+          "start": 1.1,
+          "end": 1.42
+        }
+      ]
+    }
+  ]
+}

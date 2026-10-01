@@ -1,0 +1,97 @@
+{
+  "id": "wf_viral_bench_ig_competitor_deep",
+  "title": "경쟁사 IG 계정 정밀 분석",
+  "description": "경쟁사 인스타그램 계정의 최근 30개 포스트를 두 뱃치로 수집해 참여 패턴과 승자 포맷을 해부한 벤치마크 시트를 만든다.",
+  "outputDir": "data/reports",
+  "tags": ["research"],
+  "inputs": [
+    { "id": "account_url", "kind": "scalar", "valueType": "url", "label": "경쟁사 인스타그램 프로필 URL", "observed": "", "confidence": "low" },
+    { "id": "brand_name", "kind": "scalar", "valueType": "text", "label": "우리 브랜드명 (비교 관점)", "observed": "", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "프로필 개요 + 최근 포스트 1~15 수집",
+      "detail": "경쟁사 프로필에서 팔로워·팔로잉·게시물 수·바이오·링크를 기록한 뒤, 최신 포스트부터 15개를 연다. 포스트마다 URL, 유형(릴스/카루셀/단일), 캡션 첫 줄(훅), 해시태그 수, 좋아요·댓글 수, 게시 시점을 텍스트로 수집한다.",
+      "acceptance": "프로필 개요와 포스트 15개의 전 항목이 기록됨.",
+      "tool": "chrome",
+      "toolSkills": ["instagram"],
+      "subtasks": [
+        { "id": "s1", "title": "프로필 개요 기록", "purpose": "팔로워·바이오·링크 등 계정 기본기 파악" },
+        { "id": "s2", "title": "포스트 1~15 순회 수집", "purpose": "포스트별 유형·훅·반응 수 확보" }
+      ],
+      "inputScope": [
+        { "name": "account_url", "type": "url", "description": "분석 대상 프로필" }
+      ],
+      "outputScope": [
+        { "name": "profile", "type": "json", "description": "followers·bio·link·post_count" },
+        { "name": "posts_batch1", "type": "json[]", "description": "포스트 1~15의 url·type·hook·likes·comments·posted_at" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "action",
+      "title": "최근 포스트 16~30 수집",
+      "detail": "이어서 포스트 16~30번째를 같은 항목(URL, 유형, 훅, 해시태그 수, 좋아요·댓글, 게시 시점)으로 수집한다. 계정 게시물이 30개 미만이면 있는 만큼 수집하고 실제 개수를 보고한다.",
+      "acceptance": "포스트 16~30(또는 계정 전체)이 동일 스키마로 기록됨.",
+      "tool": "chrome",
+      "toolSkills": ["instagram"],
+      "subtasks": [
+        { "id": "s1", "title": "포스트 16~30 순회 수집", "purpose": "배치1과 동일 스키마 유지" },
+        { "id": "s2", "title": "수집 개수 확정 보고", "purpose": "30개 미만 계정 예외 처리" }
+      ],
+      "inputScope": [
+        { "name": "account_url", "type": "url" },
+        { "name": "posts_batch1", "type": "json[]", "description": "중복 수집 방지용 앞 배치 URL 목록" }
+      ],
+      "outputScope": [
+        { "name": "posts_batch2", "type": "json[]", "description": "포스트 16~30, 배치1과 동일 스키마" },
+        { "name": "total_collected", "type": "number", "description": "두 배치 합산 수집 개수" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "validation",
+      "title": "수집 완전성 검증",
+      "detail": "두 배치 합산이 total_collected와 일치하는지, URL 중복이 없는지, 각 포스트에 type·likes·posted_at이 채워졌는지, profile에 followers가 있는지 점검한다.",
+      "acceptance": "is_valid=true이고 issues가 비어 있음.",
+      "inputScope": [
+        { "name": "profile", "type": "json" },
+        { "name": "posts_batch1", "type": "json[]" },
+        { "name": "posts_batch2", "type": "json[]" },
+        { "name": "total_collected", "type": "number" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "문제 없으면 빈 배열" }
+      ]
+    },
+    {
+      "id": "n4",
+      "type": "action",
+      "title": "벤치마크 분석 시트 저장",
+      "detail": "전체 포스트를 합쳐 xlsx로 저장한다. 시트1 '포스트': 한 행에 포스트 하나(참여율 = (좋아요+댓글)/팔로워 컬럼 포함). 시트2 '요약': 유형별 평균 참여율, 상위 10% 포스트의 공통점(포맷·훅 유형·게시 요일), 우리 브랜드가 훔쳐올 전술 3가지를 정리한다.",
+      "acceptance": "포스트 시트 전 행 + 요약 시트의 세 블록이 채워져 저장됨.",
+      "tool": "write",
+      "toolSkills": ["xlsx"],
+      "subtasks": [
+        { "id": "s1", "title": "포스트 시트 작성", "purpose": "참여율 계산 포함 행 단위 정리" },
+        { "id": "s2", "title": "승자 패턴 도출", "purpose": "상위 10% 포스트 공통점 분석" },
+        { "id": "s3", "title": "적용 전술 3선 작성", "purpose": "우리 계정에 이식할 실행 항목 도출" }
+      ],
+      "inputScope": [
+        { "name": "profile", "type": "json" },
+        { "name": "posts_batch1", "type": "json[]" },
+        { "name": "posts_batch2", "type": "json[]" },
+        { "name": "brand_name", "type": "text", "description": "적용 전술의 관점" }
+      ],
+      "outputScope": [
+        { "name": "sheet_name", "type": "text", "description": "작성된 시트 이름들" },
+        { "name": "row_count", "type": "number", "description": "포스트 시트 데이터 행 수" },
+        { "name": "header_row", "type": "text[]", "description": "포스트 시트 헤더" },
+        { "name": "top_patterns", "type": "json[]", "description": "상위 포스트 공통 패턴 요약" }
+      ]
+    }
+  ]
+}

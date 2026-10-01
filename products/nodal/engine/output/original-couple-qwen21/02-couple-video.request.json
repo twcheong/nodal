@@ -1,0 +1,24 @@
+{
+  "tool": "run_template_h3_image_video",
+  "arguments": {
+    "source": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png",
+    "prompt": "A natural live-action Korean romantic comedy, one continuous five-second wide two-shot animated from the supplied first frame. Preserve both adult characters' exact facial identities, hairstyle, clothes, body proportions and the warm vintage room. Camera is locked: man seated on the olive-green velvet sofa on the LEFT, woman standing on the RIGHT, low carved table with yellow mug between them, large bright timber-framed window behind. Keep both people at their original scale and distance. His seated head remains lower than her standing head. Both pairs of feet stay on the floor. Do not move furniture.\nThe woman in the ivory lace camisole and dark jeans looks at the seated man's eyes. She makes a tiny playful head tilt and asks in a clear, natural adult female Korean voice: '이건 어때?' Only her lips move during her line, from about 0.5 to 1.7 seconds. Her arms remain naturally at her sides, with just a small relaxed shoulder shift. The man listens, gazing up at her. After a short pause, at about 2.6 to 3.8 seconds the man in the navy polo answers in a warm natural adult male Korean voice: '귀여워.' Only his lips move during his reply. He gives a small affectionate smile with forearms resting naturally on his thighs. End with her restrained pleased smile and a quiet shared look. Subtle breathing, a natural blink, minimal hand motion. Exactly these two Korean sentences in order, no overlap, no narration, no music, only very quiet room ambience. Accurate speaker-specific Korean lip synchronization.\nKeep faces and hair stable, natural realistic skin, consistent window backlight, normal anatomy with exactly two arms each. Neither person changes position. No cuts, no zoom, no camera movement, no subtitles, no titles, no captions, no visible writing, no watermark.",
+    "seed": 923271,
+    "steps": 20,
+    "width": 1024,
+    "height": 576
+  },
+  "provenance": {
+    "approval": "User approved the Qwen first frame and requested continuation to video.",
+    "approved_image": "01-first-frame.png",
+    "approved_image_sha256": "c67764f377f454152f4ebb54208538242df17493ed0f139486cd39e02ef428dc",
+    "model": "MiniMax-H3-Pruned",
+    "model_path": "C:/Users/nexta/Desktop/nodal/models/MiniMax-H3-Pruned",
+    "memory_profile": "pruned_convrot_int8_offload",
+    "num_frames": 124,
+    "fps": 24,
+    "encoder": "VP9 CRF 18 + Opus",
+    "reference_video_pixels_used": false,
+    "purpose": "Animate the approved Qwen first frame as the short Korean dialogue scene used in the previous recreation; no captions."
+  }
+}

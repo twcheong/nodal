@@ -1,0 +1,100 @@
+{
+  "id": "wf_agency_sales_prospect_audit",
+  "title": "Prospect Audit Teaser",
+  "description": "Run a quick audit of a prospect's social presence, score it, and produce a pitch-ready PDF teaser that opens the sales conversation with specific, credible findings.",
+  "outputDir": "data/reports",
+  "tags": ["reporting"],
+  "inputs": [
+    { "id": "prospect_name", "kind": "scalar", "valueType": "text", "label": "Prospect business name", "observed": "", "confidence": "low" },
+    { "id": "account_url", "kind": "scalar", "valueType": "url", "label": "Prospect's main social profile URL (Instagram preferred)", "observed": "", "confidence": "low" },
+    { "id": "agency_name", "kind": "scalar", "valueType": "text", "label": "Your agency name (for the teaser)", "observed": "", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "Quick-audit the prospect's presence",
+      "detail": "Open the prospect's profile and record the fundamentals: followers, bio quality, link-in-bio, highlights, posting frequency over the last month, and the 10 most recent posts (format, hook, likes, comments, date). Also run one web search for the brand to note other active channels and anything notable (reviews, press).",
+      "acceptance": "Profile fundamentals, 10 recent posts, and other-channel notes captured.",
+      "tool": "chrome",
+      "toolSkills": ["instagram"],
+      "subtasks": [
+        { "id": "s1", "title": "Record profile fundamentals", "purpose": "Bio, link, highlights, cadence baseline" },
+        { "id": "s2", "title": "Collect 10 recent posts", "purpose": "Format, hook, and engagement per post" },
+        { "id": "s3", "title": "Scan other channels", "purpose": "One search pass for presence beyond this profile" }
+      ],
+      "inputScope": [
+        { "name": "account_url", "type": "url", "description": "Profile to audit" },
+        { "name": "prospect_name", "type": "text", "description": "Search term for the channel scan" }
+      ],
+      "outputScope": [
+        { "name": "profile", "type": "json", "description": "followers, bio, link, highlights, cadence" },
+        { "name": "recent_posts", "type": "json[]", "description": "10 posts: format, hook, likes, comments, date" },
+        { "name": "other_channels", "type": "json[]", "description": "Other active platforms and notes" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "action",
+      "title": "Score the account and pick 3 opportunities",
+      "detail": "Score the account 1–10 on five dimensions: profile optimization, content consistency, format mix, hook quality, and engagement rate. For each dimension write a one-line justification grounded in the collected data. Then pick the 3 highest-impact opportunities — specific, credible fixes the prospect will recognize as true, phrased as outcomes ('Reels with question hooks are your top performers — you posted only 2 last month').",
+      "acceptance": "Five scores with justifications and three specific opportunities.",
+      "tool": "read",
+      "toolSkills": [],
+      "subtasks": [
+        { "id": "s1", "title": "Score five dimensions", "purpose": "Grounded 1–10 scores with evidence lines" },
+        { "id": "s2", "title": "Select three opportunities", "purpose": "Specific findings that open a sales conversation" }
+      ],
+      "inputScope": [
+        { "name": "profile", "type": "json" },
+        { "name": "recent_posts", "type": "json[]" },
+        { "name": "other_channels", "type": "json[]" }
+      ],
+      "outputScope": [
+        { "name": "scores", "type": "json[]", "description": "Five dimensions: score + justification" },
+        { "name": "opportunities", "type": "json[]", "description": "Three specific, evidence-backed opportunities" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "validation",
+      "title": "Verify audit credibility",
+      "detail": "Check that all five scores have data-grounded justifications (no generic claims), each opportunity cites something actually observed in the collected posts or profile, and no claim contradicts the collected data.",
+      "acceptance": "is_valid=true and issues is empty.",
+      "inputScope": [
+        { "name": "scores", "type": "json[]" },
+        { "name": "opportunities", "type": "json[]" },
+        { "name": "recent_posts", "type": "json[]" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "Empty when valid" }
+      ]
+    },
+    {
+      "id": "n4",
+      "type": "action",
+      "title": "Write the pitch-ready PDF teaser",
+      "detail": "Write a 2–3 page PDF teaser: (1) cover section — prospect name, date, prepared-by agency line, (2) scorecard — the five scores in a table with one-line evidence each, (3) top 3 opportunities — each with the finding, why it matters, and what better looks like, (4) a soft close — one paragraph inviting a 20-minute walkthrough, no hard sell. Professional, specific, and short enough to read in three minutes.",
+      "acceptance": "PDF saved with cover, scorecard, three opportunities, and soft close.",
+      "tool": "write",
+      "toolSkills": ["pdf"],
+      "subtasks": [
+        { "id": "s1", "title": "Build the scorecard section", "purpose": "Five scores with evidence in a scannable table" },
+        { "id": "s2", "title": "Write the opportunity pages", "purpose": "Finding → impact → what better looks like" },
+        { "id": "s3", "title": "Close with the soft CTA", "purpose": "Invite the call without selling hard" }
+      ],
+      "inputScope": [
+        { "name": "scores", "type": "json[]" },
+        { "name": "opportunities", "type": "json[]" },
+        { "name": "prospect_name", "type": "text" },
+        { "name": "agency_name", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "sections_written", "type": "text[]", "description": "Teaser sections written" },
+        { "name": "page_estimate", "type": "number", "description": "Approximate page count" },
+        { "name": "opportunity_titles", "type": "text[]", "description": "The three opportunity headlines" }
+      ]
+    }
+  ]
+}

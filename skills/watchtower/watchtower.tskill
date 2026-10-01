@@ -1,0 +1,65 @@
+@workspace twixy
+
+SKILL "Watchtower"
+  version: 1.0
+  description: "Monitor marketing platforms continuously and alert on KPI changes."
+  tags: [monitoring, alerts, kpi, automation]
+  schedule: "0 9 * * *"
+
+PLATFORMS {
+  INSTAGRAM
+  TIKTOK
+  LINKEDIN
+  TWITTER
+  YOUTUBE
+}
+
+GOAL "Detect meaningful metric changes and trigger appropriate responses" {
+  objective: "Track key metrics across the user's platforms, detect spikes or drops against a defined threshold, and trigger the Data Scout when fresh data is needed."
+  kpi: alert_accuracy
+}
+
+COLLECT "Check current platform metrics" {
+  // Ask user (or infer from context) what to watch:
+  // Platform, Metric, Threshold, Frequency
+  - Load watch configuration from `~/.openclaw/workspace/twixy/data/watches/`
+
+  USE instagram AS ig
+
+  EXTRACT Metric FROM ig
+    INTO $current_metrics
+
+  LOAD "platform_metrics_baseline" FROM $INSIGHTS AS $baseline
+}
+
+ANALYZE "Compare metrics against baseline" {
+  HYPOTHESIZE Hypothesis AS $alert_check
+    FROM $current_metrics
+    ABOUT "whether any tracked metric has crossed the user-defined alert threshold compared to baseline"
+
+  IF $alert_check.confidence > 0.7 {
+    SPAWN alert_writer
+      TASK "format an alert message showing: metric name, current value, previous average, change percentage, and suggested action"
+      USING $current_metrics
+      OUTPUT $alert_message
+      AWAIT
+  }
+
+  // Update baseline with fresh readings
+  STORE $current_metrics AS "platform_metrics_baseline" IN $INSIGHTS
+}
+
+TRACK "Alert user if threshold crossed, trigger scout if needed" {
+  IF $alert_message {
+    - Send alert to user:
+    - Metric: {name}
+    - Current: {value} | Previous avg: {previous} | Change: {delta}%
+    - Suggested action: [analyze] [scout more data] [ignore]
+
+    EMIT "metric_spike_detected"
+      WITH payload = $current_metrics
+      TO SKILL "Data Scout"
+  }
+
+  STORE $current_metrics AS "watchtower_log_{date}" IN $REPORTS
+}

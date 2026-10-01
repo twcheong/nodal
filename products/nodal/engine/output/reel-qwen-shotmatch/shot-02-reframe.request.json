@@ -1,0 +1,72 @@
+{
+  "graph": {
+    "nodal_version": "1",
+    "id": "1e234202-0000-4000-8000-000000000000",
+    "nodes": {
+      "1e234202-0000-4000-8000-000000000001": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/frames/shot-02.png"
+        }
+      },
+      "1e234202-0000-4000-8000-000000000002": {
+        "type": "image.Crop",
+        "inputs": {
+          "image": {
+            "$link": [
+              "1e234202-0000-4000-8000-000000000001",
+              "image"
+            ]
+          },
+          "x": 32,
+          "y": 0,
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "1e234202-0000-4000-8000-000000000003": {
+        "type": "image.Resize",
+        "inputs": {
+          "image": {
+            "$link": [
+              "1e234202-0000-4000-8000-000000000002",
+              "image"
+            ]
+          },
+          "width": 1536,
+          "height": 864,
+          "method": "lanczos"
+        }
+      },
+      "1e234202-0000-4000-8000-000000000004": {
+        "type": "image.Save",
+        "inputs": {
+          "image": {
+            "$link": [
+              "1e234202-0000-4000-8000-000000000003",
+              "image"
+            ]
+          },
+          "embed_workflow": true
+        }
+      }
+    },
+    "outputs": [
+      "1e234202-0000-4000-8000-000000000004"
+    ]
+  },
+  "save_outputs": {
+    "1e234202-0000-4000-8000-000000000004": "frames/shot-02-match.png"
+  },
+  "provenance": {
+    "purpose": "Match source reverse shot head scale and remove extra knees introduced by the wider Qwen framing; all transformations through nodal.",
+    "source_image": "frames/shot-02.png",
+    "source_reel_frame": "../reel-DcvQpQfJ6EB/frame-005.0.png",
+    "crop": [
+      32,
+      0,
+      1280,
+      720
+    ]
+  }
+}

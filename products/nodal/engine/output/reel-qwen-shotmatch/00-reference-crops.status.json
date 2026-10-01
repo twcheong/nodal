@@ -1,0 +1,48 @@
+{
+  "run_id": "386faf5e5cd449c6a9d1d26bd1d7271e",
+  "status": "succeeded",
+  "outputs": {
+    "1e234000-0000-4000-8000-000000000004": [
+      {
+        "socket": "asset",
+        "type": "Image",
+        "inline": null,
+        "asset": {
+          "hash": "344aaa4191488016da7ce97b29746fdb",
+          "media_type": "image/png",
+          "size_bytes": 115782,
+          "width": 250,
+          "height": 245
+        }
+      }
+    ],
+    "1e234000-0000-4000-8000-000000000005": [
+      {
+        "socket": "asset",
+        "type": "Image",
+        "inline": null,
+        "asset": {
+          "hash": "f2701e41726eef70e92ff430a2afaab7",
+          "media_type": "image/png",
+          "size_bytes": 94356,
+          "width": 200,
+          "height": 230
+        }
+      }
+    ]
+  },
+  "executed": [
+    "1e234000-0000-4000-8000-000000000001",
+    "1e234000-0000-4000-8000-000000000002",
+    "1e234000-0000-4000-8000-000000000004",
+    "1e234000-0000-4000-8000-000000000003",
+    "1e234000-0000-4000-8000-000000000005"
+  ],
+  "cached": [],
+  "blocked": [],
+  "elapsed_ms": 262,
+  "created_at": "2026-09-23T05:13:30.298859Z",
+  "started_at": "2026-09-23T05:13:30.303948Z",
+  "finished_at": "2026-09-23T05:13:30.567194Z",
+  "error": null
+}

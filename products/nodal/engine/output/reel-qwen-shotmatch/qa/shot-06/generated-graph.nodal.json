@@ -1,0 +1,34 @@
+{
+  "nodal_version": "1",
+  "id": "1e235006-0000-4000-8000-000000000000",
+  "nodes": {
+    "1e235006-0000-4000-8000-000000000001": {
+      "type": "image.Load",
+      "inputs": {
+        "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/frames/shot-06.png"
+      }
+    },
+    "1e235006-0000-4000-8000-000000000003": {
+      "type": "diffusion.MiniMaxH3",
+      "inputs": {
+        "model_path": "C:/Users/nexta/Desktop/nodal/models/MiniMax-H3-Pruned",
+        "first_frame": {
+          "$link": [
+            "1e235006-0000-4000-8000-000000000001",
+            "image"
+          ]
+        },
+        "prompt": "A photorealistic Korean romantic comedy. Follow the supplied FIRST FRAME's exact shot composition, lens, faces, clothes and vintage setting. This is ONE SHOT, not an entire montage. Matching EXTREME FISHEYE CLOSE-UP of seated man looking upward, plain navy polo neckline below. Retain first-frame face size, curved wooden wall and window edges. One slow blink then a fond near-whisper in the SAME natural young adult MALE Korean voice: '귀여워.' Speak from 0.45 to 1.15 seconds, then a tiny smile. No woman or second voice. No change to normal lens.\nPreserve facial identity throughout, natural adult anatomy, realistic skin, consistent soft warm window lighting. Locked camera, no zoom or pan or reframing. No shot changes, no extra people, no narrator, no music. Very quiet indoor ambience under requested speech. No captions, subtitles, title, text, logos or watermark in any frame. Preserve the exact visible framing; NEVER replace this shot with a wide two-shot.",
+        "seed": 923506,
+        "steps": 20,
+        "width": 1024,
+        "height": 576,
+        "num_frames": 124,
+        "memory_profile": "pruned_convrot_int8_offload"
+      }
+    }
+  },
+  "outputs": [
+    "1e235006-0000-4000-8000-000000000003"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "outDir": "dist-electron",
+    // Explicit: once electron/ imports shared/, TS would otherwise infer rootDir
+    // from the whole import graph and silently relocate the emit tree.
+    "rootDir": ".",
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  },
+  // products/: profile 과 메인 프로세스 코드만 — renderer/ 는 DOM·JSX 라 여기서 빼야 한다.
+  "include": ["electron", "shared", "products/*/profile.ts", "products/*/electron"]
+}

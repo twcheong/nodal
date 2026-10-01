@@ -1,0 +1,93 @@
+{
+  "graph": {
+    "nodal_version": "1",
+    "id": "1e234812-0000-4000-8000-000000000000",
+    "nodes": {
+      "1e234812-0000-4000-8000-000000000001": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-DcvQpQfJ6EB/frame-033.0.png"
+        }
+      },
+      "1e234812-0000-4000-8000-000000000002": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/woman.png"
+        }
+      },
+      "1e234812-0000-4000-8000-000000000003": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/man.png"
+        }
+      },
+      "1e234812-0000-4000-8000-000000000008": {
+        "type": "diffusion.QwenImage21",
+        "inputs": {
+          "model_path": "C:/Users/nexta/Desktop/nodal/models/Qwen-Image-2.1",
+          "prompt": "Edit the supplied IMAGE 1. Preserve IMAGE 1's exact room, camera, lens, scale, perspective and the placement and size of both actors. DO NOT redesign the scene. Only these edits: 1. Completely replace the woman's face and hair with the approved woman from IMAGE 2, retaining IMAGE 1 woman's exact pose and location. Use image2 gold hoop earrings and IVORY LACE CAMISOLE with short ruffled peplum, plus dark jeans. 2. Replace the man's face and hair with the approved man from IMAGE 3, retaining image1 exact pose and location. Plain NAVY POLO and faded jeans. 3. Remove ALL tattoos, logos, necklaces, rings, central Korean title and bottom subtitle. 4. Add one small plain yellow mug to the coffee table. Do not make other changes. The final camera MUST stay IDENTICAL to IMAGE 1: a spacious 16mm room-wide view with much visible ornate ceiling, wooden left wall, hanging plants and foreground objects. There is one single bright rectangular back window, NOT a grid of many narrow window panes. Man is SMALL and seated at the low LEFT: his face center x=30%, y=53%. Woman is SMALL standing on RIGHT: face center x=60%, y=32%. Feet near bottom y=90%. Keep source person's bounding boxes, the low camera height and scale exactly. Large full sofa and furniture remain in the SAME locations and sizes as IMAGE 1. Do not zoom in, do not raise either person's head, do not remove the wide foreground view. The woman must be image2 person and the man image3 person, not the source actors. Natural adult anatomy, clean skin, warm window lighting. No writing, no watermark. Return image1's camera with only the requested cast/costume/text changes.",
+          "width": 1536,
+          "height": 864,
+          "steps": 40,
+          "seed": 923812,
+          "reference_resolution": 768,
+          "memory_profile": "group_offload",
+          "reference_1": {
+            "$link": [
+              "1e234812-0000-4000-8000-000000000001",
+              "image"
+            ]
+          },
+          "reference_2": {
+            "$link": [
+              "1e234812-0000-4000-8000-000000000002",
+              "image"
+            ]
+          },
+          "reference_3": {
+            "$link": [
+              "1e234812-0000-4000-8000-000000000003",
+              "image"
+            ]
+          }
+        }
+      },
+      "1e234812-0000-4000-8000-000000000009": {
+        "type": "image.Save",
+        "inputs": {
+          "image": {
+            "$link": [
+              "1e234812-0000-4000-8000-000000000008",
+              "image"
+            ]
+          },
+          "embed_workflow": true
+        }
+      }
+    },
+    "outputs": [
+      "1e234812-0000-4000-8000-000000000009"
+    ]
+  },
+  "save_outputs": {
+    "1e234812-0000-4000-8000-000000000009": "frames/shot-11-end-final.png"
+  },
+  "provenance": {
+    "shot": 11,
+    "source_frame_range": [
+      729,
+      1015
+    ],
+    "references": [
+      "../reel-DcvQpQfJ6EB/frame-033.0.png",
+      "references/woman.png",
+      "references/man.png"
+    ],
+    "reference_roles": "Source final-wide frame is sole camera reference; exact approved face crops fix cast. Whole master omitted to prevent its closer framing overriding source.",
+    "original_source_pixels_used": true,
+    "identity_master": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png",
+    "prompt": "Edit the supplied IMAGE 1. Preserve IMAGE 1's exact room, camera, lens, scale, perspective and the placement and size of both actors. DO NOT redesign the scene. Only these edits: 1. Completely replace the woman's face and hair with the approved woman from IMAGE 2, retaining IMAGE 1 woman's exact pose and location. Use image2 gold hoop earrings and IVORY LACE CAMISOLE with short ruffled peplum, plus dark jeans. 2. Replace the man's face and hair with the approved man from IMAGE 3, retaining image1 exact pose and location. Plain NAVY POLO and faded jeans. 3. Remove ALL tattoos, logos, necklaces, rings, central Korean title and bottom subtitle. 4. Add one small plain yellow mug to the coffee table. Do not make other changes. The final camera MUST stay IDENTICAL to IMAGE 1: a spacious 16mm room-wide view with much visible ornate ceiling, wooden left wall, hanging plants and foreground objects. There is one single bright rectangular back window, NOT a grid of many narrow window panes. Man is SMALL and seated at the low LEFT: his face center x=30%, y=53%. Woman is SMALL standing on RIGHT: face center x=60%, y=32%. Feet near bottom y=90%. Keep source person's bounding boxes, the low camera height and scale exactly. Large full sofa and furniture remain in the SAME locations and sizes as IMAGE 1. Do not zoom in, do not raise either person's head, do not remove the wide foreground view. The woman must be image2 person and the man image3 person, not the source actors. Natural adult anatomy, clean skin, warm window lighting. No writing, no watermark. Return image1's camera with only the requested cast/costume/text changes.",
+    "endpoint": "last frame of final continuous pull-back"
+  },
+  "priority": 100
+}

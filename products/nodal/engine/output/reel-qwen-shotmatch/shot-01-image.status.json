@@ -1,0 +1,31 @@
+{
+  "run_id": "dfe081f71e0948e5b17d5f99ecbbeb5f",
+  "status": "succeeded",
+  "progress": {
+    "completed_nodes": 5,
+    "total_nodes": 5,
+    "node_id": null,
+    "step": null,
+    "total_steps": null
+  },
+  "results": {
+    "image": {
+      "socket": "asset",
+      "type": "Image",
+      "inline": null,
+      "asset": {
+        "hash": "2e49adcbb14fcc3d0c09067090f20332",
+        "media_type": "image/png",
+        "size_bytes": 1880828,
+        "width": 1536,
+        "height": 864
+      }
+    },
+    "metadata": {
+      "socket": "metadata",
+      "type": "STRING",
+      "inline": "{\"model_path\": \"C:\\\\Users\\\\nexta\\\\Desktop\\\\nodal\\\\models\\\\Qwen-Image-2.1\", \"model\": {\"license\": \"qwen-research\", \"repo_id\": \"Qwen/Qwen-Image-2.1\", \"revision\": \"790c92633540aa0cb11d9abf19eb46d861714758\"}, \"run_id\": \"dfe081f71e0948e5b17d5f99ecbbeb5f\", \"prompt\": \"Create one photorealistic movie frame using three references with STRICTLY DIFFERENT ROLES. IMAGE 1 is the approved cast and actual room. IMAGE 2 is an exact crop of the approved woman's face: preserve this woman's facial identity, short layered black hair, wispy fringe and earrings. IMAGE 3 is ONLY the storyboard camera and costume reference, not the woman's identity. Recreate image 3's shot composition almost exactly, replacing its actress with the approved woman from images 1 and 2 and harmonizing the vintage room with image 1. Do not use image 3's facial identity or tattoos.\\nSHOT: waist-up medium single of ONLY the woman, shot from the seated man's slightly low eye level, a very gentle upward angle, approximately 35mm normal lens. Woman is positioned at x=60% of the image, head at y=20%, body visible down to the upper hips at the bottom edge. Her body is three-quarter turned toward screen LEFT, her eyes look down and left toward the off-camera seated man; warm slight closed-mouth smile. Keep generous bright window area on the LEFT half, dark wooden cabinet and old mirror on the RIGHT. Ceiling timber visible across the upper edge, same camera angle and distribution of objects as image 3. Nobody else visible, not a two-shot, no distant full-body figure. Recompose from the approved wide room rather than simply cropping it.\\nFor this first outfit, replace her lace camisole with the fitted opaque WHITE short-sleeved blouse in image 3: small stand collar, puff cap sleeves, vertical little buttons, shaped fitted waist, cropped curved hem, dark indigo jeans and brown belt, small dark burgundy shoulder bag. Both hands low near her waist and jeans, relaxed natural anatomy. Preserve approved woman's face, clean un-tattooed arms and her own black hairstyle. Warm window backlight, natural realistic skin, soft cinematic contrast and tactile wood from image 1. Horizontal 16:9, one continuous movie frame, no captions, no subtitles, no text, no logos, no watermark. Match image 3's CAMERA AND FRAMING; match images 1 and 2's WOMAN.\", \"seed\": 923401, \"steps\": 40, \"width\": 1536, \"height\": 864, \"reference_resolution\": 768, \"reference_pixel_hashes\": [\"5ae78e6278a91ea40f6e5ff2f89f36029be10f94c5438bd63b1bd3f7d46e1b63\", \"f22cc3919785a262cd921e230d6ff6ee14b43d579bd9040dacd0dbeaa00aeff5\", \"7fe681d88cff2a31512471eb58192facc71a4f1aec2d4132c6df5548070f77b2\"], \"memory_profile\": \"group_offload\", \"runtime\": {\"diffusers\": \"0.41.0.dev0\", \"transformers\": \"5.17.0\", \"torch\": \"2.13.0+cu130\"}}",
+      "asset": null
+    }
+  }
+}

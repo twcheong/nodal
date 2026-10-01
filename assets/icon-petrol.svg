@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Twixy 로고 — Paper/Petrol 테마 (플랫, 그라데이션 없음)
+       paper #FAFAF6 배경 + hairline #D9E1DA 프레임 + petrol #0D5C50 T -->
+
+  <!-- Background rounded square (paper) -->
+  <rect width="1024" height="1024" rx="230" ry="230" fill="#FAFAF6"/>
+
+  <!-- Hairline frame -->
+  <rect x="6" y="6" width="1012" height="1012" rx="224" ry="224"
+        fill="none" stroke="#D9E1DA" stroke-width="12"/>
+
+  <!-- T vertical stem (petrol) -->
+  <rect x="464" y="268" width="96" height="488" rx="12" fill="#0D5C50"/>
+
+  <!-- T horizontal bar (on top) -->
+  <rect x="192" y="268" width="640" height="96" rx="12" fill="#0D5C50"/>
+
+  <!-- Dot accent top-right of T bar (petrol-deep) -->
+  <circle cx="794" cy="232" r="22" fill="#093F37"/>
+</svg>

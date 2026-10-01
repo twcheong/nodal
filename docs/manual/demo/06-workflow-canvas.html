@@ -1,0 +1,134 @@
+<!doctype html>
+<html data-theme="light"><head><meta charset="utf-8"><link rel="stylesheet" href="tokens.css">
+<style>
+.wfrow{display:flex;align-items:center;gap:6px;padding:5px 14px;font-size:12px;color:var(--text-secondary);border-left:2px solid transparent}
+.wfrow.active{background:var(--bg-active);color:var(--text-primary);border-left:2px solid var(--accent)}
+.wfrow .d{width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.toolrow{display:flex;align-items:center;gap:7px;padding:5px 14px;font-size:12px;color:var(--text-secondary)}
+.toolrow b{font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--accent);background:var(--accent-glow);padding:1px 6px;border-radius:4px}
+.node{display:flex;align-items:stretch;gap:12px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;max-width:860px}
+.ntag{font-family:var(--font-mono);font-size:11px;padding:1px 7px;border-radius:var(--radius-sm);font-weight:600}
+.ntitle{font-size:13px;color:var(--text-primary);font-weight:500}
+.ndesc{font-size:12px;color:var(--text-muted);margin-top:3px}
+.arrow{display:flex;justify-content:center;align-items:center;padding:4px 0;color:var(--text-muted);font-size:18px;min-height:30px;max-width:860px}
+.shape{width:36px;height:36px;position:relative;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.shape svg{position:absolute;inset:0}
+.shape b{position:relative;font-size:12px;font-weight:600}
+</style></head>
+<body>
+<div class="app">
+  <div class="titlebar"><span class="lights"><i></i><i></i><i></i></span>TWIXY</div>
+  <div class="body">
+    <aside class="sidebar"><div class="col">
+      <button class="logo"><img src="../../../assets/icon-petrol-64.png" alt="Twixy"></button>
+      <button class="active">◇</button><button>⊟</button><button>⊞</button><button>⚙</button>
+    </div></aside>
+    <div class="main" style="flex-direction:row">
+      <!-- 좌: 목록 + 도구 -->
+      <aside class="aside l" style="width:260px">
+        <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+          <div style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border-subtle)">
+            <span style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.4px;flex:1">Workflows</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.6"><path d="M3 6h18M7 12h10m-7 6h4"/></svg>
+          </div>
+          <div style="flex:1;overflow:hidden;padding:4px 0">
+            <div class="wfrow active"><span class="d"></span> 월간 경쟁사 콘텐츠 조사 <span style="margin-left:auto;font-size:8.5px;font-weight:700;letter-spacing:.3px;color:var(--accent)">RSCH</span></div>
+            <div class="wfrow"><span class="d" style="background:var(--text-muted)"></span> 주간 순위 리포트</div>
+            <div class="wfrow"><span class="d" style="background:var(--text-muted)"></span> 신규 문의 정리</div>
+          </div>
+        </div>
+        <div style="height:1px;background:var(--border-subtle)"></div>
+        <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+          <div style="padding:8px 12px;border-bottom:1px solid var(--border-subtle);font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.4px">Tools &amp; Tool Skills</div>
+          <div style="flex:1;overflow:hidden;padding:4px 0">
+            <div class="toolrow"><b>Chrome</b> 브라우저 자동화</div>
+            <div class="toolrow"><b>Web Fetch</b> 웹 자료 가져오기</div>
+            <div class="toolrow"><b>Read</b> 파일 읽기</div>
+            <div class="toolrow"><b>Data</b> 수집 · 질의</div>
+            <div class="toolrow"><b>Write</b> PDF · XLSX · PPTX</div>
+            <div class="toolrow"><b>Edit</b> 파일 수정</div>
+            <div class="toolrow"><b>API</b> Google Workspace</div>
+            <div class="toolrow"><b>App</b> KakaoTalk</div>
+            <div class="toolrow"><b>MCP</b> Notion</div>
+          </div>
+        </div>
+      </aside>
+      <!-- 중앙: 캔버스 -->
+      <main style="flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg-base)">
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid var(--border-subtle);background:var(--bg-surface);padding:0 6px 0 4px;flex-shrink:0">
+          <div style="display:flex;align-items:center;gap:6px;padding:8px 14px;font-size:12px;color:var(--text-primary);border-right:1px solid var(--border-subtle);background:var(--bg-elevated)">
+            월간 경쟁사 콘텐츠 조사 <span style="color:var(--text-muted);font-size:10px">· 5 nodes</span>
+          </div>
+          <span style="display:flex;align-items:center;gap:4px;margin:8px 0 8px 8px;font-size:9px;font-family:var(--font-mono);padding:2px 7px;border-radius:4px;background:var(--bg-elevated);border:1px solid var(--border-subtle);color:var(--text-muted)">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+            data/reports</span>
+          <div style="flex:1;min-width:8px"></div>
+          <div style="display:flex;align-items:center;gap:2px">
+            <button style="background:transparent;border:none;color:var(--text-muted);padding:4px 8px;font-size:15px">⤢</button>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.5" style="margin:0 6px"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>
+            <button style="background:#10b981;border:none;color:#fff;border-radius:var(--radius-sm);padding:4px 10px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:2px;margin:6px 0 6px 2px"><span style="font-size:9px">▶</span>Start</button>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;overflow:hidden;padding:20px 24px">
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:14px">
+            <span class="mono-eyebrow" style="font-family:var(--font-sans)">Workflow inputs:</span>
+            <span style="font-size:10px;font-family:var(--font-mono);padding:2px 7px;border-radius:var(--radius-sm);background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border-subtle)">{{client}} · 클라이언트</span>
+            <span style="font-size:10px;font-family:var(--font-mono);padding:2px 7px;border-radius:var(--radius-sm);background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border-subtle)">{{competitors}} · 경쟁사 목록</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0">
+            <div class="node">
+              <div class="shape"><svg viewBox="0 0 36 36" fill="none" stroke="var(--petrol-500)" stroke-width="1.5"><circle cx="18" cy="18" r="16"/></svg><b style="color:var(--petrol-500)">1</b></div>
+              <div style="flex:1"><div style="display:flex;align-items:center;gap:8px"><span class="ntag" style="background:#0d5c5022;color:var(--accent)">[Chrome]</span><span class="ntitle">경쟁사 블로그 3곳 최근 글 수집</span><span style="margin-left:auto;font-size:10px;color:var(--text-muted)">▸</span></div>
+              <div class="ndesc">각 블로그의 최근 글 5개 제목·날짜·주제를 수집</div></div>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="node">
+              <div class="shape"><svg viewBox="0 0 36 36" fill="none" stroke="#f59e0b" stroke-width="1.5"><polygon points="18,2 34,34 2,34"/></svg><b style="color:#f59e0b;margin-top:6px">2</b></div>
+              <div style="flex:1"><div style="display:flex;align-items:center;gap:8px"><span class="ntag" style="background:#f59e0b22;color:#f59e0b">[Human Review]</span><span class="ntitle">Human Review (optional)</span><span style="margin-left:auto;font-size:10px;color:var(--text-muted)">▸</span></div>
+              <div class="ndesc" style="font-size:10.5px;font-style:italic;opacity:.75">수집 결과를 확인한 뒤 계속할지 결정합니다</div></div>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="node">
+              <div class="shape"><svg viewBox="0 0 36 36" fill="none" stroke="var(--petrol-500)" stroke-width="1.5"><circle cx="18" cy="18" r="16"/></svg><b style="color:var(--petrol-500)">3</b></div>
+              <div style="flex:1"><div style="display:flex;align-items:center;gap:8px"><span class="ntag" style="background:#0d5c5022;color:var(--accent)">[Data]</span><span class="ntitle">수집 데이터 정리 · 지난달과 비교</span><span style="margin-left:auto;font-size:10px;color:var(--text-muted)">▸</span></div>
+              <div class="ndesc">주제 분류와 게시 빈도를 지난달 결과와 비교</div></div>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="node">
+              <div class="shape"><svg viewBox="0 0 36 36" fill="none" stroke="#10b981" stroke-width="1.5"><rect x="3" y="3" width="30" height="30" rx="2"/></svg><b style="color:#10b981">4</b></div>
+              <div style="flex:1"><div style="display:flex;align-items:center;gap:8px"><span class="ntag" style="background:#10b98122;color:#10b981">[Validation]</span><span class="ntitle">표 형식 · 누락 검증</span><span style="margin-left:auto;font-size:10px;color:var(--text-muted)">▸</span></div>
+              <div class="ndesc">세 블로그 모두 5개 행이 있는지, 날짜 형식이 맞는지 확인</div></div>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="node">
+              <div class="shape"><svg viewBox="0 0 36 36" fill="none" stroke="var(--petrol-500)" stroke-width="1.5"><circle cx="18" cy="18" r="16"/></svg><b style="color:var(--petrol-500)">5</b></div>
+              <div style="flex:1"><div style="display:flex;align-items:center;gap:8px"><span class="ntag" style="background:#0d5c5022;color:var(--accent)">[Write]</span><span class="ntitle">월간 비교표 저장 (xlsx)</span><span style="margin-left:auto;font-size:10px;color:var(--text-muted)">▸</span></div>
+              <div class="ndesc">data/reports 에 월간 비교표를 엑셀로 저장</div></div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <!-- 우: 빌더 챗 -->
+      <aside class="aside r" style="width:320px">
+        <div style="padding:8px 12px;border-bottom:1px solid var(--border-subtle);font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.4px">Workflow Builder</div>
+        <div style="flex:1;overflow:hidden;padding:12px;display:flex;flex-direction:column;gap:10px">
+          <div class="bubble user" style="font-size:12px;max-width:94%">검증 단계 다음에 비교 차트도 추가해줘</div>
+          <div class="bubble ai" style="font-size:12px;max-width:94%">비교 차트를 만들어 표와 함께 저장하도록 마지막 단계를 수정했습니다.</div>
+          <div style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;padding:5px 10px;font-size:11px;font-family:var(--font-mono);color:var(--accent);background:var(--bg-surface);border:1px solid var(--accent);border-radius:var(--radius-sm)">⊕ Workflow draft detected</div>
+          <div style="display:flex;gap:6px">
+            <button style="background:var(--accent);border:none;color:#fff;border-radius:var(--radius-sm);padding:4px 12px;font-size:11px;font-weight:600">✎ Update</button>
+            <button style="background:transparent;border:1px solid var(--border);color:var(--text-secondary);border-radius:var(--radius-sm);padding:4px 12px;font-size:11px">⊕ New</button>
+          </div>
+        </div>
+        <div style="padding:10px 12px;border-top:1px solid var(--border-subtle)">
+          <textarea rows="2" style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;font-family:var(--font-sans);resize:none;outline:none;color:var(--text-primary)" placeholder='Ask the builder to refine "월간 경쟁사 콘텐츠 조사"…'></textarea>
+        </div>
+      </aside>
+    </div>
+  </div>
+  <div class="statusbar">
+    <span class="dot"></span><span style="color:var(--green)">Twixy · Ready</span>
+    <span class="usage"><span class="eyebrow">tok</span><span class="track"><span class="fill" style="width:31%;display:block"></span></span><span class="val">54.7K tok</span></span>
+  </div>
+</div>
+</body></html>

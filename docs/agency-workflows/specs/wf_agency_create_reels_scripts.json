@@ -1,0 +1,77 @@
+{
+  "id": "wf_agency_create_reels_scripts",
+  "title": "Reels Script Batch (10)",
+  "description": "Pick 10 angles from the hook library and client context, then produce 10 complete Reels scripts — 3-second hook, body, CTA, and shot directions — in one draft file.",
+  "outputDir": "content/drafts",
+  "tags": ["content"],
+  "inputs": [
+    { "id": "client_name", "kind": "scalar", "valueType": "text", "label": "Client name", "observed": "", "confidence": "low" },
+    { "id": "niche", "kind": "scalar", "valueType": "text", "label": "Client niche", "observed": "", "confidence": "low" },
+    { "id": "target_audience", "kind": "scalar", "valueType": "text", "label": "Target audience in one line", "observed": "", "confidence": "low" },
+    { "id": "hook_library_path", "kind": "scalar", "valueType": "path", "label": "Hook library CSV path (leave empty if none)", "observed": "", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "Select 10 angles",
+      "detail": "If hook_library_path points to a file, read it and pick unused hooks that fit the audience; otherwise design hooks from the niche and audience directly. Lock in 10 angles (hook + topic + format type) mixing different trigger types — no more than 3 of any one type.",
+      "acceptance": "10 angles locked with 4+ distinct trigger types represented.",
+      "tool": "read",
+      "toolSkills": [],
+      "subtasks": [
+        { "id": "s1", "title": "Load and filter the hook library", "purpose": "Unused, audience-fit hook candidates" },
+        { "id": "s2", "title": "Lock 10 angles", "purpose": "Hook × topic × format combos with type diversity" }
+      ],
+      "inputScope": [
+        { "name": "hook_library_path", "type": "path", "description": "Optional 100-hook CSV" },
+        { "name": "client_name", "type": "text" },
+        { "name": "niche", "type": "text" },
+        { "name": "target_audience", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "selected_angles", "type": "json[]", "description": "10 of hook, topic, format, trigger_type" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "action",
+      "title": "Write and save 10 scripts",
+      "detail": "Write a Reels script per angle into one markdown file. Each script contains: (1) Hook — the 0–3 second line and on-screen text, (2) Body — 15–30 seconds of dialogue broken into scenes, (3) CTA — a save/share/follow line, (4) Shot directions — per-scene framing, props, and caption placement described in text (no images), (5) a first-caption-line draft. Keep the client's voice consistent across all ten.",
+      "acceptance": "All 10 scripts saved with hook, body, CTA, shot directions, and caption line.",
+      "tool": "write",
+      "toolSkills": ["md"],
+      "subtasks": [
+        { "id": "s1", "title": "Draft each script scene by scene", "purpose": "Dialogue and on-screen text at shootable detail" },
+        { "id": "s2", "title": "Write shot directions", "purpose": "A creator can film from the directions alone" },
+        { "id": "s3", "title": "Check voice consistency", "purpose": "One client voice across all ten scripts" }
+      ],
+      "inputScope": [
+        { "name": "selected_angles", "type": "json[]" },
+        { "name": "client_name", "type": "text" },
+        { "name": "target_audience", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "scripts_written", "type": "number", "description": "Scripts completed (must be 10)" },
+        { "name": "sections_written", "type": "text[]", "description": "Title of each script" },
+        { "name": "char_count", "type": "number", "description": "Total characters in the file" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "validation",
+      "title": "Verify script completeness",
+      "detail": "Check that scripts_written is 10, every script has all four elements (hook, body, CTA, shot directions), no hook line repeats across scripts, and each body stays near a 30-second read (roughly 60–90 words).",
+      "acceptance": "is_valid=true and issues is empty.",
+      "inputScope": [
+        { "name": "scripts_written", "type": "number" },
+        { "name": "sections_written", "type": "text[]" },
+        { "name": "selected_angles", "type": "json[]" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "Empty when valid" }
+      ]
+    }
+  ]
+}

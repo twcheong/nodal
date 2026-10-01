@@ -1,0 +1,53 @@
+{
+  "selected": "05-first-frame.png",
+  "run_id": "79cf0d5e8423404d97de481f36f25b5c",
+  "asset": "5b9f0beb8ddf1a74b6f40a7b9048d2ca",
+  "dimensions": [
+    1536,
+    864
+  ],
+  "generated_by": "nodal MCP diffusion.Flux2KleinMultiReference",
+  "seed": 921305,
+  "steps": 32,
+  "model": "FLUX.2 Klein Base 4B",
+  "source": "03-cinematic-first-frame.png",
+  "reference_video_pixels_used": false,
+  "user_approved_identity_master": false,
+  "review": {
+    "format": "Full-size visual inspection of all five candidates",
+    "selected_anatomy": "No duplicated limbs observed; two arms on woman, feet grounded; seated-left/standing-right scale maintained",
+    "art_direction": "Walnut paneling, olive velvet sofa, burgundy rug, sideboard, plants, ceramics, warm dimensional light",
+    "casting": "Man without glasses, changed face; woman black chin-length fringe hairstyle and ivory sleeveless lace top",
+    "rejected_04": "Extra arm and duplicated hands; not used as input for selected image",
+    "limitations": "Creative draft awaiting user taste judgment; smiles remain relatively posed; no claim of exact source-face or source-camera reproduction"
+  },
+  "files": [
+    {
+      "file": "01-vintage-wide.png",
+      "sha256": "80b5abe646a3176bdaadbe243276eb3e53ff1e9dad951c1f7e7ca255e58e8f54"
+    },
+    {
+      "file": "02-vintage-wide.png",
+      "sha256": "a0920e8b2816551505b569b6cf3cf90cbfead0c6907a18f5e92501bdab13b706"
+    },
+    {
+      "file": "03-cinematic-first-frame.png",
+      "sha256": "2ae827f05a05a1de8b92745a8a63845aedb26542c01cc9a97dca81fe2606568b"
+    },
+    {
+      "file": "04-refined-first-frame.png",
+      "sha256": "ad172b58ec172283474eff05fe4a94af8c385adce54dd4f0ba21f2dacd2101d0"
+    },
+    {
+      "file": "05-first-frame.png",
+      "sha256": "72d3cb97ce7a8f43d6a170a7bf99f700cad6c1fe0abae4259d0bf4006f661dc2"
+    }
+  ],
+  "ci": {
+    "passed": 21,
+    "failed": 4,
+    "skipped": 10,
+    "failure_scope": "Pre-existing Python lint/format, web prettier, generated API drift",
+    "log": "ci-local.log"
+  }
+}

@@ -1,0 +1,80 @@
+[
+  {
+    "shot": 1,
+    "speech_rms": 0.04015284414642174,
+    "source_peak": 0.274932861328125,
+    "gain_db": 3.49,
+    "target_rms": 0.06
+  },
+  {
+    "shot": 2,
+    "speech_rms": 0.0652185618341595,
+    "source_peak": 0.29583740234375,
+    "gain_db": -0.72,
+    "target_rms": 0.06
+  },
+  {
+    "shot": 3,
+    "speech_rms": 0.015759499825672204,
+    "source_peak": 0.14031982421875,
+    "gain_db": 11.61,
+    "target_rms": 0.06
+  },
+  {
+    "shot": 4,
+    "speech_rms": 0.017980075470151534,
+    "source_peak": 0.102020263671875,
+    "gain_db": 10.47,
+    "target_rms": 0.06
+  },
+  {
+    "shot": 5,
+    "speech_rms": 0.020469384986834056,
+    "source_peak": 0.10906982421875,
+    "gain_db": 9.34,
+    "target_rms": 0.06
+  },
+  {
+    "shot": 6,
+    "speech_rms": 0.03464670990928347,
+    "source_peak": 0.150543212890625,
+    "gain_db": 4.77,
+    "target_rms": 0.06
+  },
+  {
+    "shot": 7,
+    "speech_rms": 0.05489859644320158,
+    "source_peak": 0.537750244140625,
+    "gain_db": 0.77,
+    "target_rms": 0.06
+  },
+  {
+    "shot": 8,
+    "speech_rms": null,
+    "source_peak": 0.110015869140625,
+    "gain_db": 0,
+    "target_rms": null,
+    "notes": "Silent reaction: preserve quiet selected room tone without amplification."
+  },
+  {
+    "shot": 9,
+    "speech_rms": 0.05018291791320354,
+    "source_peak": 0.28582763671875,
+    "gain_db": 1.55,
+    "target_rms": 0.06
+  },
+  {
+    "shot": 10,
+    "speech_rms": 0.03452164690077766,
+    "source_peak": 0.2879638671875,
+    "gain_db": 4.8,
+    "target_rms": 0.06
+  },
+  {
+    "shot": 11,
+    "speech_rms": 0.036981260100713405,
+    "source_peak": 0.23883056640625,
+    "gain_db": 4.2,
+    "target_rms": 0.06
+  }
+]

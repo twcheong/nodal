@@ -1,0 +1,157 @@
+@workspace twixy
+
+SKILL "YouTube Transcript"
+  version: 1.5
+  description: "Open a YouTube video, handle ads, open the transcript panel, and extract the full transcript text. Falls back to description + chapter timestamps if the transcript is unavailable."
+  tags: [youtube, transcript, captions, video, browser, data-collection]
+
+PLATFORMS {
+  YOUTUBE
+}
+
+GOAL "Extract YouTube transcript or chapter outline" {
+  objective: "Given a YouTube video URL, retrieve a usable text representation of the video's content — preferred order: full transcript → auto-generated captions → description + chapter timestamps. Save the result to disk so downstream skills can consume it."
+  kpi: transcript_chars_extracted
+}
+
+COLLECT "Open the video and prepare the page" {
+  USE youtube WITH profile = "twixy" AS yt
+
+  🚨 "Twixy" is THIS APP'S NAME — NOT a YouTube channel or username. NEVER search "twixy" on YouTube and NEVER navigate to youtube.com/@twixy.
+  🚨 You are a sub-agent. Run all browser calls yourself directly. Do NOT spawn further sub-agents.
+  Always use lowercase profile: "twixy" for all browser calls. Capital "T" is wrong and will fail.
+  browser status running: false does NOT mean the page failed — cookies and session persist in the twixy profile.
+
+  Required input: $videoUrl — a full YouTube watch URL (e.g. https://www.youtube.com/watch?v=VIDEO_ID).
+
+  PHASE 1 — Open the video and capture metadata:
+
+  Step 1: Open $videoUrl with browser open profile=twixy. Save the returned targetId as $tab.
+
+  Step 2: Wait 1.5 seconds — browser act kind=wait timeMs=1500 — let the player and metadata initialize.
+
+  Step 3: Capture video metadata via the player API. Pass the function as-is, no extra escaping.
+    browser act kind=evaluate fn='() => { try { const p = document.getElementById("movie_player"); if (!p || !p.getVideoData) return { error: "no player" }; const d = p.getVideoData(); const r = p.getPlayerResponse ? p.getPlayerResponse() : null; const dur = (r && r.videoDetails && Number(r.videoDetails.lengthSeconds)) || (p.getDuration && p.getDuration()) || null; return { videoId: d.video_id, title: d.title, lengthSeconds: dur, author: d.author }; } catch(e) { return { error: String(e) }; } }'
+    → Save the result as $meta. The lengthSeconds field is the SOURCE OF TRUTH for video length.
+    🚨 DO NOT infer video length from the URL `t=` parameter — that is a START TIME, not a duration. Confusing the two leads to wrong assumptions.
+}
+
+EXECUTE "Wait out any pre-roll ad before interacting" {
+  PHASE 2 — Ad handling:
+
+  ⚠️ KNOWN ISSUE — needs more work. The current skip-button click is unreliable: `.ytp-ad-skip-button*` selectors miss several real-world ad variants and on multiple recent runs the agent reported "clicked" while the ad continued playing — the user had to skip manually. Treat this section as best-effort until the selector list is widened, the inner <button> drill-down is applied (like Phase 3), and a post-click `.ad-showing` clearing check is added.
+
+  An ad blocks the player UI and the description "...more" button cannot be clicked while it is on screen. Always settle the ad first.
+
+  Step 1: Probe ad state.
+    browser act kind=evaluate fn='() => { const adShowing = document.querySelector(".ad-showing") !== null || document.querySelector(".ytp-ad-player-overlay") !== null || document.querySelector(".ytp-ad-text") !== null; const skipBtn = document.querySelector(".ytp-ad-skip-button, .ytp-ad-skip-button-modern, button.ytp-skip-ad-button"); return { adShowing, hasSkipButton: !!skipBtn }; }'
+
+  Step 2: If adShowing is false → ad already finished. Skip to Phase 3.
+
+  Step 3: If hasSkipButton is true → click it.
+    browser act kind=evaluate fn='() => { const b = document.querySelector(".ytp-ad-skip-button, .ytp-ad-skip-button-modern, button.ytp-skip-ad-button"); if (b) { b.click(); return "clicked"; } return "no-button"; }'
+    Then wait 1 second and re-probe.
+
+  Step 4: If skip button is not yet clickable → poll up to 30 seconds, checking ad state every 2 seconds. Use evaluate, NOT snapshot — snapshots of the player overlay are large and ad-heavy.
+    Loop: browser act kind=wait timeMs=2000 → re-probe Step 1 → break when adShowing is false OR hasSkipButton becomes true (then click it).
+
+  Step 5: If 30 seconds elapse and the ad is still showing → record a warning and continue anyway. The transcript flow may still work because the description column is below the player and partially independent.
+
+  🚨 NEVER take a full-page snapshot during an ad. The overlay produces tens of thousands of irrelevant tokens.
+}
+
+EXECUTE "Open the transcript panel and extract segments" {
+  PHASE 3 — Open transcript:
+
+  YouTube's transcript button lives inside the description's "...more" expansion, not next to the player.
+
+  Step 1: Expand the description.
+    browser act kind=evaluate fn='() => { const btn = document.querySelector("tp-yt-paper-button#expand, ytd-text-inline-expander #expand"); if (btn) { btn.click(); return "expanded"; } return "no-expand-button"; }'
+    Wait 800ms — browser act kind=wait timeMs=800.
+
+  Step 2: Click the "Show transcript" button by EXACT visible text — but cover ALL major YouTube UI locales. The user's browser language determines the label, so the regex MUST include English + Korean + Japanese + Chinese (Simp/Trad) + Spanish + Portuguese + French + German + Italian + Russian + Vietnamese + Indonesian + Thai + Hindi + Arabic. Do NOT match the bare localized word for "transcript" — every locale's description column also contains a heading and a "follow along" sentence whose text includes that word, and loose matching clicks one of those (silent failure → 6 polls of 0 → forced Phase 4). EXACT anchor `^...$` only.
+    🚨 If the user's locale isn't in the list, fall through to Phase 4 rather than guessing — never expand the list at runtime.
+    🚨 Click ONCE only. A second click on the SAME button toggles the panel closed — never re-click; if the first click didn't take, fall through to Phase 4.
+    🚨 Inside the fn body, use SINGLE quotes for every selector string. The fn is passed as a double-quoted JSON string, so '[class*="x"]' inside double quotes corrupts into a SyntaxError.
+    🚨 YouTube renders the description transcript section TWICE in the DOM — both instances contain identical `aria-label="Show transcript"` buttons with identical text. Only one is laid out and active in the current variant; the other is hidden/detached. A naive `candidates.find(...)` returns the first DOM match (often the hidden copy), `btn.click()` succeeds but YouTube ignores the event, and `engagement-panel-searchable-transcript` stays HIDDEN forever. Filter candidates with `el.offsetParent !== null && getBoundingClientRect()` size > 0 BEFORE picking — visible-in-layout only.
+    🚨 Each button is THREE nested elements: `ytd-button-renderer > yt-button-shape > <button>`. innerText cascades so all three wrappers pass the locale regex (matchCount becomes `3 × instances`, typically 6). Calling `.click()` on the outer `ytd-button-renderer` or `yt-button-shape` does NOT trigger YouTube's click handler — that handler is bound to the innermost native `<button>`. After picking the visible candidate, drill into its `<button>` descendant via `candidate.querySelector("button")` before clicking. Log `clickedTag` to verify — it must be "button".
+    browser act kind=evaluate fn='() => { const isClickable = el => { if (!el) return false; const tag = el.tagName.toLowerCase(); if (tag === "button") return true; if (el.getAttribute("role") === "button") return true; if (tag === "yt-button-shape" || tag === "ytd-button-renderer") return true; return false; }; const isVisible = el => { if (el.offsetParent === null) return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }; const labelRe = /^(show transcript|자막 표시|스크립트 표시|文字起こしを表示|显示转写文字|显示文字记录|顯示文字轉錄|mostrar transcripción|mostrar transcrição|afficher la transcription|transkript anzeigen|mostra trascrizione|показать расшифровку|hiển thị bản chép lời|tampilkan transkrip|แสดงคำบรรยาย|ट्रांसक्रिप्ट दिखाएं|عرض النص)$/i; const matches = [...document.querySelectorAll("button, [role=\"button\"], yt-button-shape, ytd-button-renderer")].filter(el => isClickable(el)).filter(el => labelRe.test((el.innerText || el.textContent || "").trim())); const candidate = matches.find(isVisible); if (!candidate) return { clicked: false, reason: matches.length ? "all-candidates-hidden" : "no-transcript-button-in-known-locale", matchCount: matches.length }; const realBtn = candidate.tagName.toLowerCase() === "button" ? candidate : (candidate.querySelector("button") || candidate); const panelBefore = document.querySelector("ytd-transcript-panel-renderer, ytd-engagement-panel-section-list-renderer[target-id=\"engagement-panel-searchable-transcript\"]"); const segCountBefore = document.querySelectorAll("ytd-transcript-segment-renderer").length; realBtn.click(); return { clicked: true, label: (realBtn.innerText || realBtn.textContent || "").trim(), clickedTag: realBtn.tagName.toLowerCase(), matchCount: matches.length, panelBefore: !!panelBefore, segCountBefore }; }'
+    → If clicked is false, skip to Phase 4. The reason field distinguishes "no locale match" (matchCount 0) from "all matches hidden" (matchCount > 0). Verify `clickedTag === "button"` in the result; if it's "ytd-button-renderer" or "yt-button-shape", the drill-down failed and the click likely did not register. Otherwise note segCountBefore for the panel-state check below.
+
+  Step 3: 🚨 CRITICAL — Transcript segments are LAZY-LOADED. The panel renders empty for 1–3 seconds before segments appear. DO NOT treat an empty panel as failure on the first read.
+
+  🚨 The Step 2 click is already validated — the regex is anchored `^...$` against a known locale label list, so `clicked: true` proves the right button was hit. DO NOT use panel-presence as a wrong-click signal: the transcript panel is rendered under different parent tags depending on YouTube layout (`ytd-transcript-panel-renderer` vs `ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-searchable-transcript"]`), and a single-selector miss is a *false negative*, not a wrong click.
+
+  Poll ONLY on segment count, up to 6 attempts at 800ms intervals (~5 seconds total). Panel info is diagnostic-only — log it but do NOT branch on it.
+    Loop (i = 1..6):
+      browser act kind=wait timeMs=800
+      browser act kind=evaluate fn='() => { const panel = document.querySelector("ytd-transcript-panel-renderer, ytd-engagement-panel-section-list-renderer[target-id=\"engagement-panel-searchable-transcript\"]"); return { panelPresent: !!panel, panelHidden: panel ? (panel.hasAttribute("hidden") || panel.getAttribute("visibility") === "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN") : null, segCount: document.querySelectorAll("ytd-transcript-segment-renderer").length }; }'
+      → Break when segCount > 0.
+      → If still 0 segments after attempt 6 → Phase 4. The video genuinely has no captions.
+
+  Step 4: Extract all segments in ONE evaluate call. Do NOT loop tool calls per segment.
+    browser act kind=evaluate fn='() => { const segs = [...document.querySelectorAll("ytd-transcript-segment-renderer")]; if (!segs.length) return { segments: [], note: "empty" }; const out = segs.map(s => { const ts = s.querySelector(".segment-timestamp, [class*=\"timestamp\"]")?.innerText?.trim() || ""; const tx = s.querySelector(".segment-text, yt-formatted-string.segment-text, [class*=\"segment-text\"]")?.innerText?.trim() || ""; return { ts, text: tx }; }).filter(x => x.text); return { segments: out, count: out.length }; }'
+    → Save as $segments. Combine into plain text: "[ts] text" per line.
+
+  STORE $segments AS "youtube_transcript_{videoId}_{date}" IN $RAW
+}
+
+ANALYZE "Fallback to description + chapter timestamps" {
+  PHASE 4 — Run ONLY if Phase 3 returned 0 segments after polling.
+
+  Many videos lack captions or block timedtext API access from automation. Description + chapters is the reliable secondary signal.
+
+  Step 1: Make sure the description is expanded (re-run Phase 3 Step 1 if needed).
+
+  Step 2: Extract chapter timestamps and the full description text.
+    browser act kind=evaluate fn='() => { const desc = document.querySelector("ytd-text-inline-expander, #description-inline-expander, ytd-watch-metadata #description")?.innerText?.trim() || ""; const chapEls = [...document.querySelectorAll("ytd-macro-markers-list-item-renderer, [class*=\"chapter\"], [id*=\"chapter\"]")]; const chapters = chapEls.map(el => { const ts = el.querySelector("#time, [class*=\"time\"]")?.innerText?.trim() || ""; const tx = el.querySelector("#title, h4, [class*=\"title\"]")?.innerText?.trim() || ""; return { ts, title: tx }; }).filter(c => c.ts && c.title); return { description: desc, chapters }; }'
+    → Save as $fallback.
+
+  Step 3: 🚨 DO NOT use web_fetch on the youtube.com/api/timedtext URL. The signed caption URL is bound to the player's IP/session and returns empty when fetched server-side. Multiple retries on this endpoint are a known waste pattern — skip it entirely.
+
+  STORE $fallback AS "youtube_description_{videoId}_{date}" IN $RAW
+}
+
+TRACK "Save final artifact and report" {
+  LOAD "youtube_transcript_{videoId}_{date}" FROM $RAW AS $transcript
+  IF MISSING $transcript → LOAD "youtube_description_{videoId}_{date}" FROM $RAW AS $transcript
+
+  🚨 RAW VERBATIM ONLY. This skill captures ground-truth text — NOT a summary. Forbidden:
+    - Combining adjacent segments into "paragraphs" or "sentences"
+    - Inventing section headings like "### 0:00 ~ 0:42 — 소개"
+    - Bullet-point summaries of what was said
+    - Translation, transliteration, or "cleaned-up" punctuation
+    - Any commentary, opinion, or framing
+    - Skipping segments because they look redundant
+  Summarization belongs to the NEXT skill or workflow node in the plan, never this one. The raw file must exist independently so other consumers (and the user) can re-derive different views of it later. A previous run extracted 237 segments perfectly, then wrote a 5KB hand-summarized guide instead — the user could not tell from the file whether captions had been captured. Do not repeat that.
+
+  Build a single markdown artifact in this EXACT layout:
+    # {title}
+
+    **URL:** {watch URL}
+    **Channel:** {author}
+    **Duration:** {lengthSeconds}s
+    **Extracted:** {date}
+    **Source:** transcript    ← or "description-fallback"
+
+    ---
+
+    [0:00] {first segment text exactly as captured}
+    [0:01] {second segment text exactly as captured}
+    [0:03] {third segment text exactly as captured}
+    ... (continue for ALL segments — do NOT skip, merge, or rewrite)
+
+  For the fallback path (no captions), the body after `---` becomes the raw `description` text followed by a `## Chapters` block listing `[ts] title` lines verbatim.
+
+  Save to ~/.openclaw/workspace/twixy/data/raw/youtube_{videoId}_{date}.md using the write_file tool.
+  🚨 Filename pattern is exactly `youtube_{videoId}_{date}.md` — no `_transcript` or other suffix.
+
+  Report to the user (or parent skill) in this exact shape:
+    [transcript] Extracted {N} segments from "{title}" — saved to {path}
+  OR if fallback was used:
+    [transcript-fallback] Captions unavailable for "{title}". Extracted description + {C} chapters — saved to {path}
+
+  EMIT "transcript_ready"
+    WITH payload = { videoId, source, path, charCount }
+    TO SKILL "Analytics"
+}

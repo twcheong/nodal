@@ -1,0 +1,94 @@
+{
+  "full_ci": {
+    "command": "tools/ci-local.sh",
+    "exit_code": 1,
+    "passed": 21,
+    "failed": 4,
+    "skipped": 10,
+    "failures": [
+      "python / ruff lint",
+      "python / ruff format",
+      "web / prettier",
+      "web / generated API type drift"
+    ],
+    "scope": "Existing working-tree failures also observed before this task; unrelated files were not repaired",
+    "log": "../ci-local.log"
+  },
+  "task_python": {
+    "ruff_lint": "passed",
+    "ruff_format": "passed",
+    "files": [
+      "assemble.py",
+      "collect_video_qa.py",
+      "compare_frames.py",
+      "nodal_job.py",
+      "prepare_asr.py",
+      "verify_delivery.py",
+      "verify_speech.py"
+    ]
+  },
+  "assembly_smoke": {
+    "purpose": "Verify exact hard-cut frame counts, retimed video and pitch-preserving audio on a real local generated clip",
+    "input": "test-edits.json",
+    "edit_report": "edit-smoke.edit-report.json",
+    "independent_decode": "edit-smoke-check/generated-facts.json",
+    "fps": 30,
+    "decoded_frames": 30,
+    "audio_seconds": 1.0,
+    "video_end_seconds_from_millisecond_pts": 1.0003333333333333,
+    "retimed_first_cut_speed": 1.225,
+    "status": "passed"
+  },
+  "final_video": {
+    "status": "passed",
+    "file": "../reel-1080p.webm",
+    "verification": "../reel-1080p.validation.json",
+    "run_id": "022eb872780646fdbdeb7466afc1c7f8",
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "frames": 1015,
+    "seconds": 33.833333333333336,
+    "audio_packet_payload_preserved": true,
+    "representative_frame_review": [
+      0,
+      510,
+      728,
+      1014
+    ],
+    "visual_notes": "Final upscale samples retain selected compositions and faces; no sampled text or new visual artifacts. Independent shots retain some model-generated lighting, room-detail and voice-timbre variation."
+  },
+  "partial_preview": {
+    "file": "../preview-first-four.webm",
+    "verification": "../preview-first-four.validation.json",
+    "asr": "preview-transcript.json",
+    "frames": 289,
+    "seconds": 9.633333333333333,
+    "passed": true
+  },
+  "partial_preview_eight": {
+    "file": "../preview-first-eight.webm",
+    "verification": "../preview-first-eight.validation.json",
+    "frames": 510,
+    "seconds": 17.0,
+    "passed": true
+  },
+  "shot_10_framing": {
+    "file": "../shot-10-framing.webm",
+    "verification": "../shot-10-framing.validation.json",
+    "frames": 133,
+    "seconds": 4.433333333333334,
+    "passed": true,
+    "visual_review": "Start/end decoded frames compared to source frame-020.0 and transition-24.200; face-only ending reproduced through non-generative video crop/scale."
+  },
+  "native_video": {
+    "status": "passed",
+    "file": "../reel-native.webm",
+    "verification": "../reel-native.validation.json",
+    "asr": "final-transcript.json",
+    "frames": 1015,
+    "fps": 30,
+    "seconds": 33.833333333333336,
+    "all_intended_dialogue_present": true
+  }
+}

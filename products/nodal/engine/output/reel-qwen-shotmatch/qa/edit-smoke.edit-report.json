@@ -1,0 +1,66 @@
+{
+  "fps": 30,
+  "shots": [
+    {
+      "shot": "test-a",
+      "source": "C:\\Users\\nexta\\Desktop\\nodal\\output\\original-couple-qwen21\\02-couple-video.webm",
+      "output_start_frame": 0,
+      "output_frames": 12,
+      "source_start": 0.1,
+      "source_end": 0.59,
+      "tempo": 1.2249999999999999,
+      "padding_samples": 0,
+      "source_frame_indices": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "source_sha256": "0fe15570c4b2ee4e017f634a96b2cddd9a026979ed7773fcc3d4027446729f2d"
+    },
+    {
+      "shot": "test-b",
+      "source": "C:\\Users\\nexta\\Desktop\\nodal\\output\\original-couple-qwen21\\02-couple-video.webm",
+      "output_start_frame": 12,
+      "output_frames": 18,
+      "source_start": 3.6,
+      "source_end": 4.2,
+      "tempo": 1.0000000000000002,
+      "padding_samples": 0,
+      "source_frame_indices": [
+        86,
+        87,
+        88,
+        89,
+        90,
+        90,
+        91,
+        92,
+        93,
+        94,
+        94,
+        95,
+        96,
+        97,
+        98,
+        98,
+        99,
+        100
+      ],
+      "source_sha256": "0fe15570c4b2ee4e017f634a96b2cddd9a026979ed7773fcc3d4027446729f2d"
+    }
+  ],
+  "edits": "output\\reel-qwen-shotmatch\\qa\\test-edits.json",
+  "audio_rate": 48000,
+  "frame_count": 30,
+  "duration_seconds": 1.0,
+  "sha256": "97d95ea4d37de79609e3e87b1ddf6fe63e3c7e6b026483592919046f6b64cfeb"
+}

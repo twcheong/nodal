@@ -1,0 +1,32 @@
+{
+  "run_id": "c6fa94c8f0e345108bd657fba5ff09c3",
+  "status": "succeeded",
+  "outputs": {
+    "1e234204-0000-4000-8000-000000000003": [
+      {
+        "socket": "asset",
+        "type": "Image",
+        "inline": null,
+        "asset": {
+          "hash": "b590736a7a3b5fd26997de58d8238b5d",
+          "media_type": "image/png",
+          "size_bytes": 2016583,
+          "width": 1536,
+          "height": 864
+        }
+      }
+    ]
+  },
+  "executed": [
+    "1e234204-0000-4000-8000-000000000001",
+    "1e234204-0000-4000-8000-000000000002",
+    "1e234204-0000-4000-8000-000000000003"
+  ],
+  "cached": [],
+  "blocked": [],
+  "elapsed_ms": 178095,
+  "created_at": "2026-09-23T05:34:06.105881Z",
+  "started_at": "2026-09-23T05:35:54.794661Z",
+  "finished_at": "2026-09-23T05:38:52.893121Z",
+  "error": null
+}

@@ -1,0 +1,1114 @@
+diff --git a/node_modules/openclaw/dist/abort-CNknHetJ.js b/node_modules/openclaw/dist/abort-CNknHetJ.js
+index 09e1fadd..1a85d95c 100644
+--- a/node_modules/openclaw/dist/abort-CNknHetJ.js
++++ b/node_modules/openclaw/dist/abort-CNknHetJ.js
+@@ -90,6 +90,16 @@ function stopSubagentsForRequester(params) {
+ 				childSessionKey: childKey,
+ 				reason: "killed"
+ 			}) > 0 || aborted || cleared.followupCleared > 0 || cleared.laneCleared > 0) stopped += 1;
++		} else {
++			// Twixy patch: subagent already finished (likely provider-error before
++			// this kill arrived). We still need to suppress the pending announce —
++			// markSubagentRunTerminated now sets suppressAnnounceReason="killed"
++			// on already-ended entries whose cleanup hasn't completed.
++			if (abortDeps.markSubagentRunTerminated({
++				runId: run.runId,
++				childSessionKey: childKey,
++				reason: "killed"
++			}) > 0) stopped += 1;
+ 		}
+ 		const cascadeResult = stopSubagentsForRequester({
+ 			cfg: params.cfg,
+diff --git a/node_modules/openclaw/dist/agent-runner.runtime-DEDCwJ0o.js b/node_modules/openclaw/dist/agent-runner.runtime-DEDCwJ0o.js
+index 329dc1b2..19c8afd1 100644
+--- a/node_modules/openclaw/dist/agent-runner.runtime-DEDCwJ0o.js
++++ b/node_modules/openclaw/dist/agent-runner.runtime-DEDCwJ0o.js
+@@ -440,7 +440,7 @@ async function runAgentTurnWithFallback(params) {
+ 								await params.typingSignals.signalMessageStart();
+ 								await params.opts?.onAssistantMessageStart?.();
+ 							},
+-							onReasoningStream: params.typingSignals.shouldStartOnReasoning || params.opts?.onReasoningStream ? async (payload) => {
++							onReasoningStream: /* twixy: 게이트웨이 채팅(internal_webchat)에도 추론 스트림을 연다 — 세션 reasoningLevel=stream 일 때만 실제로 흐른다 */ true ? async (payload) => {
+ 								if (params.followupRun.run.silentExpected) return;
+ 								await params.typingSignals.signalReasoningDelta();
+ 								await params.opts?.onReasoningStream?.({
+diff --git a/node_modules/openclaw/dist/content-blocks-CWb2xgCb.js b/node_modules/openclaw/dist/content-blocks-CWb2xgCb.js
+index b90951b2..a3058c70 100644
+--- a/node_modules/openclaw/dist/content-blocks-CWb2xgCb.js
++++ b/node_modules/openclaw/dist/content-blocks-CWb2xgCb.js
+@@ -526,7 +526,7 @@ function createSessionMcpRuntime(params) {
+ 			return await session.client.callTool({
+ 				name: toolName,
+ 				arguments: isMcpConfigRecord(input) ? input : {}
+-			});
++			}, void 0, { timeout: 15 * 60000 } /* twixy: SDK 기본 60초는 오래 기다리는 툴(nodal get_run 은 끝날 때까지 최대 10분 대기)을 끊는다 */);
+ 		},
+ 		async dispose() {
+ 			if (disposed) return;
+diff --git a/node_modules/openclaw/dist/gateway-cli-CWpalJNJ.js b/node_modules/openclaw/dist/gateway-cli-CWpalJNJ.js
+index a4ad1702..6a0ad82b 100644
+--- a/node_modules/openclaw/dist/gateway-cli-CWpalJNJ.js
++++ b/node_modules/openclaw/dist/gateway-cli-CWpalJNJ.js
+@@ -93,7 +93,7 @@ import "./channel-plugin-common-eQve8rmh.js";
+ import { n as resolveAgentIdentity } from "./identity-BVAU5Jb3.js";
+ import { a as isSilentReplyText, n as SILENT_REPLY_TOKEN } from "./tokens-Bot0VGKf.js";
+ import { a as stripHeartbeatToken } from "./heartbeat-CguHGkad.js";
+-import { A as resolveGroupToolPolicy, Bn as onAgentEvent, Br as resolveSystemRunApprovalRequestContext, C as rewriteTranscriptEntriesInSessionFile, D as buildDefaultToolPolicyPipelineSteps, Dr as normalizePayloadToSystemText, E as applyToolPolicyPipeline, Er as normalizeOptionalText$1, F as normalizeSpawnedRunMetadata, Fn as readLatestAssistantReply, Ft as failTaskRunByRunId, Gn as resolveNestedAgentLane, Hr as shouldDowngradeDeliveryToSessionOnly, I as resolveIngressWorkspaceOverrideForSpawnedRun, Ln as clearAgentRunContext, M as runBeforeToolCallHook, N as createOpenClawTools, Nn as onSessionLifecycleEvent, Nt as completeTaskRunByRunId, Or as normalizeRequiredName, Pn as resolveAnnounceTargetFromKey, Pt as createRunningTaskRun, Rn as emitAgentEvent, Sr as normalizeCronJobPatch, St as initSubagentRegistry, T as resolveToolLoopDetectionConfig, Tr as normalizeOptionalSessionKey, Ur as resolveExecApprovalInitiatingSurfaceState, Vn as registerAgentRunContext, Vr as resolveSystemRunApprovalRuntimeContext, _r as setGatewaySigusr1RestartPolicy, br as normalizeHttpWebhookUrl, dr as consumeGatewaySigusr1RestartAuthorization, fn as getAcpSessionManager, fr as deferGatewayRestartUntilIdle, ft as killControlledSubagentRun, gr as scheduleGatewaySigusr1Restart, hr as markGatewaySigusr1RestartHandled, ht as resolveSubagentController, ir as getActiveEmbeddedRunCount, j as resolveSubagentToolPolicy, k as resolveEffectiveToolPolicy, lr as waitForActiveEmbeddedRuns, mr as isGatewaySigusr1RestartExternallyAllowed, nr as LiveSessionModelSwitchError, or as isEmbeddedPiRunActive, p as resolveBootstrapWarningSignaturesSeen, pr as emitGatewayRestart, pt as killSubagentRunAdmin, rr as abortEmbeddedPiRun, st as summarizeToolDescriptionText, t as runEmbeddedPiAgent, tr as runWithModelFallback, ur as waitForEmbeddedPiRunEnd, vr as setPreRestartDeferralCheck, vt as countActiveDescendantRuns, wr as normalizeOptionalAgentId, wt as listDescendantRunsForRequester, xr as normalizeCronJobCreate, xt as getLatestSubagentRunByChildSessionKey, yr as triggerOpenClawRestart, zn as getAgentRunContext } from "./pi-embedded-BYdcxQ5A.js";
++import { A as resolveGroupToolPolicy, Bn as onAgentEvent, Br as resolveSystemRunApprovalRequestContext, C as rewriteTranscriptEntriesInSessionFile, D as buildDefaultToolPolicyPipelineSteps, Dr as normalizePayloadToSystemText, E as applyToolPolicyPipeline, Er as normalizeOptionalText$1, F as normalizeSpawnedRunMetadata, Fn as readLatestAssistantReply, Ft as failTaskRunByRunId, Gn as resolveNestedAgentLane, Hr as shouldDowngradeDeliveryToSessionOnly, I as resolveIngressWorkspaceOverrideForSpawnedRun, Ln as clearAgentRunContext, M as runBeforeToolCallHook, N as createOpenClawTools, Nn as onSessionLifecycleEvent, Nt as completeTaskRunByRunId, Or as normalizeRequiredName, Pn as resolveAnnounceTargetFromKey, Pt as createRunningTaskRun, Rn as emitAgentEvent, Sr as normalizeCronJobPatch, St as initSubagentRegistry, T as resolveToolLoopDetectionConfig, Tr as normalizeOptionalSessionKey, Ur as resolveExecApprovalInitiatingSurfaceState, Vn as registerAgentRunContext, Vr as resolveSystemRunApprovalRuntimeContext, _r as setGatewaySigusr1RestartPolicy, br as normalizeHttpWebhookUrl, dr as consumeGatewaySigusr1RestartAuthorization, fn as getAcpSessionManager, fr as deferGatewayRestartUntilIdle, ft as killControlledSubagentRun, gr as scheduleGatewaySigusr1Restart, hr as markGatewaySigusr1RestartHandled, ht as resolveSubagentController, ir as getActiveEmbeddedRunCount, j as resolveSubagentToolPolicy, k as resolveEffectiveToolPolicy, lr as waitForActiveEmbeddedRuns, mr as isGatewaySigusr1RestartExternallyAllowed, nr as LiveSessionModelSwitchError, or as isEmbeddedPiRunActive, p as resolveBootstrapWarningSignaturesSeen, pr as emitGatewayRestart, pt as killSubagentRunAdmin, rr as abortEmbeddedPiRun, st as summarizeToolDescriptionText, t as runEmbeddedPiAgent, tr as runWithModelFallback, ur as waitForEmbeddedPiRunEnd, vr as setPreRestartDeferralCheck, vt as countActiveDescendantRuns, wr as normalizeOptionalAgentId, wt as listDescendantRunsForRequester, xr as normalizeCronJobCreate, xt as getLatestSubagentRunByChildSessionKey, yr as triggerOpenClawRestart, zn as getAgentRunContext, twixyFreezeRequesterAnnounce, twixyUnfreezeRequesterAnnounce, twixyIsRequesterAnnounceFrozen } from "./pi-embedded-BYdcxQ5A.js";
+ import { a as matchSystemRunApprovalBinding, c as toSystemRunApprovalMismatchError, d as getMachineDisplayName, i as buildSystemRunApprovalEnvBinding, n as resolveSystemRunCommandRequest, o as missingSystemRunApprovalBinding, r as buildSystemRunApprovalBinding } from "./system-run-command-DPATDVgF.js";
+ import { n as isDiagnosticsEnabled } from "./diagnostic-events-ROhwFcx1.js";
+ import { _ as startDiagnosticHeartbeat, v as stopDiagnosticHeartbeat } from "./diagnostic-vmeqdUnS.js";
+@@ -9023,6 +9023,7 @@ const BASE_METHODS = [
+ 	"sessions.reset",
+ 	"sessions.delete",
+ 	"sessions.compact",
++	"twixy.freezeRequesterAnnounce",
+ 	"last-heartbeat",
+ 	"set-heartbeats",
+ 	"wake",
+@@ -17090,6 +17091,25 @@ const sessionsHandlers = {
+ 			reason: "compact",
+ 			compacted: true
+ 		});
++	},
++	// Twixy patch: requester-level announce freeze. A frozen requester drops
++	// all subagent announces at runSubagentAnnounceFlow's delivery gates
++	// regardless of subagent lifecycle state — orthogonal to the kill path.
++	// Used by plan-mode to silence cascading LLM wake-ups after plan failure.
++	"twixy.freezeRequesterAnnounce": ({ params, respond }) => {
++		const key = typeof params?.key === "string" ? params.key.trim() : "";
++		if (!key) {
++			respond(false, void 0, errorShape(ErrorCodes.INVALID_REQUEST, "twixy.freezeRequesterAnnounce: key required"));
++			return;
++		}
++		const frozen = params?.frozen !== false;
++		if (frozen) twixyFreezeRequesterAnnounce(key);
++		else twixyUnfreezeRequesterAnnounce(key);
++		respond(true, {
++			ok: true,
++			key,
++			frozen: twixyIsRequesterAnnounceFrozen(key)
++		}, void 0);
+ 	}
+ };
+ //#endregion
+diff --git a/node_modules/openclaw/dist/pi-embedded-BYdcxQ5A.js b/node_modules/openclaw/dist/pi-embedded-BYdcxQ5A.js
+index efea9da3..d3330f83 100644
+--- a/node_modules/openclaw/dist/pi-embedded-BYdcxQ5A.js
++++ b/node_modules/openclaw/dist/pi-embedded-BYdcxQ5A.js
+@@ -11427,11 +11427,48 @@ async function wakeSubagentRunAfterDescendants(params) {
+ 		preserveFrozenResultFallback: true
+ 	});
+ }
++// Twixy patch: module-level freeze set — requester sessions in this set have
++// all pending/future subagent announces unconditionally dropped, regardless of
++// subagent lifecycle state. Unlike suppressAnnounceReason (per-subagent, can
++// be un-set by completeSubagentRun's race at L17069), this is per-requester
++// and can only be cleared by explicit twixy.unfreezeRequesterAnnounce.
++const frozenAnnounceRequesters = new Set();
++function freezeRequesterAnnounce(sessionKey) {
++	if (typeof sessionKey !== "string") return false;
++	const trimmed = sessionKey.trim();
++	if (!trimmed) return false;
++	frozenAnnounceRequesters.add(trimmed);
++	return true;
++}
++function unfreezeRequesterAnnounce(sessionKey) {
++	if (typeof sessionKey !== "string") return false;
++	const trimmed = sessionKey.trim();
++	if (!trimmed) return false;
++	return frozenAnnounceRequesters.delete(trimmed);
++}
++function isRequesterAnnounceFrozen(sessionKey) {
++	if (typeof sessionKey !== "string") return false;
++	return frozenAnnounceRequesters.has(sessionKey.trim());
++}
+ async function runSubagentAnnounceFlow(params) {
+ 	let didAnnounce = false;
+ 	const expectsCompletionMessage = params.expectsCompletionMessage === true;
+ 	const announceType = params.announceType ?? "subagent task";
+ 	let shouldDeleteChildSession = params.cleanup === "delete";
++	// Twixy patch: lookup the live registry entry so we can honour a later
++	// `suppressAnnounceReason = "killed"` (set by markSubagentRunTerminated)
++	// that races our settle-waits. Without this, a subagent that provider-errors
++	// before the client's sessions.delete lands still fires announce, which
++	// autonomously wakes the main session LLM after plan-mode has finished.
++	const isKilledBySuppress = () => {
++		try {
++			return subagentRuns.get(params.childRunId)?.suppressAnnounceReason === "killed";
++		} catch { return false; }
++	};
++	if (isKilledBySuppress()) return false;
++	// Twixy patch: requester-level freeze — drops ALL announces targeting a
++	// frozen requester regardless of subagent state. Orthogonal to kill-flow.
++	if (isRequesterAnnounceFrozen(params.requesterSessionKey)) return false;
+ 	try {
+ 		let targetRequesterSessionKey = params.requesterSessionKey;
+ 		let targetRequesterOrigin = normalizeDeliveryContext(params.requesterOrigin);
+@@ -11586,6 +11623,15 @@ async function runSubagentAnnounceFlow(params) {
+ 			expectsCompletionMessage
+ 		}) : targetRequesterOrigin;
+ 		const directIdempotencyKey = buildAnnounceIdempotencyKey(announceId);
++		// Twixy patch: final gate before dispatch — if kill arrived during the
++		// settle waits above, bail without firing. shouldDeleteChildSession
++		// stays true/false per cleanup policy; we just skip the wake-up message.
++		if (isKilledBySuppress()) return false;
++		// Twixy patch: also honour requester-level freeze at final delivery.
++		// targetRequesterSessionKey may have been reassigned via requester
++		// fallback resolution above, so check both the original and resolved.
++		if (isRequesterAnnounceFrozen(params.requesterSessionKey)) return false;
++		if (isRequesterAnnounceFrozen(targetRequesterSessionKey)) return false;
+ 		const delivery = await deliverSubagentAnnouncement({
+ 			requesterSessionKey: targetRequesterSessionKey,
+ 			announceId,
+@@ -17335,7 +17381,17 @@ function createSubagentRunManager(params) {
+ 			params.clearPendingLifecycleError(runId);
+ 			const entry = params.runs.get(runId);
+ 			if (!entry) continue;
+-			if (typeof entry.endedAt === "number") continue;
++			if (typeof entry.endedAt === "number") {
++				// Twixy patch: even if the subagent already ended (e.g. provider
++				// error → completeSubagentRun fired endedAt before this kill
++				// arrived), mark the entry so any in-flight or queued
++				// runSubagentAnnounceFlow bails instead of waking the requester.
++				if (!entry.cleanupCompletedAt && entry.suppressAnnounceReason !== "killed") {
++					entry.suppressAnnounceReason = "killed";
++					updated += 1;
++				}
++				continue;
++			}
+ 			entry.endedAt = now;
+ 			entry.outcome = {
+ 				status: "error",
+@@ -22520,9 +22576,10 @@ async function spawnSubagentDirect(params, ctx) {
+ 		status: "forbidden",
+ 		error: "sessions_spawn requires explicit agentId when requireAgentId is configured. Use agents_list to see allowed agent ids."
+ 	};
+-	const targetAgentId = requestedAgentId ? normalizeAgentId(requestedAgentId) : requesterAgentId;
++	const allowAgents = resolveAgentConfig(cfg, requesterAgentId)?.subagents?.allowAgents ?? [];
++	const resolvedAgentId = requestedAgentId ? normalizeAgentId(requestedAgentId) : requesterAgentId;
++	const targetAgentId = (resolvedAgentId !== requesterAgentId && allowAgents.length === 0) ? requesterAgentId : resolvedAgentId;
+ 	if (targetAgentId !== requesterAgentId) {
+-		const allowAgents = resolveAgentConfig(cfg, requesterAgentId)?.subagents?.allowAgents ?? [];
+ 		const allowAny = allowAgents.some((value) => value.trim() === "*");
+ 		const normalizedTargetId = targetAgentId.toLowerCase();
+ 		const allowSet = new Set(allowAgents.filter((value) => value.trim() && value.trim() !== "*").map((value) => normalizeAgentId(value).toLowerCase()));
+@@ -22977,15 +23034,12 @@ function createSessionsSpawnTool(opts) {
+ 			const mode = params.mode === "run" || params.mode === "session" ? params.mode : void 0;
+ 			const cleanup = params.cleanup === "keep" || params.cleanup === "delete" ? params.cleanup : "keep";
+ 			const sandbox = params.sandbox === "require" ? "require" : "inherit";
+-			const streamTo = params.streamTo === "parent" ? "parent" : void 0;
++			const requestedStreamTo = params.streamTo === "parent" ? "parent" : void 0;
++			const streamTo = runtime === "acp" ? requestedStreamTo : void 0;
+ 			const timeoutSecondsCandidate = typeof params.runTimeoutSeconds === "number" ? params.runTimeoutSeconds : typeof params.timeoutSeconds === "number" ? params.timeoutSeconds : void 0;
+ 			const runTimeoutSeconds = typeof timeoutSecondsCandidate === "number" && Number.isFinite(timeoutSecondsCandidate) ? Math.max(0, Math.floor(timeoutSecondsCandidate)) : void 0;
+ 			const thread = params.thread === true;
+ 			const attachments = Array.isArray(params.attachments) ? params.attachments : void 0;
+-			if (streamTo && runtime !== "acp") return jsonResult({
+-				status: "error",
+-				error: `streamTo is only supported for runtime=acp; got runtime=${runtime}`
+-			});
+ 			if (resumeSessionId && runtime !== "acp") return jsonResult({
+ 				status: "error",
+ 				error: `resumeSessionId is only supported for runtime=acp; got runtime=${runtime}`
+@@ -23816,6 +23870,215 @@ function createWebSearchTool(options) {
+ 	};
+ }
+ let openClawToolsDeps = { callGateway };
++// ── Twixy patch: file-io / Google Workspace tool bridge ──────────────
++// OpenClaw has no public API to register custom tools — its tool array
++// is hardcoded inside createOpenClawTools(). We inject 9 thin tools
++// whose execute() POSTs JSON to the loopback HTTP bridge run by the
++// Electron main process (see electron/agent-tool-bridge.ts). The bridge
++// port + bearer token come from env vars seeded at gateway-spawn time
++// (see electron/main.ts:~1481).
++function __twixyExtraTools() {
++	const port = process.env.TWIXY_TOOL_BRIDGE_PORT;
++	const token = process.env.TWIXY_TOOL_BRIDGE_TOKEN;
++	if (!port || !token) return [];
++	const call = async (name, args) => {
++		try {
++			const res = await fetch(`http://127.0.0.1:${port}/tool/${name}`, {
++				method: "POST",
++				headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
++				body: JSON.stringify(args ?? {})
++			});
++			let data;
++			try { data = await res.json(); }
++			catch { return jsonResult({ ok: false, error: `bridge_http_${res.status}` }); }
++			// Twixy: a bridge result may carry `__images` (base64 PNGs, e.g. the
++			// deck contact sheet from tool_write_pptx). Lift them into image
++			// content blocks so the model SEES its own output; everything else
++			// stays the usual JSON text block.
++			const imgs = data && data.result && Array.isArray(data.result.__images) ? data.result.__images : null;
++			if (imgs && imgs.length) {
++				delete data.result.__images;
++				return {
++					content: [
++						{ type: "text", text: JSON.stringify(data, null, 2) },
++						...imgs.map((im) => ({ type: "image", data: im.b64, mimeType: im.mimeType || "image/png" }))
++					],
++					details: data
++				};
++			}
++			return jsonResult(data);
++		} catch (err) {
++			return jsonResult({ ok: false, error: `bridge_unreachable: ${String(err?.message ?? err)}` });
++		}
++	};
++	const STR  = (desc) => Type.String({ description: desc });
++	const OPTS = (desc) => Type.Optional(Type.String({ description: desc }));
++	const passthroughObj = (desc) => Type.Object({}, { description: desc, additionalProperties: true });
++	return [
++		{
++			label: "Write PDF",
++			name: "tool_write_pdf",
++			description: "Render a structured PDF report inside the workspace (typically data/reports/). Use this for marketing reports, analysis summaries, or any deliverable PDF — do NOT shell out to wkhtmltopdf/pandoc/python-pdf libraries. Payload accepts blocks: { type: 'h1'|'h2'|'h3'|'p', text } | { type: 'bullet', items } | { type: 'table', headers, rows } | { type: 'spacer' }.",
++			parameters: Type.Object({
++				relPath: STR("Workspace-relative output path, e.g. 'data/reports/q1-summary.pdf'. Must end in .pdf."),
++				payload: Type.Object({
++					title:  OPTS("Optional document title rendered as h1."),
++					blocks: Type.Array(passthroughObj("Block: see tool description for shape."), { description: "Ordered list of content blocks." })
++				}, { additionalProperties: false })
++			}, { additionalProperties: false }),
++			execute: async (_id, args) => call("write-pdf", args)
++		},
++		{
++			label: "Write Excel",
++			name: "tool_write_xlsx",
++			description: "Write an XLSX workbook inside the workspace. Use this for tabular deliverables; do NOT use shell tools like python-openpyxl. payload.sheets = [{ name, rows: [[..header..],[..row1..],...] }]; first row of each sheet is treated as the header row. IMPORTANT: every row passes through this conversation and each call REPLACES the whole file (no append) — so this is only for small tables you already have in hand. A large table that already exists on disk (csv/json) must go through tool_query_data with output ending in .xlsx instead: one call, no rows in context.",
++			parameters: Type.Object({
++				relPath: STR("Workspace-relative output path, e.g. 'data/reports/metrics.xlsx'. Must end in .xlsx."),
++				payload: Type.Object({
++					sheets: Type.Array(passthroughObj("Sheet: { name, rows: [[..]] }."))
++				}, { additionalProperties: false })
++			}, { additionalProperties: false }),
++			execute: async (_id, args) => call("write-xlsx", args)
++		},
++		{
++			label: "Read Excel",
++			name: "tool_read_xlsx",
++			description: "Read an XLSX workbook from the workspace. Returns sheets with truncated rows (default cap 200/sheet). Use this for ingesting marketing data files instead of running pandas/openpyxl in shell.",
++			parameters: Type.Object({
++				relPath: STR("Workspace-relative XLSX path."),
++				maxRowsPerSheet: Type.Optional(Type.Number({ description: "Per-sheet row cap (default 200, max 5000)." }))
++			}, { additionalProperties: false }),
++			execute: async (_id, args) => call("read-xlsx", args)
++		},
++		{
++			label: "Read PPTX",
++			name: "tool_read_pptx",
++			description: "Read an existing .pptx from the workspace. Returns the per-slide outline (title, body paragraphs with outline level, table, speaker notes) AND `payload` — the same deck-spec shape tool_write_pptx takes, so you can re-theme or restructure a deck someone sent you: read it, change what you need, write it back. Use this instead of trying to read a .pptx as text; it is a zip and a plain read returns binary.",
++			parameters: Type.Object({
++				relPath: STR("Workspace-relative .pptx path, e.g. 'data/raw/2026-08-13-client-deck.pptx'.")
++			}, { additionalProperties: false }),
++			execute: async (_id, args) => call("read-pptx", args)
++		},
++		{
++			name: "tool_edit_pptx",
++			description: "Edit an existing .pptx IN PLACE, preserving its original design — masters, theme, fonts, media and animations stay untouched except where an op edits. Use this when the user wants THEIR deck changed ('fix the title on slide 3', 'delete slide 5', 'duplicate the pricing slide'); use tool_read_pptx → tool_write_pptx instead when they want it REDESIGNED in Twixy's system. Slide numbers are 1-based and refer to the deck as currently ordered; ops apply in sequence, so later ops see earlier results. ops entries: { op:'replaceText', slide, find, replace } (a fragment inside ONE formatting run — if the tool reports run-split text, retry with a shorter fragment) | { op:'setText', slide, shape, paragraphs:string[] } (rewrite a whole text box — `shape` is its 1-based number in that slide's `textShapes` list from tool_read_pptx; one entry per line; the first paragraph's font/bullet/spacing is kept) | { op:'setNotes', slide, notes } | { op:'duplicateSlide', slide, after? } (the copy SHARES chart/media parts with the original — editing one edits both) | { op:'insertSlide', layout:number|string, after?, fill?:{ title?, subtitle?, body?:string[] } } (a NEW page from one of the deck's own slideLayouts — number or exact name from the `layouts` list tool_read_pptx returns — so it inherits the original design; fill goes into the title/subtitle/first body placeholder, picture/chart/table placeholders stay empty) | { op:'deleteSlide', slide } | { op:'reorderSlides', order } (a full permutation of 1..n). Do structural ops (insert/duplicate/delete/reorder) BEFORE text ops — later ops see earlier results and duplicating copies edited text. Orphaned media/notes parts are swept automatically after the ops. A .potx template source requires outRelPath ending in .pptx. The edit is transactional: the result must read back cleanly or the original is left untouched and the error says why. Returns `applied` (what each op did) and `outline` (the after-picture per slide) — READ the outline to confirm the edit did what was asked.",
++			parameters: Type.Object({
++				relPath: STR("Workspace-relative path of the .pptx (or .potx) to edit."),
++				outRelPath: OPTS("Where to write the result. Omit to edit in place. REQUIRED (must end .pptx) when the source is a .potx template."),
++				ops: Type.Array(passthroughObj("One edit operation — see the description for the seven op shapes."), { description: "Operations, applied in order." })
++			}, { additionalProperties: false }),
++			execute: async (_id, args) => call("edit-pptx", args)
++		},
++		{
++			label: "Write PPTX",
++			name: "tool_write_pptx",
++			description: "Render a designed PPTX deck inside the workspace. Use this for slide deliverables — do NOT shell out to python-pptx. Set payload.purpose to what the deck must MAKE HAPPEN — pitch (win the prospect) | report (tell what happened) | decide (extract one decision) | align (same picture for everyone) | analyze (conclusions from data) | teach (make it reproducible) — and follow that purpose's page table from skills/pptx/SKILL.md; the tool checks the deck against it and returns what is missing in `structure`. If SKILLS.md lists a pptx runbook, read skills/pptx/SKILL.md BEFORE building the deck (outline → build → QA). payload.theme picks a palette+font pairing — pick by topic domain, do NOT default to twixy out of habit: twixy (brand purple, fallback) | petrol (editorial/monthly report) | navy (finance/B2B/formal) | vivid (tech/startup/launch) | earth (food/nature/sustainability) | charts (data-heavy, chart-optimized run) | night (DARK near-black + forest/gold — keynote, premium) | terra (artisan/craft/F&B) | berry (hospitality/beauty/lifestyle) | slate (neutral executive, pairs with brand). payload.style picks a shape/whitespace recipe: sharp | soft | rounded | pill (default: theme's own). payload.slides accepts: { kind:'cover', variant?:'block'|'split'|'center', title, subtitle?, date?, badge?, kicker? (letterspaced eyebrow line above the title), chips?: string[] (outlined meta badges) } | { kind:'toc', variant?:'list'|'sidebar'|'cards', sections:[string or {label,desc?}] (give desc to every entry and the toc IS the described overview page — prefer this over a hand-built agenda) } | { kind:'stats', variant?:'cards'|'bare', title?, items:[{value,label,sublabel?}] max 4 } | { kind:'compare', variant?:'cards'|'vs'|'stacked', title?, left:{title,bullets}, right:{title,bullets} } | { kind:'quote', text, attribution? } | { kind:'timeline', variant?:'rail'|'vertical'|'bars'|'chevron' (arrow chain — the consulting process strip), title?, steps:[{label,desc?}] max 6 } | { kind:'chart', variant?:'full'|'split' (chart + takeaway side card)|'banner' (takeaway first), title?, chartType:'bar'|'line'|'pie'|'doughnut'|'area', categories, series:[{name,values}], takeaway?, source? } | { kind:'summary', variant?:'takeaways'|'split'|'thanks', takeaways max 5, closing?, nextSteps?, contact? } | { kind:'bullets', variant?:'rows'|'cards'|'numbered'|'twoCol', title?, bullets } | { kind:'text', variant?:'rail'|'panel'|'twoCol', title?, body } | { kind:'image', variant?:'full'|'bleed' (bleed = picture owns one side edge-to-edge, title+caption the other), title?, imagePath, caption? } | { kind:'table', variant?:'grid'|'zebra'|'kv' (kv = 2-col key/value, no grid), title?, headers, rows (rows beyond 15 are cut with a 'see XLSX' notice) } | { kind:'layout', title?, blocks } — free composition on a 12-column grid when no fixed kind fits: each block is { span?:1-12 (default 12, blocks wrap into rows), break?, card?, align?:'top'|'middle', body } and body is one of { type:'heading', text, level?:1|2|3 } | { type:'paragraph', text } | { type:'bullets', items } | { type:'stat', value, label, sublabel?, pct? (0-100 — draws the stat as a progress ring) } | { type:'quote', text, attribution? } | { type:'chart', chartType, categories, series } | { type:'image', imagePath, caption? } | { type:'kv', rows:[{k,v}] } | { type:'icon', name, label?, sublabel? } | { type:'step', number?, icon?, title, desc? } (agenda/process row — a stack of span-12 steps is the dense agenda page; give `icon` instead of `number` for the icon+text-rows page type) | { type:'chips', items } | { type:'funnel', stages:[{label,desc?}] } (2-6 narrowing bands with connectors) | { type:'spacer' } — e.g. two-column is two span-6 blocks, a stat row is three span-4 card blocks. Every slide also accepts notes? (speaker notes, 1-2 sentences). There is NO divider kind — put the part name in the FOLLOWING page's title (\"FUNNEL · What runs where\") and never fake a divider with a text/cover slide carrying just a number. Every 2-3 pages one page should carry a graphic device (chart, table, timeline chevron, funnel, icons, pct ring). Unknown kinds are a hard error — do not invent kinds. The tool returns `warnings` (clamped/truncated/overflowing content), `structure` (purpose slots missing, repeated geometry, all-prose decks, and MEASURED geometry defects: text overlapping text, ink off the slide, content inside the 0.3in edge gutter), and an IMAGE: a numbered contact sheet of every slide as rendered. LOOK at it — check for text overflowing its box, overlapping elements, unreadable contrast, inconsistent margins, and three consecutive slides with the same layout. If the image or the text feedback shows a problem, fix the payload and call this tool again with the SAME relPath (overwrite). ONE fix round max — do not loop.",
++			parameters: Type.Object({
++				relPath: STR("Workspace-relative output path, e.g. 'data/reports/deck.pptx'. Must end in .pptx."),
++				payload: Type.Object({
++					title:  OPTS("Deck title (used as PPTX metadata)."),
++					theme:  OPTS("Theme preset name: twixy | petrol | navy | vivid | earth | charts | night. Default 'twixy'. An unknown name is a hard error."),
++					style:  OPTS("Style recipe: sharp | soft | rounded | pill. Default: the theme's own default."),
++					accent: OPTS("Optional accent hex override applied on top of the theme (legacy; prefer theme)."),
++					purpose: OPTS("What the deck must make happen: pitch | report | decide | align | analyze | teach. Drives the structure check the tool returns — declare it. Unknown value = hard error."),
++					brand: OPTS("Client brand hex ('#RRGGBB'). Derives the WHOLE palette from it; the named theme still supplies fonts, style and light/dark (use theme:'night' + brand for a dark branded deck). accent stays a single-colour legacy override applied last."),
++					slides: Type.Array(passthroughObj("Slide: see tool description for shape."))
++				}, { additionalProperties: false })
++			}, { additionalProperties: false }),
++			execute: async (_id, args) => call("write-pptx", args)
++		},
++		{
++			label: "Fetch To File",
++			name: "tool_fetch_to_file",
++			description: "Download an HTTP resource — following its pagination to the end — straight into workspace files, and return ONLY counts. Use this whenever you need more data than you want to read: product catalogs, API result sets, exports, any endpoint that returns many records per call. It never returns the response body, so the data cannot bloat this conversation. Use this instead of web_fetch/browser page reads when the goal is to COLLECT records rather than to read one page.",
++			parameters: Type.Object({
++				destDir: STR("Workspace-relative destination DIRECTORY (a direct child of a designated root), e.g. 'data/raw/catalog'. One file is written per page."),
++				url: STR("Absolute http(s) URL of the first page, including any fixed query parameters."),
++				pagination: Type.Optional(passthroughObj("How to advance. One of: { mode:'none' } | { mode:'page', param, start?, step? } | { mode:'offset', param, size } | { mode:'cursor', param, cursorPath } (cursorPath is a dotted path to the next cursor inside the response body) | { mode:'link' } (RFC5988 Link rel=next header). Default { mode:'none' }.")),
++				maxPages: Type.Optional(Type.Number({ description: "Request ceiling. Default 50, hard max 500." })),
++				itemsPath: Type.Optional(Type.String({ description: "Dotted path to the item array in a JSON body, e.g. 'products' or 'data.items'. Empty string means the body itself is the array. Enables item counting and end-of-data detection." })),
++				minItemsPerPage: Type.Optional(Type.Number({ description: "Stop once a page returns fewer items than this — normally the page size." })),
++				headers: Type.Optional(passthroughObj("Extra request headers.")),
++				delayMs: Type.Optional(Type.Number({ description: "Delay between requests. Default 250." })),
++				timeoutMs: Type.Optional(Type.Number({ description: "Per-request timeout. Default 60000." }))
++			}, { additionalProperties: false }),
++			execute: async (_id, args) => call("fetch-to-file", args)
++		},
++		{
++			label: "Query Data",
++			name: "tool_query_data",
++			description: "Run read-only SQL (DuckDB) over data files already in the workspace, and either write the result to a file or return a small result inline. Use this for ANY reshaping of collected data — selecting columns, filtering, aggregating, joining files, deduplicating, converting json/csv/xlsx. Each input file becomes a table you name. Aggregates computed here are exact; do NOT work totals or averages out yourself, and do NOT read a data file into the conversation to transform it by hand.",
++			parameters: Type.Object({
++				sql: STR("A single read-only SQL statement over the tables named in `inputs`. Nested JSON is addressable, e.g. SELECT p.title FROM (SELECT unnest(products) AS p FROM src). File paths are NOT accessible — reference tables only."),
++				inputs: passthroughObj("Map of table name -> workspace-relative source file, e.g. { \"src\": \"data/raw/catalog/p001.json\" }. Table names must be letters/digits/underscore. .json, .csv and .parquet are read automatically."),
++				output: OPTS("Workspace-relative output file ending in .csv, .json or .xlsx. OMIT for aggregates or previews you actually want to read — then rows come back inline (capped)."),
++				maxInlineRows: Type.Optional(Type.Number({ description: "Cap on inline rows when `output` is omitted. Default 50, hard max 1000." }))
++			}, { additionalProperties: false }),
++			execute: async (_id, args) => call("query-data", args)
++		},
++		{
++			label: "Google Status",
++			name: "tool_google_status",
++			description: "Check whether the user has connected their Google Workspace account. Returns { connected: boolean, email?: string }.",
++			parameters: Type.Object({}, { additionalProperties: false }),
++			execute: async () => call("google-status", {})
++		},
++		{
++			label: "Google Connect",
++			name: "tool_google_connect",
++			description: "Trigger the loopback OAuth flow to connect Google Workspace. Opens a browser for user consent and returns once tokens are stored.",
++			parameters: Type.Object({}, { additionalProperties: false }),
++			execute: async () => call("google-connect", {})
++		},
++		{
++			label: "Google Disconnect",
++			name: "tool_google_disconnect",
++			description: "Revoke the stored Google Workspace tokens.",
++			parameters: Type.Object({}, { additionalProperties: false }),
++			execute: async () => call("google-disconnect", {})
++		},
++		{
++			label: "Write Google Doc",
++			name: "tool_write_gdoc",
++			description: "Create a new Google Doc with structured content. Requires Google Workspace connection (call tool_google_status first). blocks accepts: { type: 'h1'|'h2'|'h3'|'p', text } | { type: 'bullet', items } | { type: 'spacer' }. Returns { documentId, url, title }.",
++			parameters: Type.Object({
++				title:  STR("Document title."),
++				blocks: Type.Array(passthroughObj("Block: see tool description."))
++			}, { additionalProperties: false }),
++			execute: async (_id, args) => call("write-gdoc", args)
++		},
++		{
++			label: "Read Google Doc",
++			name: "tool_read_gdoc",
++			description: "Read a Google Doc by id. Returns plain-text rendering plus a normalized blocks array. Use this for ingesting brief docs or reading prior reports.",
++			parameters: Type.Object({
++				documentId: STR("Google Doc ID (the part after /document/d/ in the URL).")
++			}, { additionalProperties: false }),
++			execute: async (_id, args) => call("read-gdoc", args)
++		},
++		{
++			label: "Write Google Sheet",
++			name: "tool_write_gsheet",
++			description: "Create or update a Google Sheet. Either pass spreadsheetId to update an existing sheet, or omit it (with title) to create a new one. payload.sheets mirrors the local XLSX shape: [{ name, rows: [[header...],[row1...]] }].",
++			parameters: Type.Object({
++				title: OPTS("Spreadsheet title (used when creating a new spreadsheet)."),
++				spreadsheetId: OPTS("Existing spreadsheet ID — omit to create a new one."),
++				sheets: Type.Array(passthroughObj("Sheet: { name, rows: [[..]] }."))
++			}, { additionalProperties: false }),
++			execute: async (_id, args) => call("write-gsheet", args)
++		},
++		{
++			label: "Read Google Sheet",
++			name: "tool_read_gsheet",
++			description: "Read values from a Google Sheet. Returns rows truncated to the supplied range (defaults to first sheet A1:ZZ500).",
++			parameters: Type.Object({
++				spreadsheetId: STR("Spreadsheet ID."),
++				range:         OPTS("A1 range, e.g. 'Sheet1!A1:D200'. Optional.")
++			}, { additionalProperties: false }),
++			execute: async (_id, args) => call("read-gsheet", args)
++		}
++	];
++}
+ function createOpenClawTools(options) {
+ 	const resolvedConfig = options?.config ?? openClawToolsDeps.config;
+ 	const sessionAgentId = resolveSessionAgentId({
+@@ -23985,7 +24248,9 @@ function createOpenClawTools(options) {
+ 		}),
+ 		deliveryContext
+ 	});
+-	return [...tools, ...wrappedPluginTools];
++	// Twixy patch: append our 9 file-io / Google Workspace tools (gated by
++	// TWIXY_TOOL_BRIDGE_PORT/TOKEN env — empty list when not seeded).
++	return [...tools, ...wrappedPluginTools, ...__twixyExtraTools()];
+ }
+ //#endregion
+ //#region src/agents/pi-tools.abort.ts
+@@ -24090,9 +24355,430 @@ async function recordLoopOutcome(args) {
+ 		log$4.warn(`tool loop outcome tracking failed: tool=${args.toolName} error=${String(err)}`);
+ 	}
+ }
++// ── Twixy patch: Designated-directory hard guard ────────────────────
++// Hard-block tool calls whose target file path is outside the documented
++// workspace buckets. Runs from runBeforeToolCallHook BEFORE the existing
++// Guardrail Mode gate, so the block fires regardless of TWIXY_GUARDRAIL_MODE
++// (including the default "bypass"). This prevents LLM hallucinations like
++// `data/exports/foo.csv` when the workflow only declares data/raw, data/reports etc.
++//
++// The roots + per-root channel whitelist are user-editable via the Twixy
++// SettingsPanel — Electron seeds them at spawn via TWIXY_DESIGNATED_ROOTS
++// (JSON string[]) and TWIXY_ALLOWED_SUBDIRS (JSON Record<string,string[]>).
++// When the env is absent or malformed we fall back to a hardcoded default
++// so the guard fails-safe rather than disabling itself.
++//
++// SOURCE OF TRUTH (electron): electron/designated-paths/config.ts
++const __TWIXY_DEFAULT_DESIGNATED_ROOTS = [
++	"data/raw", "data/insights", "strategies",
++	"content/drafts", "content/published", "data/reports",
++];
++const __TWIXY_DEFAULT_ALLOWED_SUBDIRS = {
++	"data/raw":          ["instagram", "youtube", "tiktok", "twitter"],
++	"data/insights":     [],
++	"strategies":        [],
++	"content/drafts":    [],
++	"content/published": [],
++	"data/reports":      [],
++};
++function __twixyParseRoots(raw) {
++	if (typeof raw !== "string" || !raw) return null;
++	try {
++		const v = JSON.parse(raw);
++		if (!Array.isArray(v)) return null;
++		const out = [];
++		for (const x of v) if (typeof x === "string" && x) out.push(x);
++		return out.length > 0 ? out : null;
++	} catch { return null; }
++}
++function __twixyParseSubdirs(raw) {
++	if (typeof raw !== "string" || !raw) return null;
++	try {
++		const v = JSON.parse(raw);
++		if (!v || typeof v !== "object" || Array.isArray(v)) return null;
++		const out = {};
++		for (const k of Object.keys(v)) {
++			const arr = v[k];
++			if (!Array.isArray(arr)) continue;
++			out[k] = arr.filter((s) => typeof s === "string" && s);
++		}
++		return out;
++	} catch { return null; }
++}
++const __TWIXY_DESIGNATED_ROOTS = (
++	__twixyParseRoots(process.env.TWIXY_DESIGNATED_ROOTS) || __TWIXY_DEFAULT_DESIGNATED_ROOTS
++);
++const __TWIXY_ALLOWED_SUBDIRS = (
++	__twixyParseSubdirs(process.env.TWIXY_ALLOWED_SUBDIRS) || __TWIXY_DEFAULT_ALLOWED_SUBDIRS
++);
++function __twixyIsDesignatedRelPath(rel) {
++	if (typeof rel !== "string" || !rel) return false;
++	if (rel.startsWith("/") || rel.startsWith("~") || rel.startsWith("\\")) return false;
++	if (rel.indexOf("\0") !== -1) return false;
++	const norm = rel.replace(/\\/g, "/");
++	const segs = norm.split("/").filter(Boolean);
++	if (segs.some(s => s === "..")) return false;
++	for (const root of __TWIXY_DESIGNATED_ROOTS) {
++		const rootSegs = root.split("/");
++		if (segs.length <= rootSegs.length) continue;
++		let match = true;
++		for (let i = 0; i < rootSegs.length; i++) {
++			if (segs[i] !== rootSegs[i]) { match = false; break; }
++		}
++		if (!match) continue;
++		const tail = segs.slice(rootSegs.length);
++		if (tail.length === 1) return true;
++		if (tail.length === 2) return (__TWIXY_ALLOWED_SUBDIRS[root] || []).indexOf(tail[0]) !== -1;
++		return false;
++	}
++	return false;
++}
++function __twixyDesignatedCheck(toolName, params) {
++	const tn = String(toolName || "").toLowerCase();
++	const p = (params && typeof params === "object") ? params : {};
++	let rel = null;
++	if (tn === "write" || tn === "edit" || tn === "notebookedit") {
++		rel = p.path != null ? p.path
++		    : p.file_path != null ? p.file_path
++		    : p.filePath != null ? p.filePath
++		    : p.target != null ? p.target
++		    : p.dst != null ? p.dst
++		    : p.destination != null ? p.destination
++		    : p.file != null ? p.file
++		    : null;
++	} else if (tn === "tool_write_pdf" || tn === "tool_write_xlsx" || tn === "tool_write_pptx") {
++		rel = p.relPath != null ? p.relPath : (p.path != null ? p.path : null);
++	} else if (tn === "tool_fetch_to_file") {
++		// Writes one file per page INTO this directory; the directory itself
++		// must be a designated destination.
++		rel = p.destDir != null ? p.destDir : null;
++	} else if (tn === "tool_query_data") {
++		// `output` is optional — an inline query writes nothing, so a null
++		// rel correctly falls through to block:false below.
++		rel = p.output != null ? p.output : null;
++	}
++	if (rel == null) return { block: false };
++	if (typeof rel !== "string") return {
++		block: true,
++		reason: "Designated-path guard: path argument must be a string, got " + typeof rel,
++	};
++	if (__twixyIsDesignatedRelPath(rel)) return { block: false };
++	return {
++		block: true,
++		reason:
++			"Path \"" + rel + "\" is not in a designated workspace directory and cannot be written. " +
++			"Allowed roots (workspace-relative): " + __TWIXY_DESIGNATED_ROOTS.join(", ") + ". " +
++			"Files must be written directly under one of these roots, or under a whitelisted " +
++			"channel subfolder of data/raw (instagram/youtube/tiktok/twitter). " +
++			"Retry with a corrected path — e.g. " +
++			"\"data/reports/" + (rel.split("/").pop() || "output") + "\" or " +
++			"\"data/raw/" + (rel.split("/").pop() || "output") + "\".",
++	};
++}
++// ── Twixy patch: Overwrite guard — user approval for EXISTING files ──
++// A write-family tool targeting a file that already exists must get the
++// user's explicit approval — write nodes were silently clobbering files.
++// Runs regardless of TWIXY_GUARDRAIL_MODE: the renderer treats pluginId
++// "twixy.overwrite" specially and prompts even in bypass mode. New-file
++// writes stay silent. `edit` is a surgical patch (not a full replace) so
++// it is not gated here. The gateway process cwd IS the Twixy workspace
++// (Electron spawns it with cwd=getWorkspace()), so relative paths resolve
++// against cwd directly.
++function __twixyOverwriteCheck(toolName, params) {
++	const tn = String(toolName || "").toLowerCase();
++	const p = (params && typeof params === "object") ? params : {};
++	// Which param carried the path — the "Save as…" redirect below rewrites
++	// exactly that key, so we have to remember it rather than re-guess.
++	let keys = [];
++	if (tn === "write") {
++		keys = ["path", "file_path", "filePath", "target", "dst", "destination", "file"];
++	} else if (tn === "tool_write_pdf" || tn === "tool_write_xlsx" || tn === "tool_write_pptx") {
++		keys = ["relPath", "path"];
++	} else if (tn === "tool_query_data") {
++		keys = ["output"];
++	}
++	let rel = null, key = null;
++	for (const k of keys) {
++		if (typeof p[k] === "string" && p[k]) { rel = p[k]; key = k; break; }
++	}
++	if (typeof rel !== "string" || !rel) return { gate: false };
++	try {
++		const abs = rel.startsWith("/") ? rel : process.cwd() + "/" + rel;
++		if (!existsSync(abs)) return { gate: false };
++		return { gate: true, rel, key };
++	} catch { return { gate: false }; }
++}
++// ── Twixy patch: overwrite "Save as…" redirect ──────────────────────
++// When the user picks "Save as…" in the overwrite prompt, the renderer
++// registers <approval id> → <new workspace-relative path> in
++// TWIXY_OVERWRITE_REDIRECT_FILE *before* answering allow-once. We consume
++// that entry here and repoint the tool's path param, so the existing file
++// survives and the new output lands under the name the user chose.
++// Single-use: the entry is deleted on read. Fail-open = plain overwrite,
++// which is why the renderer only approves after the write succeeds.
++const __TWIXY_OVERWRITE_REDIRECT_FILE = process.env.TWIXY_OVERWRITE_REDIRECT_FILE
++	|| ((process.env.HOME || "") + "/.openclaw/twixy-overwrite-redirect.json");
++function __twixyOverwriteRedirect(id) {
++	if (!__TWIXY_OVERWRITE_REDIRECT_FILE || !id) return null;
++	try {
++		if (!existsSync(__TWIXY_OVERWRITE_REDIRECT_FILE)) return null;
++		const map = JSON.parse(fsSync.readFileSync(__TWIXY_OVERWRITE_REDIRECT_FILE, "utf8"));
++		const hit = (map && typeof map === "object") ? map[id] : void 0;
++		const rel = (hit && typeof hit.path === "string" && hit.path) ? hit.path : null;
++		if (!rel) return null;
++		try {
++			delete map[id];
++			fsSync.writeFileSync(__TWIXY_OVERWRITE_REDIRECT_FILE, JSON.stringify(map));
++		} catch { /* best effort */ }
++		return rel;
++	} catch { return null; }
++}
++// ── Twixy patch: browser profile slot enforcement ────────────────────
++// TWIXY_BROWSER_SLOTS_FILE (written by the Electron main process on every
++// slot lease/release) maps gateway sessionKey → browser profile name
++// (wf-1..3). For browser tool calls from a mapped session we overwrite
++// params.profile so the run always drives its own Chrome instance. The
++// file is tiny and browser calls are seconds apart — a sync read per call
++// is fine. Missing/invalid file = no-op (default profile behaviour).
++const __TWIXY_BROWSER_SLOTS_FILE = process.env.TWIXY_BROWSER_SLOTS_FILE || "";
++function __twixyApplyBrowserSlot(toolName, params, sessionKey) {
++	if (toolName !== "browser") return;
++	if (!__TWIXY_BROWSER_SLOTS_FILE || !sessionKey) return;
++	if (!params || typeof params !== "object") return;
++	try {
++		if (!existsSync(__TWIXY_BROWSER_SLOTS_FILE)) return;
++		const raw = fsSync.readFileSync(__TWIXY_BROWSER_SLOTS_FILE, "utf8");
++		const map = JSON.parse(raw);
++		const profile = map && typeof map === "object" ? map[sessionKey] : void 0;
++		if (typeof profile === "string" && profile) params.profile = profile;
++	} catch { /* fail-open */ }
++}
++// ── Twixy patch: Guardrail Mode classifier ──────────────────────────
++// Used by runBeforeToolCallHook to decide whether a tool call needs
++// user approval. Intercepts file-writing tools and destructive/network
++// Bash commands. Reads mode + allowlist from env vars populated by the
++// Electron main process (see electron/guardrail/config.ts).
++function __twixyGuardrailClassify(toolName, params) {
++	const tn = String(toolName || "").toLowerCase();
++	const p = (params && typeof params === "object") ? params : {};
++	if (tn === "write") {
++		// Fail-closed: a "write" tool entered the classifier, so we
++		// gate regardless of which param shape the model used. Empty
++		// key falls back to "<unknown>" rather than bypassing — older
++		// behavior let camelCase `filePath` from non-Anthropic models
++		// slip through guardrail entirely.
++		const key = String(p.path ?? p.file_path ?? p.filePath ?? p.target ?? p.dst ?? p.destination ?? "<unknown>");
++		return { gated: true, kind: "write", key,
++			title: "Write file",
++			description: `About to write file contents: ${key}`,
++			severity: "warning" };
++	}
++	if (tn === "edit" || tn === "notebookedit") {
++		// Same fail-closed policy as write — see comment above.
++		const key = String(p.path ?? p.file_path ?? p.filePath ?? p.target ?? p.dst ?? p.destination ?? "<unknown>");
++		return { gated: true, kind: "edit", key,
++			title: "Edit file",
++			description: `About to modify file: ${key}`,
++			severity: "warning" };
++	}
++	// Twixy patch: file-io tools (PDF/XLSX/PPTX) gated under the existing
++	// write allowlist with the relPath as the key. Same fail-closed shape
++	// as `write` — relPath should always be present, but if a model omits
++	// it we still gate rather than bypass.
++	if (tn === "tool_fetch_to_file") {
++		const key = String(p.destDir ?? "<unknown>");
++		return { gated: true, kind: "write", key,
++			title: "Collect to files",
++			description: `About to download into: ${key}`,
++			severity: "warning" };
++	}
++	if (tn === "tool_query_data" && p.output != null) {
++		const key = String(p.output);
++		return { gated: true, kind: "write", key,
++			title: "Write query result",
++			description: `About to write query output: ${key}`,
++			severity: "warning" };
++	}
++	if (tn === "tool_write_pdf" || tn === "tool_write_xlsx" || tn === "tool_write_pptx") {
++		const key = String(p.relPath ?? p.path ?? "<unknown>");
++		const fmt = tn === "tool_write_pdf" ? "PDF" : tn === "tool_write_xlsx" ? "Excel" : "PPTX";
++		return { gated: true, kind: "write", key,
++			title: `Write ${fmt}`,
++			description: `About to write ${fmt} report: ${key}`,
++			severity: "warning" };
++	}
++	// Twixy patch: Google Workspace writers gated as 'write' with the
++	// document title (or spreadsheet id) as the allowlist key — these
++	// touch the user's Google account, so always require approval unless
++	// explicitly allowlisted.
++	if (tn === "tool_write_gdoc" || tn === "tool_write_gsheet") {
++		const key = String(p.title ?? p.spreadsheetId ?? "<unknown>");
++		const surface = tn === "tool_write_gdoc" ? "Google Doc" : "Google Sheet";
++		return { gated: true, kind: "write", key,
++			title: `Write ${surface}`,
++			description: `About to write to ${surface}: ${key}`,
++			severity: "warning" };
++	}
++	// Twixy patch: Google connect/disconnect gated as 'bash' (network
++	// side-effect category) since they trigger an OAuth browser flow and
++	// mutate stored credentials. Read-only tools (status/read-gdoc/
++	// read-gsheet/read-xlsx) are intentionally NOT gated.
++	if (tn === "tool_google_connect" || tn === "tool_google_disconnect") {
++		const action = tn === "tool_google_connect" ? "connect" : "disconnect";
++		return { gated: true, kind: "bash", key: tn,
++			title: `Google Workspace ${action}`,
++			description: `About to ${action} the Google Workspace integration.`,
++			severity: "warning" };
++	}
++	if (tn === "bash" || tn === "exec") {
++		const cmd = String(p.command ?? "").trim();
++		if (!cmd) return { gated: false };
++		// Fail-closed: if the analyzer throws we have no signal whether
++		// the command is destructive/network — gate as critical.
++		let analysis;
++		let analysisThrew = false;
++		try { analysis = analyzeShellCommand({ command: cmd }); }
++		catch { analysis = null; analysisThrew = true; }
++		if (analysisThrew) {
++			const bin = cmd.split(/\s+/)[0] || "<unknown>";
++			return { gated: true, kind: "bash", key: bin,
++				title: "Shell command (analyzer error)",
++				description: cmd.length > 200 ? cmd.slice(0, 200) + "…" : cmd,
++				severity: "critical" };
++		}
++		const destructive = Boolean(analysis?.destructive);
++		const network     = Boolean(analysis?.network) || Boolean(analysis?.externalSideEffect);
++		if (!destructive && !network) return { gated: false };
++		const bin = cmd.split(/\s+/)[0] || "";
++		return { gated: true, kind: "bash", key: bin,
++			title: destructive ? "Destructive shell command" : "Network shell command",
++			description: cmd.length > 200 ? cmd.slice(0, 200) + "…" : cmd,
++			severity: destructive ? "critical" : "warning" };
++	}
++	return { gated: false };
++}
+ async function runBeforeToolCallHook(args) {
+ 	const toolName = normalizeToolName(args.toolName || "tool");
+ 	const params = args.params;
++	// ── Twixy patch: per-session browser profile slot ────────────────
++	// Parallel workflow Test runs each lease an independent Chrome (profile
++	// wf-1..3, own cdpPort + user-data-dir). Twixy mirrors the run's gateway
++	// sessionKey → profile mapping to TWIXY_BROWSER_SLOTS_FILE; for every
++	// browser tool call from a mapped session we FORCE params.profile to the
++	// leased slot — the model's own profile choice (or omission) is ignored,
++	// so two runs can never collide on one Chrome. Sessions not in the map
++	// (chat, builder) keep default behaviour. Fail-open on any file error.
++	__twixyApplyBrowserSlot(toolName, params, args.ctx?.sessionKey);
++	// ── Twixy patch: Designated-dir hard guard ──────────────────────
++	// Hard-block file-write tools whose target path is outside the documented
++	// workspace buckets. Runs unconditionally — does NOT depend on
++	// TWIXY_GUARDRAIL_MODE — so an LLM cannot escape the buckets even when the
++	// user has guardrail in the default "bypass" mode. The reason string is
++	// surfaced to the model so it can retry with a corrected path.
++	const __dg = __twixyDesignatedCheck(toolName, params);
++	if (__dg.block) {
++		return { blocked: true, reason: __dg.reason };
++	}
++	// ── Twixy patch: Overwrite approval gate ────────────────────────
++	// Existing-file overwrites require the user's OK — independent of the
++	// Guardrail mode below (renderer special-cases pluginId twixy.overwrite
++	// so bypass mode still prompts). Denied/timeout → teach the model to
++	// save to a NEW versioned path instead of retrying the same overwrite.
++	const __ow = __twixyOverwriteCheck(toolName, params);
++	if (__ow.gate) {
++		try {
++			const __owDesc = ("The agent wants to OVERWRITE the existing file: " + __ow.rel).slice(0, 256);
++			const req = await callGatewayTool("plugin.approval.request", { timeoutMs: 310000 }, {
++				pluginId:    "twixy.overwrite",
++				title:       "Overwrite file?",
++				description: __owDesc,
++				severity:    "warning",
++				toolName,
++				toolCallId:  args.toolCallId,
++				agentId:     args.ctx?.agentId,
++				sessionKey:  args.ctx?.sessionKey,
++				timeoutMs:   300000,
++				twoPhase:    true,
++			}, { expectFinal: false });
++			const id = req?.id;
++			if (!id) return { blocked: true, reason: "Overwrite approval request failed — save to a NEW file path instead (same folder, add a version suffix like -v2)." };
++			let decision;
++			if (Object.prototype.hasOwnProperty.call(req ?? {}, "decision")) {
++				decision = req?.decision;
++			} else {
++				const wait = await callGatewayTool("plugin.approval.waitDecision", { timeoutMs: 310000 }, { id });
++				decision = wait?.decision;
++			}
++			if (decision !== PluginApprovalResolutions.ALLOW_ONCE && decision !== PluginApprovalResolutions.ALLOW_ALWAYS) {
++				return { blocked: true, reason:
++					"The user did NOT approve overwriting \"" + __ow.rel + "\". Do not attempt this overwrite again. " +
++					"Save your output to a NEW file instead (same folder, version suffix like -v2), " +
++					"or tell the user they can approve the overwrite and ask you to retry." };
++			}
++			// "Save as…" — user allowed the write but at a different name.
++			const __redirect = __twixyOverwriteRedirect(id);
++			if (__redirect && __ow.key && params && typeof params === "object") {
++				params[__ow.key] = __redirect;
++			}
++		} catch (err) {
++			return { blocked: true, reason: "Overwrite approval failed: " + String(err?.message ?? err) + " — save to a NEW file path instead." };
++		}
++	}
++	// ── Twixy Guardrail gate ───────────────────────────────────────
++	const __twixyMode = process.env.TWIXY_GUARDRAIL_MODE || "bypass";
++	if (__twixyMode !== "bypass") {
++		const __gr = __twixyGuardrailClassify(toolName, params);
++		if (__gr.gated) {
++			let __allowed = false;
++			if (__twixyMode !== "strict") {
++				try {
++					const raw = process.env.TWIXY_GUARDRAIL_ALLOWLIST || "";
++					const list = raw ? JSON.parse(raw) : { write: [], edit: [], bash: [] };
++					const entries = (list && Array.isArray(list[__gr.kind])) ? list[__gr.kind] : [];
++					__allowed = entries.some((pat) => {
++						if (typeof pat !== "string" || !pat) return false;
++						if (pat === __gr.key) return true;
++						if (pat.endsWith("/**")) return __gr.key.startsWith(pat.slice(0, -2));
++						if (pat.endsWith("/*"))  return __gr.key.startsWith(pat.slice(0, -1));
++						return false;
++					});
++				} catch { __allowed = false; }
++			}
++			if (!__allowed) {
++				try {
++					const req = await callGatewayTool("plugin.approval.request", { timeoutMs: 310000 }, {
++						pluginId:    "twixy.guardrail",
++						title:       __gr.title,
++						description: __gr.description,
++						severity:    __gr.severity,
++						toolName,
++						toolCallId:  args.toolCallId,
++						agentId:     args.ctx?.agentId,
++						sessionKey:  args.ctx?.sessionKey,
++						timeoutMs:   300000,
++						twoPhase:    true,
++					}, { expectFinal: false });
++					const id = req?.id;
++					if (!id) return { blocked: true, reason: "Guardrail approval request failed" };
++					let decision;
++					if (Object.prototype.hasOwnProperty.call(req ?? {}, "decision")) {
++						decision = req?.decision;
++					} else {
++						const wait = await callGatewayTool("plugin.approval.waitDecision", { timeoutMs: 310000 }, { id });
++						decision = wait?.decision;
++					}
++					if (decision === PluginApprovalResolutions.DENY) {
++						return { blocked: true, reason: "User denied this action via Guardrail Mode" };
++					}
++					if (decision !== PluginApprovalResolutions.ALLOW_ONCE && decision !== PluginApprovalResolutions.ALLOW_ALWAYS) {
++						return { blocked: true, reason: "Guardrail approval timed out or cancelled" };
++					}
++				} catch (err) {
++					return { blocked: true, reason: "Guardrail check failed: " + String(err?.message ?? err) };
++				}
++			}
++		}
++	}
+ 	if (args.ctx?.sessionKey) {
+ 		const { getDiagnosticSessionState, logToolLoopAction, detectToolCallLoop, recordToolCall } = await loadBeforeToolCallRuntime();
+ 		const sessionState = getDiagnosticSessionState({
+@@ -40331,4 +41017,4 @@ async function runEmbeddedPiAgent(params) {
+ 	}));
+ }
+ //#endregion
+-export { buildCommandsMessagePaginated as $, sanitizeTaskStatusText as $n, createManagedTaskFlow as $t, resolveGroupToolPolicy as A, AcpRuntimeError as An, LowercaseNonEmptyStringFieldSchema as Ar, shouldIgnorePostCompletionAnnounceForSession as At, resolveAcpThreadSessionDetailLines as B, onAgentEvent as Bn, resolveSystemRunApprovalRequestContext as Br, listTaskFlowsForOwner as Bt, rewriteTranscriptEntriesInSessionFile as C, validateRuntimeModeInput as Cn, inferLegacyName as Cr, isSubagentSessionRunActive as Ct, buildDefaultToolPolicyPipelineSteps as D, resolveAcpSessionResolutionError as Dn, normalizePayloadToSystemText as Dr, markSubagentRunTerminated as Dt, applyToolPolicyPipeline as E, resolveAcpAgentFromSessionKey as En, normalizeOptionalText$1 as Er, listSubagentRunsForRequester as Et, normalizeSpawnedRunMetadata as F, readLatestAssistantReply as Fn, resolveInternalSessionKey as Fr, failTaskRunByRunId as Ft, cleanupFailedAcpSpawn as G, resolveNestedAgentLane as Gn, getChannelAgentToolMeta as Gr, getTaskById as Gt, resolveAcpAgentPolicyError as H, resolveStoredSubagentCapabilities as Hn, shouldDowngradeDeliveryToSessionOnly as Hr, cancelTaskById as Ht, resolveIngressWorkspaceOverrideForSpawnedRun as I, formatAgentInternalEventsForPrompt as In, resolveMainSessionAlias as Ir, getFlowTaskSummary as It, getTaskByIdForOwner as J, resolveSubagentTargetFromRuns as Jn, markTaskLostById as Jt, findLatestTaskForRelatedSessionKeyForOwner as K, formatRunLabel as Kn, makeBootstrapWarn as Kr, listTaskRecords as Kt, resolveAcpSpawnRuntimePolicyError as L, clearAgentRunContext as Ln, SESSION_ID_RE as Lr, runTaskInFlowForOwner as Lt, runBeforeToolCallHook as M, toAcpRuntimeError as Mn, parseOptionalField as Mr, cancelFlowByIdForOwner as Mt, createOpenClawTools as N, onSessionLifecycleEvent as Nn, sanitizeTextContent as Nr, completeTaskRunByRunId as Nt, sniffMimeFromBase64 as O, isSessionIdentityPending as On, normalizeRequiredName as Or, replaceSubagentRunAfterSteer as Ot, spawnSubagentDirect as P, resolveAnnounceTargetFromKey as Pn, stripToolMessages as Pr, createRunningTaskRun as Pt, buildCommandsMessage as Q, formatTaskStatusTitle as Qn, updateTaskNotifyPolicyById as Qt, resolveAcpSessionCwd as R, emitAgentEvent as Rn, looksLikeSessionId as Rr, findLatestTaskFlowForOwner as Rt, stripToolResultDetails as S, validateRuntimeCwdInput as Sn, normalizeCronJobPatch as Sr, initSubagentRegistry as St, resolveToolLoopDetectionConfig as T, validateRuntimePermissionProfileInput as Tn, normalizeOptionalSessionKey as Tr, listSubagentRunsForController as Tt, resolveAcpDispatchPolicyError as U, AGENT_LANE_NESTED as Un, resolveExecApprovalInitiatingSurfaceState as Ur, deleteTaskRecordById as Ut, isAcpEnabledByPolicy as V, registerAgentRunContext as Vn, resolveSystemRunApprovalRuntimeContext as Vr, resolveTaskFlowForLookupTokenForOwner as Vt, resolveAcpDispatchPolicyMessage as W, AGENT_LANE_SUBAGENT as Wn, resolveOpenClawDocsPath as Wr, ensureTaskRegistryReady as Wt, resolveTaskForLookupTokenForOwner as X, buildTaskStatusSnapshot as Xn, resolveTaskForLookupToken as Xt, listTasksForRelatedSessionKeyForOwner as Y, sortSubagentRuns as Yn, maybeDeliverTaskTerminalUpdate as Yt, buildStatusReply as Z, formatTaskStatusDetail as Zn, setTaskCleanupAfterById as Zt, compactEmbeddedPiSessionDirect as _, registerAcpRuntimeBackend as _n, setGatewaySigusr1RestartPolicy as _r, steerControlledSubagentRun as _t, buildSystemPromptReport as a, listTaskFlowRecords as an, getActiveEmbeddedRunSnapshot as ar, buildFallbackNotice as at, estimateMessagesTokens as b, parseRuntimeTimeoutSecondsInput as bn, normalizeHttpWebhookUrl as br, countPendingDescendantRunsExcludingRun as bt, analyzeBootstrapBudget as c, resumeFlow as cn, queueEmbeddedPiMessage as cr, listTasksForAgentIdForStatus as ct, buildBootstrapTruncationReportMeta as d, __testing as dn, consumeGatewaySigusr1RestartAuthorization as dr, killAllControlledSubagentRuns as dt, deleteTaskFlowRecordById as en, isFallbackSummaryError as er, buildHelpMessage as et, prependBootstrapPromptWarning as f, getAcpSessionManager as fn, deferGatewayRestartUntilIdle as fr, killControlledSubagentRun as ft, compactEmbeddedPiSession as g, getAcpRuntimeBackend as gn, scheduleGatewaySigusr1Restart as gr, sendControlledSubagentMessage as gt, resolveRunWorkspaceDir as h, __testing$1 as hn, markGatewaySigusr1RestartHandled as hr, resolveSubagentController as ht, prepareSessionManagerForRun as i, getTaskFlowRegistryRestoreFailure as in, getActiveEmbeddedRunCount as ir, buildFallbackClearedNotice as it, resolveSubagentToolPolicy as j, isAcpRuntimeError as jn, TrimmedNonEmptyStringFieldSchema as jr, cancelFlowById as jt, resolveEffectiveToolPolicy as k, resolveSessionIdentityFromMeta as kn, DeliveryThreadIdFieldSchema as kr, resolveRequesterForChildSession as kt, buildBootstrapInjectionStats as l, setFlowWaiting as ln, waitForActiveEmbeddedRuns as lr, listTasksForSessionKeyForStatus as lt, redactRunIdentifier as m, resolveSessionStorePathForAcp as mn, isGatewaySigusr1RestartExternallyAllowed as mr, listControlledSubagentRuns as mt, detectImageReferences as n, finishFlow as nn, LiveSessionModelSwitchError as nr, formatContextUsageShort as nt, buildSystemPromptParams as o, requestFlowCancel as on, isEmbeddedPiRunActive as or, resolveFallbackTransition as ot, resolveBootstrapWarningSignaturesSeen as p, readAcpSessionEntry as pn, emitGatewayRestart as pr, killSubagentRunAdmin as pt, findTaskByRunIdForOwner as q, formatRunStatus as qn, resolveBootstrapContextForRun as qr, listTasksForFlowId as qt, loadImageFromRef as r, getTaskFlowById as rn, abortEmbeddedPiRun as rr, formatTokenCount as rt, EmbeddedBlockChunker as s, resolveTaskFlowForLookupToken as sn, isEmbeddedPiRunStreaming as sr, summarizeToolDescriptionText as st, runEmbeddedPiAgent as t, failFlow as tn, runWithModelFallback as tr, buildToolsMessage as tt, buildBootstrapPromptWarning as u, updateFlowRecordByIdExpectedRevision as un, waitForEmbeddedPiRunEnd as ur, buildSubagentList as ut, buildToolSummaryMap as v, requireAcpRuntimeBackend as vn, setPreRestartDeferralCheck as vr, countActiveDescendantRuns as vt, createOpenClawCodingTools as w, validateRuntimeModelInput as wn, normalizeOptionalAgentId$1 as wr, listDescendantRunsForRequester as wt, readPostCompactionContext as x, validateRuntimeConfigOptionInput as xn, normalizeCronJobCreate as xr, getLatestSubagentRunByChildSessionKey as xt, buildAgentSystemPrompt as y, unregisterAcpRuntimeBackend as yn, triggerOpenClawRestart as yr, countPendingDescendantRuns as yt, resolveAcpSessionIdentifierLinesFromIdentity as z, getAgentRunContext as zn, createExecTool as zr, getTaskFlowByIdForOwner as zt };
++export { buildCommandsMessagePaginated as $, sanitizeTaskStatusText as $n, createManagedTaskFlow as $t, resolveGroupToolPolicy as A, AcpRuntimeError as An, LowercaseNonEmptyStringFieldSchema as Ar, shouldIgnorePostCompletionAnnounceForSession as At, resolveAcpThreadSessionDetailLines as B, onAgentEvent as Bn, resolveSystemRunApprovalRequestContext as Br, listTaskFlowsForOwner as Bt, rewriteTranscriptEntriesInSessionFile as C, validateRuntimeModeInput as Cn, inferLegacyName as Cr, isSubagentSessionRunActive as Ct, buildDefaultToolPolicyPipelineSteps as D, resolveAcpSessionResolutionError as Dn, normalizePayloadToSystemText as Dr, markSubagentRunTerminated as Dt, applyToolPolicyPipeline as E, resolveAcpAgentFromSessionKey as En, normalizeOptionalText$1 as Er, listSubagentRunsForRequester as Et, normalizeSpawnedRunMetadata as F, readLatestAssistantReply as Fn, resolveInternalSessionKey as Fr, failTaskRunByRunId as Ft, cleanupFailedAcpSpawn as G, resolveNestedAgentLane as Gn, getChannelAgentToolMeta as Gr, getTaskById as Gt, resolveAcpAgentPolicyError as H, resolveStoredSubagentCapabilities as Hn, shouldDowngradeDeliveryToSessionOnly as Hr, cancelTaskById as Ht, resolveIngressWorkspaceOverrideForSpawnedRun as I, formatAgentInternalEventsForPrompt as In, resolveMainSessionAlias as Ir, getFlowTaskSummary as It, getTaskByIdForOwner as J, resolveSubagentTargetFromRuns as Jn, markTaskLostById as Jt, findLatestTaskForRelatedSessionKeyForOwner as K, formatRunLabel as Kn, makeBootstrapWarn as Kr, listTaskRecords as Kt, resolveAcpSpawnRuntimePolicyError as L, clearAgentRunContext as Ln, SESSION_ID_RE as Lr, runTaskInFlowForOwner as Lt, runBeforeToolCallHook as M, toAcpRuntimeError as Mn, parseOptionalField as Mr, cancelFlowByIdForOwner as Mt, createOpenClawTools as N, onSessionLifecycleEvent as Nn, sanitizeTextContent as Nr, completeTaskRunByRunId as Nt, sniffMimeFromBase64 as O, isSessionIdentityPending as On, normalizeRequiredName as Or, replaceSubagentRunAfterSteer as Ot, spawnSubagentDirect as P, resolveAnnounceTargetFromKey as Pn, stripToolMessages as Pr, createRunningTaskRun as Pt, buildCommandsMessage as Q, formatTaskStatusTitle as Qn, updateTaskNotifyPolicyById as Qt, resolveAcpSessionCwd as R, emitAgentEvent as Rn, looksLikeSessionId as Rr, findLatestTaskFlowForOwner as Rt, stripToolResultDetails as S, validateRuntimeCwdInput as Sn, normalizeCronJobPatch as Sr, initSubagentRegistry as St, resolveToolLoopDetectionConfig as T, validateRuntimePermissionProfileInput as Tn, normalizeOptionalSessionKey as Tr, listSubagentRunsForController as Tt, resolveAcpDispatchPolicyError as U, AGENT_LANE_NESTED as Un, resolveExecApprovalInitiatingSurfaceState as Ur, deleteTaskRecordById as Ut, isAcpEnabledByPolicy as V, registerAgentRunContext as Vn, resolveSystemRunApprovalRuntimeContext as Vr, resolveTaskFlowForLookupTokenForOwner as Vt, resolveAcpDispatchPolicyMessage as W, AGENT_LANE_SUBAGENT as Wn, resolveOpenClawDocsPath as Wr, ensureTaskRegistryReady as Wt, resolveTaskForLookupTokenForOwner as X, buildTaskStatusSnapshot as Xn, resolveTaskForLookupToken as Xt, listTasksForRelatedSessionKeyForOwner as Y, sortSubagentRuns as Yn, maybeDeliverTaskTerminalUpdate as Yt, buildStatusReply as Z, formatTaskStatusDetail as Zn, setTaskCleanupAfterById as Zt, compactEmbeddedPiSessionDirect as _, registerAcpRuntimeBackend as _n, setGatewaySigusr1RestartPolicy as _r, steerControlledSubagentRun as _t, buildSystemPromptReport as a, listTaskFlowRecords as an, getActiveEmbeddedRunSnapshot as ar, buildFallbackNotice as at, estimateMessagesTokens as b, parseRuntimeTimeoutSecondsInput as bn, normalizeHttpWebhookUrl as br, countPendingDescendantRunsExcludingRun as bt, analyzeBootstrapBudget as c, resumeFlow as cn, queueEmbeddedPiMessage as cr, listTasksForAgentIdForStatus as ct, buildBootstrapTruncationReportMeta as d, __testing as dn, consumeGatewaySigusr1RestartAuthorization as dr, killAllControlledSubagentRuns as dt, deleteTaskFlowRecordById as en, isFallbackSummaryError as er, buildHelpMessage as et, prependBootstrapPromptWarning as f, getAcpSessionManager as fn, deferGatewayRestartUntilIdle as fr, killControlledSubagentRun as ft, compactEmbeddedPiSession as g, getAcpRuntimeBackend as gn, scheduleGatewaySigusr1Restart as gr, sendControlledSubagentMessage as gt, resolveRunWorkspaceDir as h, __testing$1 as hn, markGatewaySigusr1RestartHandled as hr, resolveSubagentController as ht, prepareSessionManagerForRun as i, getTaskFlowRegistryRestoreFailure as in, getActiveEmbeddedRunCount as ir, buildFallbackClearedNotice as it, resolveSubagentToolPolicy as j, isAcpRuntimeError as jn, TrimmedNonEmptyStringFieldSchema as jr, cancelFlowById as jt, resolveEffectiveToolPolicy as k, resolveSessionIdentityFromMeta as kn, DeliveryThreadIdFieldSchema as kr, resolveRequesterForChildSession as kt, buildBootstrapInjectionStats as l, setFlowWaiting as ln, waitForActiveEmbeddedRuns as lr, listTasksForSessionKeyForStatus as lt, redactRunIdentifier as m, resolveSessionStorePathForAcp as mn, isGatewaySigusr1RestartExternallyAllowed as mr, listControlledSubagentRuns as mt, detectImageReferences as n, finishFlow as nn, LiveSessionModelSwitchError as nr, formatContextUsageShort as nt, buildSystemPromptParams as o, requestFlowCancel as on, isEmbeddedPiRunActive as or, resolveFallbackTransition as ot, resolveBootstrapWarningSignaturesSeen as p, readAcpSessionEntry as pn, emitGatewayRestart as pr, killSubagentRunAdmin as pt, findTaskByRunIdForOwner as q, formatRunStatus as qn, resolveBootstrapContextForRun as qr, listTasksForFlowId as qt, loadImageFromRef as r, getTaskFlowById as rn, abortEmbeddedPiRun as rr, formatTokenCount as rt, EmbeddedBlockChunker as s, resolveTaskFlowForLookupToken as sn, isEmbeddedPiRunStreaming as sr, summarizeToolDescriptionText as st, runEmbeddedPiAgent as t, failFlow as tn, runWithModelFallback as tr, buildToolsMessage as tt, buildBootstrapPromptWarning as u, updateFlowRecordByIdExpectedRevision as un, waitForEmbeddedPiRunEnd as ur, buildSubagentList as ut, buildToolSummaryMap as v, requireAcpRuntimeBackend as vn, setPreRestartDeferralCheck as vr, countActiveDescendantRuns as vt, createOpenClawCodingTools as w, validateRuntimeModelInput as wn, normalizeOptionalAgentId$1 as wr, listDescendantRunsForRequester as wt, readPostCompactionContext as x, validateRuntimeConfigOptionInput as xn, normalizeCronJobCreate as xr, getLatestSubagentRunByChildSessionKey as xt, buildAgentSystemPrompt as y, unregisterAcpRuntimeBackend as yn, triggerOpenClawRestart as yr, countPendingDescendantRuns as yt, resolveAcpSessionIdentifierLinesFromIdentity as z, getAgentRunContext as zn, createExecTool as zr, getTaskFlowByIdForOwner as zt, freezeRequesterAnnounce as twixyFreezeRequesterAnnounce, unfreezeRequesterAnnounce as twixyUnfreezeRequesterAnnounce, isRequesterAnnounceFrozen as twixyIsRequesterAnnounceFrozen };
+diff --git a/node_modules/openclaw/dist/routes-D3B9A956.js b/node_modules/openclaw/dist/routes-D3B9A956.js
+index 4d1741a8..90e6e874 100644
+--- a/node_modules/openclaw/dist/routes-D3B9A956.js
++++ b/node_modules/openclaw/dist/routes-D3B9A956.js
+@@ -1537,7 +1537,7 @@ function registerBrowserAgentActRoutes(app, ctx) {
+ 		if (!isActKind(kindRaw)) return jsonError(res, 400, "kind is required");
+ 		const kind = kindRaw;
+ 		const targetId = resolveTargetIdFromBody(body);
+-		if (Object.hasOwn(body, "selector") && !SELECTOR_ALLOWED_KINDS.has(kind)) return jsonError(res, 400, SELECTOR_UNSUPPORTED_MESSAGE);
++		if (Object.hasOwn(body, "selector") && body.selector && !SELECTOR_ALLOWED_KINDS.has(kind)) return jsonError(res, 400, SELECTOR_UNSUPPORTED_MESSAGE);
+ 		const earlyFn = kind === "wait" || kind === "evaluate" ? toStringOrEmpty(body.fn) : "";
+ 		if ((kind === "evaluate" || kind === "wait" && earlyFn) && !ctx.state().resolved.evaluateEnabled) return jsonError(res, 403, browserEvaluateDisabledMessage(kind === "evaluate" ? "evaluate" : "wait"));
+ 		await withRouteTabContext({
+@@ -3568,6 +3568,26 @@ async function launchOpenClawChrome(resolved, profile) {
+ 			if (bootstrap.exitCode != null) break;
+ 			await new Promise((r) => setTimeout(r, 50));
+ 		}
++		// ── Twixy patch: bootstrap must FULLY release the CDP port ──────────
++		// The ready-probe below only checks the PORT, so if the dying bootstrap
++		// still holds it, the real spawn "passes" the probe while CDP actually
++		// points at a browser that is about to disappear — the preview attaches
++		// to it, tools capture its targetIds, and every later browser call
++		// times out (observed on fresh wf-N profiles: two "browser started"
++		// lines seconds apart, frozen preview, snapshot timeouts). Escalate to
++		// SIGKILL and wait for the port to be free before the real spawn.
++		if (bootstrap.exitCode == null) try {
++			bootstrap.kill("SIGKILL");
++		} catch {}
++		const twixyPortFreeDeadline = Date.now() + 15e3;
++		while (Date.now() < twixyPortFreeDeadline) {
++			try {
++				await ensurePortAvailable(profile.cdpPort);
++				break;
++			} catch {
++				await new Promise((r) => setTimeout(r, 150));
++			}
++		}
+ 	}
+ 	if (needsDecorate) try {
+ 		decorateOpenClawProfile(userDataDir, {
+@@ -3776,7 +3796,8 @@ function createProfileAvailability({ opts, profile, state, getProfileState, setP
+ 		const detail = lastError instanceof Error ? ` Last error: ${lastError.message}` : "";
+ 		throw new BrowserProfileUnavailableError(`Chrome MCP existing-session attach for profile "${profile.name}" timed out waiting for tabs to become available. Approve the browser attach prompt, keep the browser open, and retry.${detail}`);
+ 	};
+-	const ensureBrowserAvailable = async () => {
++	let __twixyEnsureInFlight = null;
++	const __twixyEnsureBrowserAvailableInner = async () => {
+ 		await reconcileProfileRuntime();
+ 		if (capabilities.usesChromeMcp) {
+ 			if (profile.userDataDir && !fsSync.existsSync(profile.userDataDir)) throw new BrowserProfileUnavailableError(`Browser user data directory not found for profile "${profile.name}": ${profile.userDataDir}`);
+@@ -3831,6 +3852,19 @@ function createProfileAvailability({ opts, profile, state, getProfileState, setP
+ 		setProfileRunning(null);
+ 		return { stopped: true };
+ 	};
++	// ── Twixy patch: ensure 직렬화 ─────────────────────────────────────
++	// 같은 프로필에 브라우저 툴 호출이 동시에 들어오면 ensure 가 병렬로 돌아
++	// Chrome 이 이중 스폰된다 (관측: 같은 초에 pid 2개, 포트는 1개 → 유령
++	// Chrome + 이후 snapshot 타임아웃). in-flight promise 로 직렬화한다.
++	const ensureBrowserAvailable = async () => {
++		if (__twixyEnsureInFlight) return __twixyEnsureInFlight;
++		__twixyEnsureInFlight = __twixyEnsureBrowserAvailableInner();
++		try {
++			return await __twixyEnsureInFlight;
++		} finally {
++			__twixyEnsureInFlight = null;
++		}
++	};
+ 	return {
+ 		isHttpReachable,
+ 		isReachable,
+diff --git a/node_modules/openclaw/dist/runtime-api-DN3n8SWI.js b/node_modules/openclaw/dist/runtime-api-DN3n8SWI.js
+index d62e1046..2b8e7f40 100644
+--- a/node_modules/openclaw/dist/runtime-api-DN3n8SWI.js
++++ b/node_modules/openclaw/dist/runtime-api-DN3n8SWI.js
+@@ -121,7 +121,7 @@ async function executeSnapshotAction(params) {
+ 	const { input, baseUrl, profile, proxyRequest } = params;
+ 	const snapshotDefaults = browserToolActionDeps.loadConfig().browser?.snapshotDefaults;
+ 	const format = input.snapshotFormat === "ai" || input.snapshotFormat === "aria" ? input.snapshotFormat : void 0;
+-	const mode = input.mode === "efficient" ? "efficient" : format !== "aria" && snapshotDefaults?.mode === "efficient" ? "efficient" : void 0;
++	const mode = input.mode === "efficient" && format !== "aria" ? "efficient" : format !== "aria" && snapshotDefaults?.mode === "efficient" ? "efficient" : void 0;
+ 	const labels = typeof input.labels === "boolean" ? input.labels : void 0;
+ 	const refs = input.refs === "aria" || input.refs === "role" ? input.refs : void 0;
+ 	const hasMaxChars = Object.hasOwn(input, "maxChars");
+diff --git a/node_modules/openclaw/dist/tool-policy-Bk9WQZ0U.js b/node_modules/openclaw/dist/tool-policy-Bk9WQZ0U.js
+index 43a2e22d..0d5e1918 100644
+--- a/node_modules/openclaw/dist/tool-policy-Bk9WQZ0U.js
++++ b/node_modules/openclaw/dist/tool-policy-Bk9WQZ0U.js
+@@ -275,6 +275,131 @@ const CORE_TOOL_DEFINITIONS = [
+ 		sectionId: "media",
+ 		profiles: [],
+ 		includeInOpenClawGroup: true
++	},
++	// ── Twixy bridge tools (added by patch) ─────────────────────────────
++	// These are the 11 file-io / Google Workspace tools exposed by
++	// __twixyExtraTools() in pi-embedded-*.js. They MUST be in the
++	// "coding" profile allowlist — otherwise the tools.profile filter at
++	// pi-embedded:26214 strips them before the LLM ever sees them.
++	{
++		id: "tool_write_pdf",
++		label: "tool_write_pdf",
++		description: "Write a PDF report to data/reports/ (use instead of pandoc/wkhtmltopdf)",
++		sectionId: "fs",
++		profiles: ["coding"],
++		includeInOpenClawGroup: true
++	},
++	{
++		id: "tool_write_xlsx",
++		label: "tool_write_xlsx",
++		description: "Write an .xlsx workbook (use instead of openpyxl/python)",
++		sectionId: "fs",
++		profiles: ["coding"],
++		includeInOpenClawGroup: true
++	},
++	{
++		id: "tool_read_xlsx",
++		label: "tool_read_xlsx",
++		description: "Read an .xlsx workbook (returns first 200 rows/sheet by default)",
++		sectionId: "fs",
++		profiles: ["coding"],
++		includeInOpenClawGroup: true
++	},
++	{
++		id: "tool_fetch_to_file",
++		label: "tool_fetch_to_file",
++		description: "Download a paginated HTTP resource into workspace files, returning counts only (use instead of web_fetch when collecting many records)",
++		sectionId: "automation",
++		profiles: ["coding"],
++		includeInOpenClawGroup: true
++	},
++	{
++		id: "tool_query_data",
++		label: "tool_query_data",
++		description: "Read-only SQL over workspace data files; writes the result to a file or returns a small result inline (use instead of reading data files in to reshape them by hand)",
++		sectionId: "fs",
++		profiles: ["coding"],
++		includeInOpenClawGroup: true
++	},
++	{
++		id: "tool_read_pptx",
++		label: "tool_read_pptx",
++		description: "Read an existing .pptx — returns the text outline (with per-slide textShapes for tool_edit_pptx setText), the deck spec for a Twixy redesign, the layouts list for insertSlide, and a wireframe contact sheet image of every slide (a .pptx is a zip; a plain read returns binary)",
++		sectionId: "fs",
++		profiles: ["coding"],
++		includeInOpenClawGroup: true
++	},
++	{
++		id: "tool_edit_pptx",
++		label: "tool_edit_pptx",
++		description: "Edit an existing .pptx in place preserving its original design — replace/rewrite text, set notes, duplicate/delete/reorder slides, insert a new slide from one of the deck's own layouts, .potx templates (design-preserving; for a redesign use read+write)",
++		sectionId: "fs",
++		profiles: ["coding"],
++		includeInOpenClawGroup: true
++	},
++	{
++		id: "tool_write_pptx",
++		label: "tool_write_pptx",
++		description: "Write a designed .pptx deck — 6 deck purposes with page tables, 14 slide kinds incl. a 12-column composable layout, 7 theme presets (incl. dark), 4 style recipes, speaker notes, visual QA contact sheet (use instead of python-pptx — never write JSON to a .pptx filename)",
++		sectionId: "fs",
++		profiles: ["coding"],
++		includeInOpenClawGroup: true
++	},
++	{
++		id: "tool_google_status",
++		label: "tool_google_status",
++		description: "Check Google Workspace connection status",
++		sectionId: "automation",
++		profiles: ["coding"],
++		includeInOpenClawGroup: true
++	},
++	{
++		id: "tool_google_connect",
++		label: "tool_google_connect",
++		description: "Trigger Google Workspace OAuth (loopback)",
++		sectionId: "automation",
++		profiles: ["coding"],
++		includeInOpenClawGroup: true
++	},
++	{
++		id: "tool_google_disconnect",
++		label: "tool_google_disconnect",
++		description: "Revoke Google Workspace tokens",
++		sectionId: "automation",
++		profiles: ["coding"],
++		includeInOpenClawGroup: true
++	},
++	{
++		id: "tool_write_gdoc",
++		label: "tool_write_gdoc",
++		description: "Create or update a Google Doc",
++		sectionId: "automation",
++		profiles: ["coding"],
++		includeInOpenClawGroup: true
++	},
++	{
++		id: "tool_read_gdoc",
++		label: "tool_read_gdoc",
++		description: "Read a Google Doc by documentId",
++		sectionId: "automation",
++		profiles: ["coding"],
++		includeInOpenClawGroup: true
++	},
++	{
++		id: "tool_write_gsheet",
++		label: "tool_write_gsheet",
++		description: "Create or update a Google Sheet",
++		sectionId: "automation",
++		profiles: ["coding"],
++		includeInOpenClawGroup: true
++	},
++	{
++		id: "tool_read_gsheet",
++		label: "tool_read_gsheet",
++		description: "Read a Google Sheet by spreadsheetId (range optional)",
++		sectionId: "automation",
++		profiles: ["coding"],
++		includeInOpenClawGroup: true
+ 	}
+ ];
+ const CORE_TOOL_BY_ID = new Map(CORE_TOOL_DEFINITIONS.map((tool) => [tool.id, tool]));
+diff --git a/node_modules/openclaw/skills/skill-creator/SKILL.md b/node_modules/openclaw/skills/skill-creator/SKILL.md
+index ad1e2c14..a65d6187 100644
+--- a/node_modules/openclaw/skills/skill-creator/SKILL.md
++++ b/node_modules/openclaw/skills/skill-creator/SKILL.md
+@@ -5,6 +5,13 @@ description: Create, edit, improve, or audit AgentSkills. Use when creating a ne
+ 
+ # Skill Creator
+ 
++> **Twixy workspace — OVERRIDE all steps below:**
++> 1. Read `~/.openclaw/workspace/twixy/docs/tskill-writing-guide.md` for the TSL format
++> 2. Write the skill as `~/.openclaw/workspace/twixy/skills/<name>/<name>.tskill` (NOT `SKILL.md`)
++> 3. Create an empty file at `~/.openclaw/workspace/twixy/skills/<name>/.twixy-custom`
++> 4. Do NOT run `init_skill.py` or `package_skill.py` — they don't exist here
++> 5. Done. Twixy auto-compiles `.tskill` → `SKILL.md` on save.
++
+ This skill provides guidance for creating effective skills.
+ 
+ ## About Skills

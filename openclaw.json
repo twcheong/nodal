@@ -1,0 +1,18 @@
+{
+  // Twixy Marketing Copilot — OpenClaw config
+  agent: {
+    model: "openrouter/xiaomi/mimo-v2-pro",
+    think: "auto",
+  },
+  agents: {
+    defaults: {
+      workspace: "~/.openclaw/workspace/twixy",
+    },
+  },
+  gateway: {
+    port: 18789,
+  },
+  sandbox: {
+    mode: "non-main",
+  },
+}

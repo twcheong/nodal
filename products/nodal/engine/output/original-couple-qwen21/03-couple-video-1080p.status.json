@@ -1,0 +1,28 @@
+{
+  "run_id": "b6dff29a452b404eb226823d886ad13d",
+  "status": "succeeded",
+  "progress": {
+    "completed_nodes": 1,
+    "total_nodes": 1,
+    "node_id": null,
+    "step": null,
+    "total_steps": null
+  },
+  "results": {
+    "video": {
+      "socket": "video",
+      "type": {
+        "opaque": "MiniMaxH3Video",
+        "capabilities": []
+      },
+      "inline": null,
+      "asset": {
+        "hash": "52f166755db052672b97ca2b0851dbf0",
+        "media_type": "video/webm",
+        "size_bytes": 5240606,
+        "width": null,
+        "height": null
+      }
+    }
+  }
+}

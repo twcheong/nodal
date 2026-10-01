@@ -1,0 +1,182 @@
+<!doctype html>
+<html data-theme="light"><head><meta charset="utf-8"><link rel="stylesheet" href="tokens.css">
+<style>
+.tilegrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile-label{margin-top:3px;font-size:10px;line-height:1.35;color:var(--text-muted)}
+.tile-label.active{color:var(--accent);font-weight:600}
+.mini{display:block;border-radius:6px;border:1px solid rgba(0,0,0,.14);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.mini.sel{border:2px solid var(--accent)}
+.deck-sec{border-bottom:1px solid var(--border-subtle);flex-shrink:0}
+.deck-sec .h{padding:8px 12px 6px;display:flex;align-items:baseline;gap:6px;font-size:10px;font-family:var(--font-mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px}
+.deck-sec .h .note{text-transform:none;letter-spacing:0;opacity:.8}
+.deck-sec .b{padding:0 12px 10px}
+.barbtn{font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid rgba(0,0,0,.16);background:transparent;color:inherit;font-family:var(--font-sans)}
+</style></head>
+<body>
+<div class="app">
+  <div class="titlebar"><span class="lights"><i></i><i></i><i></i></span>TWIXY</div>
+  <div class="body">
+    <aside class="sidebar"><div class="col">
+      <button class="logo active"><img src="../../../assets/icon-petrol-64.png" alt="Twixy"></button>
+      <button>◇</button><button>⊟</button><button>⊞</button><button>⚙</button>
+    </div></aside>
+    <div class="main">
+      <div class="cop-header">
+        <button class="hbtn">☰</button><button class="hbtn">＋</button>
+        <div class="tabstrip"><span class="chattab active"><span style="color:var(--accent);font-size:10px">✓</span> 5월 성과 보고 덱 <span class="x">×</span></span></div>
+        <button class="hbtn">⚠ Report</button>
+        <span class="projbadge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg> maple-cafe</span>
+        <button class="hbtn">⚙</button>
+      </div>
+      <div style="flex:1;min-height:0;display:flex;overflow:hidden">
+        <!-- 좌: DeckDesigner (380) -->
+        <aside class="aside l" style="width:380px;overflow:hidden">
+          <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column">
+            <div class="deck-sec">
+              <div class="h">Palette <span class="note">12 slides</span></div>
+              <div class="b tilegrid" id="palette"></div>
+            </div>
+            <div class="deck-sec">
+              <div class="h">Shape <span class="note">corners · margins · page number</span></div>
+              <div class="b tilegrid" id="shapes"></div>
+            </div>
+            <div class="deck-sec">
+              <div class="h">Brand tint <span class="note">re-skins any palette</span></div>
+              <div class="b" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+                <span class="sw" style="background:#C0392B"></span><span class="sw" style="background:#E67E22"></span>
+                <span class="sw" style="background:#D4AF37"></span><span class="sw" style="background:#2E7D32"></span>
+                <span class="sw" style="background:#0F9B8E"></span><span class="sw" style="background:#1F6FEB"></span>
+                <span class="sw" style="background:#5B4BD6"></span><span class="sw" style="background:#B5347A"></span>
+                <span style="width:24px;height:24px;border:1px solid var(--border-subtle);border-radius:5px;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red)"></span>
+              </div>
+            </div>
+          </div>
+        </aside>
+        <!-- 중앙: 채팅 -->
+        <div class="chatcol" style="min-width:0">
+          <div class="msgs" style="overflow:hidden">
+            <div style="margin:0 auto;padding:20px 18px;display:flex;flex-direction:column;gap:12px;max-width:640px">
+              <div class="bubble user" style="font-size:12px">메이플앤코 5월 콘텐츠 성과 보고 덱 만들어줘. 채널별 성과 비교랑 다음 달 제안 포함, 12장 정도.</div>
+              <div class="bubble ai" style="font-size:12px">5월 성과 데이터를 기반으로 보고 덱을 구성했습니다. 오른쪽에서 슬라이드를 확인하시고, 왼쪽에서 색과 모양을 바꿔보세요.</div>
+              <div style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;padding:5px 10px;font-size:11px;font-family:var(--font-mono);color:var(--accent);background:var(--bg-surface);border:1px solid var(--accent);border-radius:var(--radius-sm)">◧ Deck · 12 slides</div>
+            </div>
+          </div>
+          <div class="chiprow-outer">
+            <div class="chiprow">
+              <span class="modechip"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg> Simple</span>
+              <span class="modechip">◇ Workflow</span>
+              <span class="modechip active">▤ Content</span>
+              <span class="sublabel">Deck making — live preview, fix slide by slide</span>
+            </div>
+            <form class="composer">
+              <div class="box"><textarea rows="3" placeholder="Describe the task you want to automate…  (drop a file or type @ to attach)"></textarea><span class="charcount">0 / 8,000</span></div>
+              <button class="sendbtn" type="button">Send</button>
+            </form>
+          </div>
+        </div>
+        <!-- 우: DeckPanel (560) -->
+        <aside class="aside r" style="width:560px">
+          <div style="padding:10px 12px 0;display:flex;align-items:center;gap:8px">
+            <span style="flex:1;min-width:0;font-size:11px;color:var(--text-muted)">12 slides · petrol · soft</span>
+            <button class="barbtn">↶ Undo 3</button>
+            <button class="barbtn">Export PPTX</button>
+          </div>
+          <div style="padding:10px 12px 6px;display:flex;justify-content:center" id="hero"></div>
+          <div style="padding:0 12px 8px;display:flex;gap:6px">
+            <input style="flex:1;font-size:11px;padding:6px 8px;border-radius:6px;border:1px solid rgba(0,0,0,.16);background:transparent;color:inherit;font-family:var(--font-sans)" placeholder='Fix slide 1 only — e.g. "make it a chart"'>
+            <button class="barbtn" style="padding:6px 10px">Fix this slide</button>
+          </div>
+          <div style="flex:1;min-height:0;overflow:hidden;padding:4px 12px 12px;display:flex;flex-wrap:wrap;gap:8px" id="thumbs"></div>
+        </aside>
+      </div>
+    </div>
+  </div>
+  <div class="statusbar">
+    <span class="dot"></span><span style="color:var(--green)">Twixy · Ready</span>
+    <span class="usage"><span class="eyebrow">tok</span><span class="track"><span class="fill" style="width:44%;display:block"></span></span><span class="val">78.1K tok</span></span>
+  </div>
+</div>
+<style>.sw{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.18);display:inline-block}</style>
+<script>
+// ── 미니 슬라이드 렌더러 (실제 앱처럼 로컬 SVG 렌더) ──
+const THEMES = {
+  twixy:{p:'#4638B3',a:'#7C6AFF',bg:'#FDFCFF',ink:'#22222b'}, petrol:{p:'#0F4C5C',a:'#2A9D8F',bg:'#FAF8F5',ink:'#1d2b2e'},
+  navy:{p:'#0B2545',a:'#B8860B',bg:'#FBFBF9',ink:'#14203a'}, vivid:{p:'#1D3557',a:'#FF6B35',bg:'#FFFFFF',ink:'#182a44'},
+  earth:{p:'#3A5A40',a:'#BC6C25',bg:'#FBFAF6',ink:'#28382c'}, charts:{p:'#264653',a:'#E76F51',bg:'#FCFBF7',ink:'#1e3540'},
+  night:{p:'#1F2A24',a:'#D4AF37',bg:'#0A0A0C',ink:'#F2F6F3'}, terra:{p:'#5C2B21',a:'#B85042',bg:'#FBF7F2',ink:'#40201a'},
+  berry:{p:'#4A1F31',a:'#A26769',bg:'#FDFAF5',ink:'#361825'}, slate:{p:'#25303A',a:'#5E8C8A',bg:'#FCFCFC',ink:'#1d262e'},
+};
+// cover 얼굴(block): 대표색 전면 + 우상단 반투명 원 + 흰 제목 + 하단 액센트 띠
+function cover(t,w,title,sub){const h=w*540/960;
+  return `<svg class="mini" width="${w}" height="${h}" viewBox="0 0 960 540" xmlns="http://www.w3.org/2000/svg">
+  <rect width="960" height="540" fill="${t.p}"/>
+  <circle cx="820" cy="60" r="210" fill="#ffffff" opacity="0.13"/>
+  <text x="70" y="270" font-family="Georgia,serif" font-size="52" font-weight="700" fill="#fff">${title||''}</text>
+  <text x="70" y="320" font-family="sans-serif" font-size="24" fill="#ffffffbb">${sub||''}</text>
+  <rect y="512" width="960" height="28" fill="${t.a}"/></svg>`}
+function chartS(t,w){const h=w*540/960;const bars=[210,300,150,340,260];
+  return `<svg class="mini" width="${w}" height="${h}" viewBox="0 0 960 540"><rect width="960" height="540" fill="${t.bg}"/>
+  <text x="60" y="80" font-size="34" font-weight="700" fill="${t.ink}" font-family="sans-serif">채널별 도달 추이</text>
+  ${bars.map((b,i)=>`<rect x="${110+i*160}" y="${460-b}" width="86" height="${b}" rx="6" fill="${i==3?t.a:t.p}" opacity="${i==3?1:.75}"/>`).join('')}
+  <line x1="70" y1="460" x2="900" y2="460" stroke="${t.ink}" stroke-opacity=".25" stroke-width="2"/></svg>`}
+function bullets(t,w){const h=w*540/960;
+  return `<svg class="mini" width="${w}" height="${h}" viewBox="0 0 960 540"><rect width="960" height="540" fill="${t.bg}"/>
+  <text x="60" y="80" font-size="34" font-weight="700" fill="${t.ink}" font-family="sans-serif">핵심 요약</text>
+  ${[0,1,2,3].map(i=>`<circle cx="80" cy="${150+i*90}" r="9" fill="${t.a}"/><rect x="110" y="${138+i*90}" width="${540-i*60}" height="22" rx="8" fill="${t.ink}" opacity=".28"/>`).join('')}</svg>`}
+function stats(t,w){const h=w*540/960;
+  return `<svg class="mini" width="${w}" height="${h}" viewBox="0 0 960 540"><rect width="960" height="540" fill="${t.bg}"/>
+  <text x="60" y="80" font-size="34" font-weight="700" fill="${t.ink}" font-family="sans-serif">5월 핵심 지표</text>
+  ${[0,1,2].map(i=>`<rect x="${60+i*290}" y="140" width="260" height="270" rx="14" fill="#fff" stroke="${t.ink}" stroke-opacity=".14"/>
+   <text x="${190+i*290}" y="270" font-size="56" font-weight="700" fill="${t.p}" text-anchor="middle">${['+18%','2.4M','312'][i]}</text>
+   <text x="${190+i*290}" y="330" font-size="20" fill="${t.ink}" fill-opacity=".6" text-anchor="middle">${['도달 증가','총 노출','신규 문의'][i]}</text>`).join('')}</svg>`}
+function compare(t,w){const h=w*540/960;
+  return `<svg class="mini" width="${w}" height="${h}" viewBox="0 0 960 540"><rect width="960" height="540" fill="${t.bg}"/>
+  <text x="60" y="80" font-size="34" font-weight="700" fill="${t.ink}" font-family="sans-serif">경쟁사 비교</text>
+  <rect x="60" y="130" width="400" height="330" rx="14" fill="${t.p}" opacity=".92"/><rect x="500" y="130" width="400" height="330" rx="14" fill="#fff" stroke="${t.ink}" stroke-opacity=".16"/>
+  ${[0,1,2].map(i=>`<rect x="95" y="${210+i*70}" width="320" height="18" rx="7" fill="#fff" opacity=".55"/><rect x="535" y="${210+i*70}" width="320" height="18" rx="7" fill="${t.ink}" opacity=".3"/>`).join('')}</svg>`}
+function timeline(t,w){const h=w*540/960;
+  return `<svg class="mini" width="${w}" height="${h}" viewBox="0 0 960 540"><rect width="960" height="540" fill="${t.bg}"/>
+  <text x="60" y="80" font-size="34" font-weight="700" fill="${t.ink}" font-family="sans-serif">6월 실행 일정</text>
+  <line x1="90" y1="300" x2="880" y2="300" stroke="${t.p}" stroke-width="5"/>
+  ${[0,1,2,3].map(i=>`<circle cx="${140+i*230}" cy="300" r="17" fill="${i<2?t.a:t.bg}" stroke="${t.p}" stroke-width="4"/><rect x="${95+i*230}" y="345" width="120" height="15" rx="6" fill="${t.ink}" opacity=".3"/>`).join('')}</svg>`}
+function section(t,w,n){const h=w*540/960;
+  return `<svg class="mini" width="${w}" height="${h}" viewBox="0 0 960 540"><rect width="960" height="540" fill="${t.bg}"/>
+  <rect width="330" height="540" fill="${t.p}"/><text x="70" y="330" font-size="120" font-weight="700" fill="#ffffff55" font-family="Georgia,serif">${n}</text>
+  <rect x="390" y="240" width="420" height="30" rx="10" fill="${t.ink}" opacity=".8"/><rect x="390" y="295" width="300" height="18" rx="8" fill="${t.ink}" opacity=".3"/></svg>`}
+function tableS(t,w){const h=w*540/960;
+  return `<svg class="mini" width="${w}" height="${h}" viewBox="0 0 960 540"><rect width="960" height="540" fill="${t.bg}"/>
+  <text x="60" y="80" font-size="34" font-weight="700" fill="${t.ink}" font-family="sans-serif">콘텐츠별 성과</text>
+  <rect x="60" y="120" width="840" height="52" fill="${t.p}"/>
+  ${[0,1,2,3].map(i=>`<rect x="60" y="${172+i*58}" width="840" height="58" fill="${i%2?t.ink:'#fff'}" fill-opacity="${i%2?0.05:1}" stroke="${t.ink}" stroke-opacity=".1"/>`).join('')}</svg>`}
+function summary(t,w){const h=w*540/960;
+  return `<svg class="mini" width="${w}" height="${h}" viewBox="0 0 960 540"><rect width="960" height="540" fill="${t.bg}"/>
+  <text x="60" y="90" font-size="38" font-weight="700" fill="${t.ink}" font-family="sans-serif">다음 달 제안</text>
+  ${[0,1,2].map(i=>`<rect x="60" y="${140+i*95}" width="14" height="70" rx="5" fill="${t.a}"/><rect x="100" y="${162+i*95}" width="${560-i*80}" height="24" rx="9" fill="${t.ink}" opacity=".3"/>`).join('')}
+  <rect x="60" y="450" width="840" height="4" fill="${t.a}"/></svg>`}
+
+const P = THEMES.petrol;
+// Palette 타일: 지금 슬라이드(표지)를 테마별로 렌더
+const pal = document.getElementById('palette');
+Object.entries(THEMES).forEach(([name,t])=>{
+  const d=document.createElement('div');
+  d.innerHTML = cover(t,166,'5월 성과 보고','메이플앤코 · 2026.06').replace('class="mini"', name==='petrol'?'class="mini sel"':'class="mini"')
+    + `<div class="tile-label ${name==='petrol'?'active':''}">${name}${name==='night'?' <span style="font-weight:400;opacity:.7">· dark</span>':''}</div>`;
+  pal.appendChild(d);
+});
+// Shape 타일 4종
+const shapes=document.getElementById('shapes');
+[['sharp','plain'],['soft','pill'],['rounded','dot'],['pill','frame']].forEach(([s,b])=>{
+  const d=document.createElement('div');
+  d.innerHTML = cover(P,166,'5월 성과 보고','메이플앤코 · 2026.06').replace('class="mini"', s==='soft'?'class="mini sel"':'class="mini"')
+    + `<div class="tile-label ${s==='soft'?'active':''}">${s} <span style="font-weight:400;opacity:.7">· ${b}</span></div>`;
+  shapes.appendChild(d);
+});
+// 히어로: 표지 (536폭)
+document.getElementById('hero').innerHTML = cover(P,536,'5월 콘텐츠 성과 보고','메이플앤코 · 2026.06').replace('class="mini"','class="mini sel"');
+// 썸네일 12장
+const kinds=[w=>cover(P,w,'5월 콘텐츠 성과 보고',''),w=>bullets(P,w),w=>section(P,w,'1'),w=>stats(P,w),w=>chartS(P,w),w=>tableS(P,w),w=>compare(P,w),w=>section(P,w,'2'),w=>timeline(P,w),w=>bullets(P,w),w=>chartS(P,w),w=>summary(P,w)];
+const th=document.getElementById('thumbs');
+kinds.forEach((f,i)=>{const d=document.createElement('div');d.style.position='relative';
+  d.innerHTML=f(122)+`<span style="position:absolute;top:2px;left:4px;font-size:9px;color:#999">${i+1}</span>`;th.appendChild(d)});
+</script>
+</body></html>

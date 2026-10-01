@@ -1,0 +1,134 @@
+{
+  "id": "wf_viral_strategy_hook_library",
+  "title": "니치 검증 훅 100개 라이브러리",
+  "description": "IG·YouTube·Threads 3채널에서 실제로 터진 훅 40개를 수집하고 패턴 변형으로 60개를 확장해 훅 100개 라이브러리 CSV를 구축한다.",
+  "outputDir": "data/insights",
+  "tags": ["campaign"],
+  "inputs": [
+    { "id": "niche", "kind": "scalar", "valueType": "text", "label": "니치/업종", "observed": "", "confidence": "low" },
+    { "id": "brand_name", "kind": "scalar", "valueType": "text", "label": "브랜드명", "observed": "", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "IG 릴스 고반응 훅 15개 수집",
+      "detail": "Instagram에서 니치 관련 해시태그·탐색 탭을 훑어 반응이 높은 릴스 15개의 첫 문장(화면 자막 또는 캡션 첫 줄)을 원문 그대로 수집한다. 각 훅에 출처 URL과 대략적 반응 수를 함께 기록한다.",
+      "acceptance": "고반응 릴스 훅 15개가 원문·출처와 함께 수집됨.",
+      "tool": "chrome",
+      "toolSkills": ["instagram"],
+      "subtasks": [
+        { "id": "s1", "title": "니치 고반응 릴스 탐색", "purpose": "좋아요·댓글 높은 릴스 선별" },
+        { "id": "s2", "title": "훅 원문 채록", "purpose": "첫 문장을 변형 없이 기록" }
+      ],
+      "inputScope": [
+        { "name": "niche", "type": "text", "description": "탐색 기준 니치" }
+      ],
+      "outputScope": [
+        { "name": "ig_hooks", "type": "json[]", "description": "hook·source_url·engagement 15개" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "action",
+      "title": "YT 쇼츠·제목 훅 15개 수집",
+      "detail": "YouTube에서 니치 키워드로 쇼츠와 조회수 높은 영상을 검색해, 제목과 영상 도입부 문구에서 훅 15개를 수집한다. 조회수와 출처 URL을 함께 기록한다.",
+      "acceptance": "YT 훅 15개가 원문·출처·조회수와 함께 수집됨.",
+      "tool": "chrome",
+      "toolSkills": ["youtube"],
+      "subtasks": [
+        { "id": "s1", "title": "니치 고조회 쇼츠·영상 검색", "purpose": "조회수 기준 상위 콘텐츠 선별" },
+        { "id": "s2", "title": "제목·도입부 훅 채록", "purpose": "제목형 훅과 구어형 훅 모두 확보" }
+      ],
+      "inputScope": [
+        { "name": "niche", "type": "text" },
+        { "name": "ig_hooks", "type": "json[]", "description": "중복 훅 회피 참고용" }
+      ],
+      "outputScope": [
+        { "name": "yt_hooks", "type": "json[]", "description": "hook·source_url·views 15개" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "action",
+      "title": "Threads 화제 포스트 훅 10개 수집",
+      "detail": "Threads에서 니치 관련 화제 포스트를 훑어 반응 높은 포스트의 첫 줄 10개를 수집한다. 텍스트 플랫폼 특유의 훅(고백형/저격형/반전형)을 우선한다.",
+      "acceptance": "Threads 훅 10개가 원문·출처와 함께 수집됨.",
+      "tool": "chrome",
+      "toolSkills": ["threads"],
+      "subtasks": [
+        { "id": "s1", "title": "화제 포스트 탐색", "purpose": "리포스트·답글 많은 포스트 선별" },
+        { "id": "s2", "title": "첫 줄 훅 채록", "purpose": "텍스트형 훅 유형 확보" }
+      ],
+      "inputScope": [
+        { "name": "niche", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "threads_hooks", "type": "json[]", "description": "hook·source_url·engagement 10개" }
+      ]
+    },
+    {
+      "id": "n4",
+      "type": "validation",
+      "title": "수집 훅 검증",
+      "detail": "세 채널 합산 훅이 35개 이상인지, 실질 중복(문장 유사도 높은 쌍)이 없는지, 각 항목에 출처가 있는지 점검한다.",
+      "acceptance": "is_valid=true이고 issues가 비어 있음.",
+      "inputScope": [
+        { "name": "ig_hooks", "type": "json[]" },
+        { "name": "yt_hooks", "type": "json[]" },
+        { "name": "threads_hooks", "type": "json[]" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "문제 없으면 빈 배열" }
+      ]
+    },
+    {
+      "id": "n5",
+      "type": "action",
+      "title": "패턴 분류·변형 확장으로 100개 완성",
+      "detail": "수집 훅 40개를 심리 트리거 유형(호기심 갭/숫자 약속/공감 저격/반전/경고/사회적 증명/비밀 공개 등)으로 분류하고, 각 유형의 문장 구조를 템플릿화한다. 템플릿에 니치·브랜드 맥락을 대입해 변형 훅 60개를 생성, 총 100개를 만든다. 변형 훅은 원본 유형 태그를 승계한다.",
+      "acceptance": "유형 분류 완료 + 수집 40개와 변형 60개 합계 100개.",
+      "tool": "read",
+      "toolSkills": [],
+      "subtasks": [
+        { "id": "s1", "title": "심리 트리거 유형 분류", "purpose": "수집 훅을 7~8개 유형으로 라벨링" },
+        { "id": "s2", "title": "문장 구조 템플릿화", "purpose": "유형별 재사용 가능한 훅 공식 추출" },
+        { "id": "s3", "title": "니치 맞춤 변형 60개 생성", "purpose": "템플릿×니치 조합으로 확장" }
+      ],
+      "inputScope": [
+        { "name": "ig_hooks", "type": "json[]" },
+        { "name": "yt_hooks", "type": "json[]" },
+        { "name": "threads_hooks", "type": "json[]" },
+        { "name": "niche", "type": "text" },
+        { "name": "brand_name", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "hook_library", "type": "json[]", "description": "100개: hook·trigger_type·origin(수집/변형)·source_url·suggested_channel" },
+        { "name": "trigger_types", "type": "text[]", "description": "사용된 트리거 유형 목록" }
+      ]
+    },
+    {
+      "id": "n6",
+      "type": "action",
+      "title": "훅 라이브러리 CSV 저장",
+      "detail": "100개 훅을 CSV로 저장한다. 컬럼: 번호, 훅 문장, 트리거 유형, 출처(수집/변형), 출처 URL, 추천 채널, 사용 기록(빈 칸 — 이후 성과 회고 워크플로우가 갱신). 트리거 유형별로 정렬한다.",
+      "acceptance": "100행 전부 채워진 CSV가 저장됨.",
+      "tool": "write",
+      "toolSkills": ["csv"],
+      "subtasks": [
+        { "id": "s1", "title": "행 데이터 구성", "purpose": "라이브러리를 컬럼 스키마에 매핑" },
+        { "id": "s2", "title": "유형별 정렬·저장", "purpose": "탐색하기 쉬운 순서로 기록" }
+      ],
+      "inputScope": [
+        { "name": "hook_library", "type": "json[]" },
+        { "name": "trigger_types", "type": "text[]" }
+      ],
+      "outputScope": [
+        { "name": "row_count", "type": "number", "description": "헤더 제외 행 수 (100이어야 함)" },
+        { "name": "header_row", "type": "text[]", "description": "CSV 헤더" },
+        { "name": "type_distribution", "type": "json", "description": "트리거 유형별 개수" }
+      ]
+    }
+  ]
+}

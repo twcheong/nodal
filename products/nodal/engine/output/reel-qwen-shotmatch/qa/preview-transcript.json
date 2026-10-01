@@ -1,0 +1,128 @@
+{
+  "method": "Korean forced, beam 10, VAD; no expected text or initial prompt",
+  "audio": "output\\reel-qwen-shotmatch\\preview-first-four.webm",
+  "model": "models\\asr\\whisper-large-v3-turbo",
+  "language": "ko",
+  "segments": [
+    {
+      "start": 0.21,
+      "end": 3.11,
+      "text": " 내일 우리 놀러 갈 때 입을 옷 어떤 게 나은지 봐줘.",
+      "words": [
+        {
+          "word": " 내일",
+          "start": 0.21,
+          "end": 0.77
+        },
+        {
+          "word": " 우리",
+          "start": 0.77,
+          "end": 0.99
+        },
+        {
+          "word": " 놀러",
+          "start": 0.99,
+          "end": 1.25
+        },
+        {
+          "word": " 갈",
+          "start": 1.25,
+          "end": 1.37
+        },
+        {
+          "word": " 때",
+          "start": 1.37,
+          "end": 1.49
+        },
+        {
+          "word": " 입을",
+          "start": 1.49,
+          "end": 1.75
+        },
+        {
+          "word": " 옷",
+          "start": 1.75,
+          "end": 1.85
+        },
+        {
+          "word": " 어떤",
+          "start": 1.85,
+          "end": 2.49
+        },
+        {
+          "word": " 게",
+          "start": 2.49,
+          "end": 2.59
+        },
+        {
+          "word": " 나은지",
+          "start": 2.59,
+          "end": 2.85
+        },
+        {
+          "word": " 봐줘.",
+          "start": 2.85,
+          "end": 3.11
+        }
+      ]
+    },
+    {
+      "start": 3.41,
+      "end": 3.95,
+      "text": " 어때?",
+      "words": [
+        {
+          "word": " 어때?",
+          "start": 3.41,
+          "end": 3.95
+        }
+      ]
+    },
+    {
+      "start": 4.07,
+      "end": 4.99,
+      "text": " 어우 귀여워.",
+      "words": [
+        {
+          "word": " 어우",
+          "start": 4.07,
+          "end": 4.45
+        },
+        {
+          "word": " 귀여워.",
+          "start": 4.45,
+          "end": 4.99
+        }
+      ]
+    },
+    {
+      "start": 6.31,
+      "end": 7.17,
+      "text": " 이건 어때?",
+      "words": [
+        {
+          "word": " 이건",
+          "start": 6.31,
+          "end": 6.85
+        },
+        {
+          "word": " 어때?",
+          "start": 6.85,
+          "end": 7.17
+        }
+      ]
+    },
+    {
+      "start": 8.59,
+      "end": 9.13,
+      "text": " 귀여워.",
+      "words": [
+        {
+          "word": " 귀여워.",
+          "start": 8.59,
+          "end": 9.13
+        }
+      ]
+    }
+  ]
+}

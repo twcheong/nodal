@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# JS
+node_modules/
+dist/
+.vite/
+.pnpm-store/
+
+# 개인 설정. `apps/web/.env` 는 비밀이 아닌 기본값이라 커밋한다 —
+# 각자의 덮어쓰기는 `.env.local` 로 (vite 규약).
+.env.local
+.env.*.local
+
+# 에이전트 도구의 개인 설정. `.local` 접두 규약은 위 `.env.local` 과 같다 —
+# `.claude/settings.json`(공유 설정)은 커밋 대상이고 이것만 각자의 것이다.
+.claude/settings.local.json
+
+# 런타임 산출물 (M3~)
+/outputs/
+/output/
+/models/
+/assets/
+
+# OS / 에디터
+.DS_Store
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,252 @@
+{
+  "id": "wf_agency_client_ig_audit",
+  "title": "Instagram Account Deep Audit",
+  "description": "Audit a client's Instagram account: collect the last 30 posts in two batches with targeted per-post extraction, validate structure and post age, and deliver an audit spreadsheet whose every aggregate is an Excel formula (no hand-computed numbers), with engagement compared only across posts old enough to be comparable.",
+  "outputDir": "data/reports",
+  "tags": [
+    "client"
+  ],
+  "inputs": [
+    {
+      "id": "account_url",
+      "kind": "scalar",
+      "valueType": "url",
+      "label": "Client's Instagram profile URL",
+      "observed": "",
+      "confidence": "low"
+    },
+    {
+      "id": "client_name",
+      "kind": "scalar",
+      "valueType": "text",
+      "label": "Client name",
+      "observed": "",
+      "confidence": "low"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "Collect profile overview and posts 1–15",
+      "detail": "Open the Instagram profile page and capture the profile overview (followers, following, bio tagline, highlights). Capture the followers count twice: the exact integer if the page exposes it (title/tooltip attribute on the followers link), and the rounded display string ('749K') separately. Never treat a rounded display string as an exact number without recording that it is rounded — every engagement rate downstream divides by it.\n\nThen scroll the posts grid and collect post URLs (the link href on each article element).\n\nFor each post URL, open the post and extract ONLY these fields with one targeted DOM read per post:\nurl, shortcode, format (Reel | Carousel | Static Image), first_line_hook, hashtags, likes (integer), comments (integer), posted_at_iso\n- likes: the live like counter text above/below the post's action bar (e.g. '1,506 likes'), NOT the hover face pile. Strip commas and expand K/M into a plain integer.\n- comments: the number next to the comment button, as a plain integer.\n- posted_at_iso: the `datetime` attribute of the post's <time> element — the full ISO timestamp. Do NOT use the relative label ('3d'); the exact timestamp is required for the age normalisation downstream.\n\nCOST RULE — this is what makes or breaks the run. Never pull a whole post page into the conversation: no full-page text dumps, no full accessibility-tree reads, no screenshots. Query the specific elements you need, produce ONE small JSON object per post, and append it to the output file as you go. Once a post's row is written, its page content must not be carried forward — the next post starts from the row list, not from the previous page.",
+      "acceptance": "Profile overview + 15 posts, each with integer likes/comments and an ISO posted_at_iso; zero face-pile extractions; no full-page dumps in the transcript.",
+      "tool": "chrome",
+      "toolSkills": [
+        "instagram"
+      ],
+      "subtasks": [
+        {
+          "id": "s1",
+          "title": "Capture profile overview",
+          "purpose": "Followers (exact integer + rounded display string), following, bio, highlights, link in bio"
+        },
+        {
+          "id": "s2",
+          "title": "Collect post URLs from grid",
+          "purpose": "Extract the href from each article element in the posts grid"
+        },
+        {
+          "id": "s3",
+          "title": "Targeted per-post extraction",
+          "purpose": "One narrow DOM read per post for the 8 fields — real like counter, comment count, <time datetime> ISO timestamp. No page dumps."
+        },
+        {
+          "id": "s4",
+          "title": "Append rows as you go",
+          "purpose": "Write each post's row to the batch-1 file immediately so the data lives on disk, not in context"
+        }
+      ],
+      "inputScope": [
+        {
+          "name": "account_url",
+          "type": "url",
+          "description": "Instagram profile URL"
+        }
+      ],
+      "outputScope": [
+        {
+          "name": "profile_overview",
+          "type": "json",
+          "description": "Profile metrics and metadata, incl. followers_exact and followers_display"
+        },
+        {
+          "name": "posts_batch1",
+          "type": "json[]",
+          "description": "Posts 1–15: url, shortcode, format, hook, hashtags, likes, comments, posted_at_iso"
+        }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "action",
+      "title": "Collect posts 16–30",
+      "detail": "Continue scrolling the profile grid to collect post URLs 16–30. Deduplicate on the URL shortcode AT THE GRID STAGE, before opening anything — batch 1's shortcode list is all you need from it. Never pay to open a post that is already in batch 1.\n\nExtract the same fields per post, with the same targeted-read method as batch 1:\nurl, shortcode, format (Reel | Carousel | Static Image), first_line_hook, hashtags, likes (integer), comments (integer), posted_at_iso\n- likes: the live like counter text above/below the post's action bar (e.g. '1,506 likes'), NOT the hover face pile. Strip commas and expand K/M into a plain integer.\n- comments: the number next to the comment button, as a plain integer.\n- posted_at_iso: the `datetime` attribute of the post's <time> element — the full ISO timestamp. Do NOT use the relative label ('3d'); the exact timestamp is required for the age normalisation downstream.\n\nCOST RULE — this is what makes or breaks the run. Never pull a whole post page into the conversation: no full-page text dumps, no full accessibility-tree reads, no screenshots. Query the specific elements you need, produce ONE small JSON object per post, and append it to the output file as you go. Once a post's row is written, its page content must not be carried forward — the next post starts from the row list, not from the previous page. Do not re-read or re-summarise batch 1's rows — you only need its shortcode list for dedup.",
+      "acceptance": "Posts 16–30 with integer likes/comments and ISO posted_at_iso, zero duplicate shortcodes vs batch 1, zero duplicate posts opened, no full-page dumps in the transcript.",
+      "tool": "chrome",
+      "toolSkills": [
+        "instagram"
+      ],
+      "subtasks": [
+        {
+          "id": "s1",
+          "title": "Collect post URLs 16–30",
+          "purpose": "Scroll grid and extract article element hrefs"
+        },
+        {
+          "id": "s2",
+          "title": "Dedup on shortcode before opening",
+          "purpose": "Drop any shortcode already in batch 1 at the grid stage — never open a duplicate"
+        },
+        {
+          "id": "s3",
+          "title": "Targeted per-post extraction",
+          "purpose": "Same narrow DOM read as batch 1, one small JSON object per post, appended as you go"
+        }
+      ],
+      "inputScope": [
+        {
+          "name": "account_url",
+          "type": "url",
+          "description": "Instagram profile URL"
+        },
+        {
+          "name": "posts_batch1",
+          "type": "json[]",
+          "description": "Batch 1 shortcode list for dedup — nothing else is needed from it"
+        }
+      ],
+      "outputScope": [
+        {
+          "name": "posts_batch2",
+          "type": "json[]",
+          "description": "Posts 16–30, deduplicated, same 8 fields as batch 1"
+        }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "validation",
+      "title": "Validate structure, dedup and post age",
+      "detail": "Read the batch 1 and batch 2 JSON files from the output folder — do NOT reconstruct the rows from earlier messages in this conversation. Combine them and report the result of each check explicitly:\n1. combined count = 30\n2. no duplicate url and no duplicate shortcode\n3. every row: format is one of Reel | Carousel | Static Image; likes and comments are plain integers >= 0 (a newline or two concatenated numbers in likes means the face-pile bug is back); posted_at_iso parses as a date; url non-empty\n4. count the rows PER FORMAT and confirm the counts sum exactly to the combined count. Report those counts — they are the authoritative figures the spreadsheet must agree with.\n5. add age_days = (run date − posted_at_iso) to every row, and tag rows with age_days < 2 as too_new\n\nSet is_valid=false and name the offending rows if any check fails.\n\nDo NOT compute averages, engagement rates or any other aggregate here — the spreadsheet computes those with Excel formulas. Your job is structure, dedup and age, nothing else.",
+      "acceptance": "is_valid=true, issues=[], 30 combined posts, per-format counts summing to 30, age_days on every row, no newline-delimited numbers in likes.",
+      "inputScope": [
+        {
+          "name": "posts_batch1",
+          "type": "json[]"
+        },
+        {
+          "name": "posts_batch2",
+          "type": "json[]"
+        },
+        {
+          "name": "profile_overview",
+          "type": "json"
+        }
+      ],
+      "outputScope": [
+        {
+          "name": "is_valid",
+          "type": "boolean"
+        },
+        {
+          "name": "issues",
+          "type": "string[]",
+          "description": "Empty when valid"
+        },
+        {
+          "name": "format_counts",
+          "type": "json",
+          "description": "Rows per format — must sum to the combined count; the spreadsheet must match these"
+        },
+        {
+          "name": "all_posts",
+          "type": "json[]",
+          "description": "Clean deduplicated array with age_days and too_new added"
+        }
+      ]
+    },
+    {
+      "id": "n4",
+      "type": "action",
+      "title": "Write audit spreadsheet",
+      "detail": "Write a two-sheet xlsx to the workflow output folder.\n\n(1) Posts sheet — columns: #, URL, Format, Hook, Hashtags, Posted (ISO), Age (days), Likes, Comments, Eng. Rate (%). Write only values you actually scraped. The Eng. Rate cell must be an Excel FORMULA referencing that row's Likes/Comments and the followers cell on the Audit sheet — not a number you worked out yourself.\n\n(2) Audit sheet — Account Snapshot first (followers as a real integer in its own cell, with the rounded display string in the cell beside it), then four blocks:\n  - Avg Engagement Rate by Format — the Posts (n), Avg Eng. Rate and Best Eng. cells must be Excel FORMULAS (COUNTIF / AVERAGEIF / MAXIFS) over the Posts sheet.\n  - Top 10% Traits\n  - Three Weakest Patterns to Stop\n  - Quick Wins\n\nARITHMETIC RULE: do not hand-calculate any aggregate. Every count, average, min/max and rate on the Audit sheet is a formula Excel evaluates over the Posts sheet. Prose blocks are yours to write; numbers are the spreadsheet's to compute. If your xlsx writer cannot emit formulas, say so explicitly in your reply and fall back to values derived by enumerating every contributing row — never an estimate — with the count checks below still applied.\n\nAGE RULE: exclude rows with Age (days) < 2 from the Top Traits / Weakest Patterns / Quick Wins reasoning. A post live for a few hours has not finished accumulating engagement, and ranking it against a three-week-old post measures time on platform, not content quality. Add a note row under the Weakest Patterns block stating the exclusion and how many rows it covered.\n\nCONSISTENCY RULE: any block header that states a count ('N posts above 1%') must match the number of items actually listed in that block, and the per-format Posts (n) values must add up to the Posts sheet row count and to the format_counts reported by the validation node. Check both before you report OK.",
+      "acceptance": "XLSX saved with header + 30 data rows; Eng. Rate and every Audit-sheet aggregate written as formulas (or an explicitly declared enumerated fallback); per-format counts match format_counts and sum to the row count; every stated count matches the items listed; age exclusion applied and noted.",
+      "tool": "write",
+      "toolSkills": [
+        "xlsx"
+      ],
+      "subtasks": [
+        {
+          "id": "s1",
+          "title": "Build posts rows",
+          "purpose": "Map each post to the ten columns; Eng. Rate as a per-row formula, never a typed number"
+        },
+        {
+          "id": "s2",
+          "title": "Build audit blocks",
+          "purpose": "Format aggregates as COUNTIF/AVERAGEIF/MAXIFS formulas; prose blocks reasoned over posts aged >= 2 days only"
+        },
+        {
+          "id": "s3",
+          "title": "Self-check counts",
+          "purpose": "Per-format counts sum to the row count and match format_counts; every stated count matches the items listed"
+        },
+        {
+          "id": "s4",
+          "title": "Write the workbook",
+          "purpose": "Save to workflow outputDir as <client-name>-audit.xlsx"
+        }
+      ],
+      "inputScope": [
+        {
+          "name": "all_posts",
+          "type": "json[]",
+          "description": "Clean 30-post array with age_days and too_new"
+        },
+        {
+          "name": "format_counts",
+          "type": "json",
+          "description": "Authoritative rows-per-format from validation"
+        },
+        {
+          "name": "profile_overview",
+          "type": "json",
+          "description": "Followers count (exact + rounded display) for the rate formulas"
+        },
+        {
+          "name": "client_name",
+          "type": "text",
+          "description": "Client name for sheet header"
+        }
+      ],
+      "outputScope": [
+        {
+          "name": "sheet_name",
+          "type": "text",
+          "description": "Sheet name written"
+        },
+        {
+          "name": "row_count",
+          "type": "number",
+          "description": "Data rows written, excluding header"
+        },
+        {
+          "name": "header_row",
+          "type": "text[]",
+          "description": "Column headers as written"
+        },
+        {
+          "name": "formulas_used",
+          "type": "boolean",
+          "description": "False means the writer could not emit formulas and the enumerated fallback was used"
+        },
+        {
+          "name": "excluded_too_new",
+          "type": "number",
+          "description": "Rows excluded from the pattern analysis for being under 2 days old"
+        }
+      ]
+    }
+  ]
+}

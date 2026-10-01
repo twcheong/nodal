@@ -1,0 +1,23 @@
+{
+  "tool": "run_template_qwen21_compose",
+  "arguments": {
+    "reference_1": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png",
+    "reference_2": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/woman.png",
+    "reference_3": "C:/Users/nexta/Desktop/nodal/output/reel-DcvQpQfJ6EB/frame-004.0.png",
+    "prompt": "Create one photorealistic movie frame using three references with STRICTLY DIFFERENT ROLES. IMAGE 1 is the approved cast and actual room. IMAGE 2 is an exact crop of the approved woman's face: preserve this woman's facial identity, short layered black hair, wispy fringe and earrings. IMAGE 3 is ONLY the storyboard camera and costume reference, not the woman's identity. Recreate image 3's shot composition almost exactly, replacing its actress with the approved woman from images 1 and 2 and harmonizing the vintage room with image 1. Do not use image 3's facial identity or tattoos.\nSHOT: waist-up medium single of ONLY the woman, shot from the seated man's slightly low eye level, a very gentle upward angle, approximately 35mm normal lens. Woman is positioned at x=60% of the image, head at y=20%, body visible down to the upper hips at the bottom edge. Her body is three-quarter turned toward screen LEFT, her eyes look down and left toward the off-camera seated man; warm slight closed-mouth smile. Keep generous bright window area on the LEFT half, dark wooden cabinet and old mirror on the RIGHT. Ceiling timber visible across the upper edge, same camera angle and distribution of objects as image 3. Nobody else visible, not a two-shot, no distant full-body figure. Recompose from the approved wide room rather than simply cropping it.\nFor this first outfit, replace her lace camisole with the fitted opaque WHITE short-sleeved blouse in image 3: small stand collar, puff cap sleeves, vertical little buttons, shaped fitted waist, cropped curved hem, dark indigo jeans and brown belt, small dark burgundy shoulder bag. Both hands low near her waist and jeans, relaxed natural anatomy. Preserve approved woman's face, clean un-tattooed arms and her own black hairstyle. Warm window backlight, natural realistic skin, soft cinematic contrast and tactile wood from image 1. Horizontal 16:9, one continuous movie frame, no captions, no subtitles, no text, no logos, no watermark. Match image 3's CAMERA AND FRAMING; match images 1 and 2's WOMAN.",
+    "width": 1536,
+    "height": 864,
+    "reference_resolution": 768,
+    "steps": 40,
+    "seed": 923401
+  },
+  "provenance": {
+    "shot_id": 1,
+    "source_start": 0,
+    "source_end": 4.0666666667,
+    "approved_identity_reference": "output/original-couple-qwen21/01-first-frame.png",
+    "source_pixels_role": "Camera/costume reference only; do not transfer source actor identity",
+    "reference_crop_backend": "nodal image.Crop",
+    "user_correction": "Follow original shot compositions and cuts, not a uniform two-shot."
+  }
+}

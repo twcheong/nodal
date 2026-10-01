@@ -1,0 +1,105 @@
+{
+  "graph": {
+    "nodal_version": "1",
+    "id": "1e234711-0000-4000-8000-000000000000",
+    "nodes": {
+      "1e234711-0000-4000-8000-000000000001": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-DcvQpQfJ6EB/transition-24.300.png"
+        }
+      },
+      "1e234711-0000-4000-8000-000000000002": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/woman.png"
+        }
+      },
+      "1e234711-0000-4000-8000-000000000003": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/man.png"
+        }
+      },
+      "1e234711-0000-4000-8000-000000000004": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png"
+        }
+      },
+      "1e234711-0000-4000-8000-000000000008": {
+        "type": "diffusion.QwenImage21",
+        "inputs": {
+          "model_path": "C:/Users/nexta/Desktop/nodal/models/Qwen-Image-2.1",
+          "prompt": "EDIT IMAGE 1, keeping its EXACT CAMERA COMPOSITION, lens, person sizes and person positions. Replace the woman with the exact DIFFERENT approved woman from IMAGE 2. Replace the man with the exact DIFFERENT approved man from IMAGE 3. IMAGE 4 only confirms their identities and COSTUMES: woman dry layered black bob, gold hoop earrings, ivory lace camisole with ruffled peplum and dark jeans; man short tousled black hair, plain navy polo and faded jeans. Keep IMAGE 1 source pose and framing: seated man very LOW on LEFT, his face center approximately x=17%, y=54%; standing woman on RIGHT, face center approximately x=77%, y=20%. Preserve their different heights in the image exactly. The man's lower legs and the woman's lower legs are cut off at the bottom. Low table top only enters along bottom edge at y=85%, no full table legs, no feet visible. Very large bright rectangular window spans most background from x=27% to x=95%, timber left wall and sofa left, antique cabinet far right. This is the closer START of a pull-back, NOT the final wide shot. DO NOT use IMAGE 4 camera or framing; do NOT show the whole sofa, feet, floor, or whole table. REMOVE large central Korean title and every subtitle or letter from IMAGE 1. Remove ALL tattoos, finger rings, necklace and polo patches/logos. Natural clean skin on both actors. Do not preserve the original image1 actors' faces. Preserve background geometry, camera height, gaze directions and relaxed seated/standing pose from IMAGE 1. Both people look toward one another, woman mildly exasperated, man attentive. Warm walnut and olive sofa textures consistent with image4. Add only one small plain yellow mug on the low table if visible. Exactly two adult people, no text, no collage. The exact IMAGE 1 framing with the approved IMAGE 2 and IMAGE 3 cast is the priority.",
+          "width": 1536,
+          "height": 864,
+          "steps": 40,
+          "seed": 923711,
+          "reference_resolution": 768,
+          "memory_profile": "group_offload",
+          "reference_1": {
+            "$link": [
+              "1e234711-0000-4000-8000-000000000001",
+              "image"
+            ]
+          },
+          "reference_2": {
+            "$link": [
+              "1e234711-0000-4000-8000-000000000002",
+              "image"
+            ]
+          },
+          "reference_3": {
+            "$link": [
+              "1e234711-0000-4000-8000-000000000003",
+              "image"
+            ]
+          },
+          "reference_4": {
+            "$link": [
+              "1e234711-0000-4000-8000-000000000004",
+              "image"
+            ]
+          }
+        }
+      },
+      "1e234711-0000-4000-8000-000000000009": {
+        "type": "image.Save",
+        "inputs": {
+          "image": {
+            "$link": [
+              "1e234711-0000-4000-8000-000000000008",
+              "image"
+            ]
+          },
+          "embed_workflow": true
+        }
+      }
+    },
+    "outputs": [
+      "1e234711-0000-4000-8000-000000000009"
+    ]
+  },
+  "save_outputs": {
+    "1e234711-0000-4000-8000-000000000009": "frames/shot-11-camera.png"
+  },
+  "provenance": {
+    "shot": 11,
+    "source_frame_range": [
+      729,
+      1015
+    ],
+    "references": [
+      "../reel-DcvQpQfJ6EB/transition-24.300.png",
+      "references/woman.png",
+      "references/man.png",
+      "../original-couple-qwen21/01-first-frame.png"
+    ],
+    "reference_roles": "Image1 fixes exact original camera and person scale; image2 and image3 fix approved cast; image4 confirms costumes and room style only.",
+    "original_source_pixels_used": true,
+    "identity_master": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png",
+    "prompt": "EDIT IMAGE 1, keeping its EXACT CAMERA COMPOSITION, lens, person sizes and person positions. Replace the woman with the exact DIFFERENT approved woman from IMAGE 2. Replace the man with the exact DIFFERENT approved man from IMAGE 3. IMAGE 4 only confirms their identities and COSTUMES: woman dry layered black bob, gold hoop earrings, ivory lace camisole with ruffled peplum and dark jeans; man short tousled black hair, plain navy polo and faded jeans. Keep IMAGE 1 source pose and framing: seated man very LOW on LEFT, his face center approximately x=17%, y=54%; standing woman on RIGHT, face center approximately x=77%, y=20%. Preserve their different heights in the image exactly. The man's lower legs and the woman's lower legs are cut off at the bottom. Low table top only enters along bottom edge at y=85%, no full table legs, no feet visible. Very large bright rectangular window spans most background from x=27% to x=95%, timber left wall and sofa left, antique cabinet far right. This is the closer START of a pull-back, NOT the final wide shot. DO NOT use IMAGE 4 camera or framing; do NOT show the whole sofa, feet, floor, or whole table. REMOVE large central Korean title and every subtitle or letter from IMAGE 1. Remove ALL tattoos, finger rings, necklace and polo patches/logos. Natural clean skin on both actors. Do not preserve the original image1 actors' faces. Preserve background geometry, camera height, gaze directions and relaxed seated/standing pose from IMAGE 1. Both people look toward one another, woman mildly exasperated, man attentive. Warm walnut and olive sofa textures consistent with image4. Add only one small plain yellow mug on the low table if visible. Exactly two adult people, no text, no collage. The exact IMAGE 1 framing with the approved IMAGE 2 and IMAGE 3 cast is the priority."
+  },
+  "priority": 100
+}

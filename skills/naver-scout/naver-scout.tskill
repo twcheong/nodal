@@ -1,0 +1,44 @@
+@workspace twixy
+
+SKILL "Naver Scout"
+  version: 1.0
+  summary: "네이버 생태계(블로그·카페·스마트스토어)에서 순위·유입·리뷰 신호를 브라우저로 수집해 저장한다."
+  description: "Collects Korean-market marketing signals from the Naver ecosystem — blog/cafe search rank for a keyword, smartstore product reviews and ratings, and top-exposed posts — using the built-in browser tool (no new tool, no Naver API). data-scout covers global social; this covers the domestic Naver surfaces that matter for Korean marketing. The marketer supplies the keyword/brand/store URL and depth; the skill drives the browser to read the public pages, stores a structured snapshot in data/raw, and reports what it found. Login-gated pages prompt the user to authenticate — credentials are never stored. Trigger phrases: 네이버 수집, 네이버 순위, 블로그 순위, 스마트스토어 리뷰, 네이버 검색 노출, naver scout, naver rank, smartstore reviews."
+  tags: [data-collection, naver, korea, blog, smartstore, browser]
+  trigger: "네이버 수집, 네이버 순위, 네이버 검색 노출, 블로그 순위, 카페 노출, 스마트스토어 리뷰, 스마트스토어 평점, naver scout, naver rank, smartstore reviews"
+  output: "structured Naver snapshot in $RAW (rank/reviews/top posts); emits naver_scout_complete"
+
+GOAL "Gather Naver-ecosystem marketing signals" {
+  objective: "Read the public Naver blog/cafe search results, smartstore reviews, and exposure for the user's keyword/brand/store, then save a structured snapshot for downstream analysis and reporting."
+  kpi: items_collected
+}
+
+PHASE "Collect" {
+  COLLECT "Drive the browser over Naver surfaces" {
+    // Naver is not a native TSL platform — drive the general-purpose browser tool by prose.
+    - Resolve scope from the user's request:
+      target: keyword to search, brand name, or a smartstore/blog URL.
+      surfaces: which to read — blog search rank, cafe posts, smartstore reviews. Default: whatever fits the target (URL → that surface; keyword → blog+cafe search rank).
+      depth: latest N items / top N results. Default: top 20.
+
+    // Blog/cafe rank + top posts for a keyword.
+    - If a keyword is given: use the browser tool to open Naver search (https://search.naver.com/search.naver?query={target}), read the VIEW/블로그/카페 tab, and capture for the top results: title, author/blog, url, posted date, and rank position.
+    - If a smartstore URL is given: open it, read the product rating, review count, and the latest reviews (reviewer, star rating, date, text snippet).
+    - Handle infinite scroll / pagination until `depth` is reached. If a page requires login, prompt the user to authenticate in the browser — never store credentials.
+    - Normalize what you read into rows: for rank → { rank, title, author, url, posted_at }; for reviews → { rating, date, text, reviewer }.
+
+    STORE $naver_items AS "naver_{target}_{date}" IN $RAW
+  }
+}
+
+PHASE "Confirm" {
+  TRACK "Report and hand off" {
+    LOAD "naver_{target}_{date}" FROM $RAW AS $items
+
+    - Report to the user: "[Naver Scout] Collected {count} items for {target}" and the relative save path (e.g. data/raw/naver_{target}_{date}.json), plus a one-line read of what stands out (e.g. rank movement, review sentiment at a glance).
+
+    EMIT "naver_scout_complete"
+      WITH payload = { target: $target, count: $items.count }
+      TO SKILL "Watchtower"
+  }
+}

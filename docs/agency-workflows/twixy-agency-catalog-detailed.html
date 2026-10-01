@@ -1,0 +1,627 @@
+<title>Twixy Workflow Catalog (Detailed) — 100 Workflows for Social Media Agencies</title>
+<style>
+  :root {
+    --paper: #FAFAF6;
+    --ink: #14201B;
+    --ink-soft: #4A594F;
+    --petrol: #0D5C50;
+    --petrol-deep: #093F37;
+    --mint: #E4F0E9;
+    --line: #D9E1DA;
+    --card: #FFFFFF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #0E1613;
+      --ink: #E9EFEA;
+      --ink-soft: #9BAFA3;
+      --petrol: #4FC9B2;
+      --petrol-deep: #7ADFCB;
+      --mint: #17251F;
+      --line: #263630;
+      --card: #131E19;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0E1613;
+    --ink: #E9EFEA;
+    --ink-soft: #9BAFA3;
+    --petrol: #4FC9B2;
+    --petrol-deep: #7ADFCB;
+    --mint: #17251F;
+    --line: #263630;
+    --card: #131E19;
+  }
+  :root[data-theme="light"] {
+    --paper: #FAFAF6;
+    --ink: #14201B;
+    --ink-soft: #4A594F;
+    --petrol: #0D5C50;
+    --petrol-deep: #093F37;
+    --mint: #E4F0E9;
+    --line: #D9E1DA;
+    --card: #FFFFFF;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .serif { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; }
+  .mono  { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 32px; }
+
+  /* ── Hero ── */
+  .hero { padding: 72px 0 56px; border-bottom: 1px solid var(--line); }
+  .hero-grid { display: flex; gap: 56px; align-items: flex-end; flex-wrap: wrap; }
+  .hero-copy { flex: 1 1 460px; min-width: 300px; }
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--petrol); margin: 0 0 20px;
+  }
+  h1 {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: clamp(34px, 5vw, 52px);
+    line-height: 1.08; font-weight: 500; letter-spacing: -0.01em;
+    margin: 0 0 20px; text-wrap: balance;
+  }
+  h1 em { font-style: italic; color: var(--petrol); }
+  .lede { font-size: 18px; color: var(--ink-soft); max-width: 34em; margin: 0 0 28px; }
+  .stats { display: flex; gap: 28px; flex-wrap: wrap; }
+  .stat .n {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 26px; color: var(--ink); display: block; line-height: 1.1;
+  }
+  .stat .l { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); }
+
+  /* 10×10 dot field: 100 workflows, 24 highlighted = top picks */
+  .dotfield { flex: 0 0 auto; }
+  .dots { display: grid; grid-template-columns: repeat(10, 16px); gap: 7px; }
+  .dots span { width: 16px; height: 16px; border-radius: 3px; background: var(--mint); border: 1px solid var(--line); }
+  .dots span.on { background: var(--petrol); border-color: var(--petrol); }
+  .dots-cap { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; color: var(--ink-soft); margin-top: 12px; letter-spacing: 0.04em; }
+  .dots-cap b { color: var(--petrol); font-weight: 600; }
+
+  /* ── Sections ── */
+  section { padding: 56px 0; border-bottom: 1px solid var(--line); }
+  h2 {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: clamp(26px, 3.4vw, 34px); font-weight: 500; line-height: 1.15;
+    margin: 0 0 12px; text-wrap: balance;
+  }
+  .sec-intro { color: var(--ink-soft); max-width: 40em; margin: 0 0 36px; font-size: 17px; }
+
+  /* Problems */
+  .probs { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+  .prob { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 24px 22px; }
+  .prob h3 { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; font-size: 20px; font-weight: 600; margin: 0 0 8px; }
+  .prob p { margin: 0; color: var(--ink-soft); font-size: 15px; }
+  .prob .tagline { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--petrol); display: block; margin-bottom: 12px; }
+
+  /* How it works */
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; counter-reset: step; }
+  .step { padding: 4px 0 0; }
+  .step::before {
+    counter-increment: step; content: counter(step, decimal-leading-zero);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px; color: var(--petrol); letter-spacing: 0.08em;
+    display: block; margin-bottom: 10px;
+  }
+  .step h3 { font-size: 17px; margin: 0 0 6px; font-weight: 600; }
+  .step p { margin: 0; color: var(--ink-soft); font-size: 15px; }
+
+  /* Catalog categories */
+  .cat { padding: 48px 0; border-bottom: 1px solid var(--line); }
+  .cat-head { display: flex; align-items: baseline; gap: 18px; margin-bottom: 8px; }
+  .cat-letter {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 44px; line-height: 1; color: var(--petrol); font-weight: 500; font-style: italic;
+    flex: 0 0 auto; width: 44px;
+  }
+  .cat-head h2 { margin: 0; font-size: clamp(22px, 3vw, 28px); }
+  .cat-range { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; color: var(--ink-soft); margin-left: auto; letter-spacing: 0.06em; white-space: nowrap; }
+  .cat-blurb { color: var(--ink-soft); margin: 0 0 28px 62px; max-width: 38em; font-size: 16px; }
+
+  .entries { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 40px; margin-left: 62px; }
+  .entry { display: flex; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); break-inside: avoid; }
+  .entry .no {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 12px; color: var(--ink-soft); padding-top: 3px; flex: 0 0 30px;
+  }
+  .entry > div { min-width: 0; flex: 1; }
+  .entry h4 { margin: 0 0 2px; font-size: 15px; font-weight: 600; line-height: 1.35; }
+  .entry p { margin: 0; font-size: 13.5px; color: var(--ink-soft); line-height: 1.45; }
+  .tag {
+    display: inline-block; vertical-align: 2px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    background: var(--petrol); color: var(--paper);
+    padding: 2px 7px 1px; border-radius: 20px; margin-left: 7px; white-space: nowrap;
+  }
+  .entry.ready { background: var(--mint); border-top-color: transparent; border-radius: 8px; padding: 12px 14px; margin: 0 -14px; }
+  .entry.ready + .entry { border-top-color: transparent; }
+
+  /* Top-pick expandable detail */
+  .more { margin-top: 8px; }
+  .more summary {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--petrol); cursor: pointer; list-style: none; user-select: none;
+  }
+  .more summary::-webkit-details-marker { display: none; }
+  .more summary::before { content: "+ "; }
+  .more[open] summary::before { content: "− "; }
+  .more-body { padding: 8px 0 2px; }
+  .more-body p { margin: 0 0 8px; font-size: 13px; color: var(--ink-soft); line-height: 1.55; }
+  .more-body p:last-child { margin-bottom: 0; }
+  .more-body .io { font-size: 12.5px; color: var(--ink); }
+  .more-body .io b { color: var(--petrol); font-weight: 600; }
+
+  /* Playbooks */
+  .plays { display: grid; gap: 14px; }
+  .play { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px 22px; display: flex; gap: 24px; align-items: baseline; flex-wrap: wrap; }
+  .play h3 { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; font-size: 18px; font-weight: 600; margin: 0; flex: 0 0 220px; }
+  .play .chain { font-size: 14px; color: var(--ink-soft); flex: 1 1 300px; }
+  .play .chain b { color: var(--ink); font-weight: 600; }
+  .play .chain .sep { color: var(--petrol); padding: 0 4px; }
+
+  /* CTA */
+  .cta { padding: 72px 0 88px; border-bottom: none; }
+  .cta-box { background: var(--petrol); color: #F4FAF7; border-radius: 14px; padding: 48px 44px; }
+  :root[data-theme="dark"] .cta-box, :root[data-theme="dark"] .cta-box h2 { color: #08211C; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .cta-box, :root:not([data-theme="light"]) .cta-box h2 { color: #08211C; } }
+  .cta-box h2 { color: inherit; margin-bottom: 10px; }
+  .cta-box p { margin: 0 0 8px; max-width: 40em; opacity: 0.92; font-size: 17px; }
+  .cta-box .fine { font-size: 13.5px; opacity: 0.75; margin-top: 20px; }
+
+  footer { padding: 0 0 48px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  footer p { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11.5px; color: var(--ink-soft); margin: 0; letter-spacing: 0.04em; }
+
+  @media (max-width: 760px) {
+    .entries { grid-template-columns: 1fr; margin-left: 0; }
+    .cat-blurb { margin-left: 0; }
+    .cat-letter { width: auto; }
+    .hero { padding-top: 48px; }
+  }
+  @media print {
+    .hero, section, .cat { padding: 28px 0; }
+    .entry, .prob, .play { break-inside: avoid; }
+    .cta-box { border: 1px solid var(--line); background: none; color: var(--ink); }
+  }
+</style>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow">Twixy Marketing Copilot · Workflow Catalog</p>
+      <h1>Everything your agency does by hand, <em>running as a workflow.</em></h1>
+      <p class="lede">100 ready-made AI workflows for social media agencies — client research, content production, publishing, monitoring, and client reporting. The same process, the same quality, for every client, no matter who hits Run.</p>
+      <div class="stats">
+        <div class="stat"><span class="n">100</span><span class="l">Workflows</span></div>
+        <div class="stat"><span class="n">8</span><span class="l">Stages</span></div>
+        <div class="stat"><span class="n">12+</span><span class="l">Channels</span></div>
+      </div>
+    </div>
+    <div class="dotfield" aria-hidden="true">
+      <div class="dots">
+        <span class="on"></span><span></span><span></span><span></span><span></span><span></span><span class="on"></span><span></span><span></span><span></span>
+        <span></span><span class="on"></span><span></span><span></span><span class="on"></span><span></span><span></span><span></span><span class="on"></span><span></span>
+        <span></span><span></span><span class="on"></span><span></span><span></span><span></span><span></span><span class="on"></span><span></span><span></span>
+        <span class="on"></span><span></span><span></span><span></span><span></span><span class="on"></span><span></span><span></span><span></span><span class="on"></span>
+        <span></span><span></span><span></span><span class="on"></span><span></span><span></span><span class="on"></span><span></span><span></span><span></span>
+        <span></span><span class="on"></span><span></span><span></span><span class="on"></span><span></span><span></span><span class="on"></span><span></span><span></span>
+        <span></span><span></span><span class="on"></span><span></span><span></span><span></span><span></span><span></span><span class="on"></span><span></span>
+        <span class="on"></span><span></span><span></span><span class="on"></span><span></span><span></span><span></span><span></span><span></span><span class="on"></span>
+        <span></span><span></span><span></span><span></span><span class="on"></span><span></span><span class="on"></span><span></span><span></span><span></span>
+        <span></span><span class="on"></span><span></span><span></span><span></span><span class="on"></span><span></span><span></span><span></span><span></span>
+      </div>
+      <p class="dots-cap">100 workflows · <b>24 top picks — what agencies run first</b></p>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>Built for the way small agencies actually break</h2>
+    <p class="sec-intro">Twixy was designed around the three problems every 2–10 person social media agency runs into as it grows.</p>
+    <div class="probs">
+      <div class="prob">
+        <span class="tagline">Problem 01</span>
+        <h3>The busywork tax</h3>
+        <p>Every new client means the same research, the same spreadsheets, the same copy-paste relay between ten open tabs and an AI chat. Tasks take too long, errors slip in, and the process starts over with the next client.</p>
+      </div>
+      <div class="prob">
+        <span class="tagline">Problem 02</span>
+        <h3>Knowledge that walks out the door</h3>
+        <p>Your best prompts and working methods live in someone's personal notes and memory. Output quality depends on who does the work — and when an experienced person leaves, their process leaves with them.</p>
+      </div>
+      <div class="prob">
+        <span class="tagline">Problem 03</span>
+        <h3>The founder bottleneck</h3>
+        <p>Reviews, status-chasing, and client reporting all flow through one person. Approvals pile up, missed deadlines surface too late, and the founder's workload grows with every client added.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>How Twixy works</h2>
+    <p class="sec-intro">A workflow is your agency's process captured as a runnable asset — visible steps, built-in quality checks, and a deliverable at the end.</p>
+    <div class="steps">
+      <div class="step">
+        <h3>Pick a workflow</h3>
+        <p>Start from any of the 100 in this catalog, or describe your own process in plain English and Twixy builds it as a workflow. Duplicate, tweak, and it becomes yours.</p>
+      </div>
+      <div class="step">
+        <h3>Point it at a client</h3>
+        <p>Fill in a few inputs — the client, the niche, a profile link. The AI then works the browser like a trained assistant: researching, drafting, publishing, and reporting, step by step.</p>
+      </div>
+      <div class="step">
+        <h3>Review the output, not the process</h3>
+        <p>Every run ends in a concrete deliverable — an audit spreadsheet, a content batch, a client-ready report — with validation checks along the way. You review results in minutes, not methods for hours.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap" style="padding-top:56px;">
+  <h2 class="serif" style="margin-bottom:8px;">The catalog</h2>
+  <p class="sec-intro" style="margin-bottom:12px;">Eight stages that mirror how agency work actually flows — from the first week with a new client to the monthly report. Entries marked <span class="tag" style="vertical-align:1px;">Top pick</span> are the workflows agencies reach for first at each stage — expand them for a closer look at how each one runs.</p>
+</div>
+
+<div class="cat">
+  <div class="wrap">
+    <div class="cat-head"><span class="cat-letter">A</span><h2>Client Onboarding &amp; Research</h2><span class="cat-range">001–012</span></div>
+    <p class="cat-blurb">Turn the messy first week into a repeatable battery of audits and briefs — identical quality for every client you sign.</p>
+    <div class="entries">
+      <div class="entry"><span class="no">001</span><div><h4>Client Intake → Kickoff Brief</h4><p>A messy intake questionnaire turned into a structured kickoff brief.</p></div></div>
+      <div class="entry"><span class="no">002</span><div><h4>Full Social Presence Audit</h4><p>Every handle, bio, and link checked for consistency in one sweep.</p></div></div>
+      <div class="entry ready"><span class="no">003</span><div><h4>Instagram Account Deep Audit<span class="tag">Top pick</span></h4><p>30 posts analyzed: what works, what doesn't, and five quick wins.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>Twixy opens the client's profile in a real browser and collects the last 30 posts in two passes — format, opening hook, hashtags, likes, comments, and the exact posting time of each. It computes per-post engagement against followers, then builds a two-sheet audit: the raw post data, plus an analysis sheet with average engagement by format, the shared traits of the top 10% of posts, the weakest habits to stop, and five quick wins for week one. A built-in validation step checks the data is complete before anything is scored.</p>
+          <p class="io"><b>You provide:</b> the profile link · <b>You get:</b> an audit spreadsheet ready for the kickoff call</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">004</span><div><h4>Brand Voice &amp; Tone Guide</h4><p>A written voice guide extracted from the client's existing content.</p></div></div>
+      <div class="entry"><span class="no">005</span><div><h4>Audience Persona Builder</h4><p>Personas built from how real customers actually talk online.</p></div></div>
+      <div class="entry"><span class="no">006</span><div><h4>Website &amp; SEO Snapshot</h4><p>The client's site crawled and scored before your first strategy call.</p></div></div>
+      <div class="entry"><span class="no">007</span><div><h4>Hashtag Landscape Baseline</h4><p>The client's hashtag territory mapped on day one.</p></div></div>
+      <div class="entry"><span class="no">008</span><div><h4>Content Inventory &amp; Top Performers</h4><p>Catalog what exists and surface what already works.</p></div></div>
+      <div class="entry"><span class="no">009</span><div><h4>Google Business Profile Audit</h4><p>Listing completeness, reviews, and posts checked for local clients.</p></div></div>
+      <div class="entry ready"><span class="no">010</span><div><h4>Client Onboarding Summary Pack<span class="tag">Top pick</span></h4><p>Every audit merged into one kickoff deck for the client.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>After the onboarding audits have run, their outputs are scattered across files. This workflow reads all of them — account audit, site snapshot, competitor set, voice guide — and merges them into a single kickoff pack: what we found, what it means, and the direction we recommend. It's the "here's how thoroughly we analyzed you" document for the first client meeting, produced automatically instead of assembled by hand the night before.</p>
+          <p class="io"><b>You provide:</b> the client name · <b>You get:</b> one kickoff-ready report pack</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">011</span><div><h4>Competitor Set Identification</h4><p>The five competitors that actually matter, found and profiled.</p></div></div>
+      <div class="entry ready"><span class="no">012</span><div><h4>Quick-Wins Scan<span class="tag">Top pick</span></h4><p>Bio, links, pinned posts — fixes you can ship in week one.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>Twixy reads the profile the way a senior strategist would — bio, link-in-bio (it actually clicks through and checks the landing page), pinned posts, highlights, and the recent grid — and checks each against a built-in review checklist: is the bio clear in three seconds, is there a CTA pointing at the link, is a stale announcement still pinned, is there a posting gap. It only flags fixes that need <em>no new content production</em>. Each finding comes as current state → suggested change (including rewritten bio copy where relevant) → how to apply it and how long it takes.</p>
+          <p class="io"><b>You provide:</b> the profile link · <b>You get:</b> a week-one fix list, evidence attached</p>
+        </div></details>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<div class="cat">
+  <div class="wrap">
+    <div class="cat-head"><span class="cat-letter">B</span><h2>Competitor &amp; Market Intelligence</h2><span class="cat-range">013–024</span></div>
+    <p class="cat-blurb">Know exactly what's working in the niche — without anyone spending a day hopping between tabs.</p>
+    <div class="entries">
+      <div class="entry ready"><span class="no">013</span><div><h4>Competitor Instagram Teardown<span class="tag">Top pick</span></h4><p>30 competitor posts dissected into steal-worthy tactics.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>The same 30-post collection engine as the account audit, pointed at a competitor. The analysis flips perspective: which formats they win with, which hooks they repeat, what their posting rhythm looks like — and it closes with three tactics worth porting to your client, each backed by the competitor's own numbers. When a client asks "why is [competitor] growing faster than us?", this is the data-backed answer.</p>
+          <p class="io"><b>You provide:</b> the competitor's profile link · <b>You get:</b> a teardown spreadsheet with three portable tactics</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">014</span><div><h4>Content Mix Matrix</h4><p>The top five accounts and their format ratios in one grid.</p></div></div>
+      <div class="entry"><span class="no">015</span><div><h4>Competitor YouTube Strategy</h4><p>Upload cadence, title patterns, and view distribution decoded.</p></div></div>
+      <div class="entry"><span class="no">016</span><div><h4>YouTube Outlier Finder</h4><p>Videos that massively outperformed their channel — and why.</p></div></div>
+      <div class="entry"><span class="no">017</span><div><h4>Competitor LinkedIn Analysis</h4><p>What drives engagement on competitors' company pages.</p></div></div>
+      <div class="entry"><span class="no">018</span><div><h4>Competitor TikTok Scan</h4><p>Their format choices, posting rhythm, and standout videos.</p></div></div>
+      <div class="entry ready"><span class="no">019</span><div><h4>Meta Ad Library Scan<span class="tag">Top pick</span></h4><p>Competitors' active ads, angles, and long-running winners.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>Meta's Ad Library is public — every ad a competitor is running is visible, but nobody has time to check it. Twixy browses it for each competitor and records their active ads: the angle, the hook, the offer, and critically <em>how long each ad has been running</em>. An ad that's been live for months is an ad that's making money — a proven message you can learn from for free. The output flags these long-runners and summarizes the angles the whole category is converging on.</p>
+          <p class="io"><b>You provide:</b> competitor names · <b>You get:</b> a spreadsheet of live ads with proven-winner flags</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">020</span><div><h4>Reels Hook Harvest</h4><p>Competitors' first-three-second hooks collected and classified.</p></div></div>
+      <div class="entry ready"><span class="no">021</span><div><h4>Niche Trend &amp; Format Scan<span class="tag">Top pick</span></h4><p>The formats and hooks winning in the niche right now.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>Twixy explores two or three niche hashtags and collects 12–15 of the top-performing Reels — each one's hook line, format type (talking head, text-overlay list, before/after, POV…), audio, and engagement. After a coverage check, it writes a trend brief: the five dominant formats this week with examples, the recurring hook patterns with the actual lines quoted, and five content ideas ready to hand to production. Run it before the weekly content meeting and the meeting prep is already done.</p>
+          <p class="io"><b>You provide:</b> the niche + 2–3 hashtags · <b>You get:</b> a trend brief with five ready-to-brief ideas</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">022</span><div><h4>Reddit Community Intelligence</h4><p>Pain points and customer language mined from real threads.</p></div></div>
+      <div class="entry"><span class="no">023</span><div><h4>SERP Content Gap Analysis</h4><p>The topics top-ranking pages fail to cover.</p></div></div>
+      <div class="entry"><span class="no">024</span><div><h4>Viral Case Study Teardown</h4><p>One viral hit reconstructed: timeline, spread path, takeaways.</p></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="cat">
+  <div class="wrap">
+    <div class="cat-head"><span class="cat-letter">C</span><h2>Strategy &amp; Planning</h2><span class="cat-range">025–036</span></div>
+    <p class="cat-blurb">Your agency's thinking, captured as a process anyone on the team can run — not a senior employee's private method.</p>
+    <div class="entries">
+      <div class="entry"><span class="no">025</span><div><h4>Content Pillar Framework</h4><p>Four to five pillars with mix ratios per channel.</p></div></div>
+      <div class="entry ready"><span class="no">026</span><div><h4>30-Day Content Calendar<span class="tag">Top pick</span></h4><p>Date × channel × hook — 30 rows ready for client approval.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>First it designs the frame: four to five content pillars with mix ratios and a weekly posting rhythm per channel — folding in the latest trend brief if you have one. Then it fills a 30-row calendar, one row per day: channel, pillar, format, topic, a drafted hook, CTA, and production effort. A final validation pass checks that all 30 rows are complete, no hook repeats, and the pillar mix stays within ±10% of the design. The output is concrete enough to send for client approval as-is.</p>
+          <p class="io"><b>You provide:</b> client, niche, audience · <b>You get:</b> a 30-row approval-ready calendar</p>
+        </div></details>
+      </div></div>
+      <div class="entry ready"><span class="no">027</span><div><h4>Verified Hook Library<span class="tag">Top pick</span></h4><p>100 hooks: 40 harvested from winners, 60 pattern-derived.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>This one builds an agency asset. Twixy harvests hooks that actually performed — 15 from Instagram Reels, 15 from YouTube titles and intros, 10 from Threads — captured verbatim with sources. It then classifies them by psychological trigger (curiosity gap, numbered promise, relatable callout, plot twist…), turns each type's sentence structure into a reusable template, and generates 60 niche-fit variants: a 100-hook library with a usage-log column your team updates over time. The Reels Script workflow reads this file directly — your senior writer's instinct, turned into a file the whole team draws from.</p>
+          <p class="io"><b>You provide:</b> the niche · <b>You get:</b> a 100-hook library that feeds production</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">028</span><div><h4>Campaign Concept Brief</h4><p>Three distinct concepts with hooks, CTAs, and success metrics.</p></div></div>
+      <div class="entry"><span class="no">029</span><div><h4>UGC &amp; Hashtag Campaign Design</h4><p>Rules, rewards, and a seeding plan for user-generated content.</p></div></div>
+      <div class="entry ready"><span class="no">030</span><div><h4>Creator Shortlist &amp; Outreach Plan<span class="tag">Top pick</span></h4><p>Prioritized creators with personalized outreach angles.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>Takes your discovered creator list and does the pre-campaign grunt work: scores each creator on niche fit, audience size, and engagement quality, ranks them into tiers, and drafts a personalized outreach angle for each one — what to lead with, what to offer, what to avoid. The output is a spreadsheet your account manager can start sending from the same afternoon.</p>
+          <p class="io"><b>You provide:</b> a creator list file · <b>You get:</b> a tiered outreach plan, angle per creator</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">031</span><div><h4>Launch Teaser→Reveal Sequence</h4><p>A channel-by-channel plan from D-14 to D+7.</p></div></div>
+      <div class="entry"><span class="no">032</span><div><h4>Trend &amp; Newsjacking Playbook</h4><p>Verify the trend, pick the angle, respond within 24 hours.</p></div></div>
+      <div class="entry"><span class="no">033</span><div><h4>Positioning &amp; Bio Rewrite</h4><p>Profile diagnosis with ready-to-paste rewrites.</p></div></div>
+      <div class="entry"><span class="no">034</span><div><h4>Quarterly Social Roadmap</h4><p>Monthly themes, goals, and channel allocation.</p></div></div>
+      <div class="entry"><span class="no">035</span><div><h4>Crisis Response Playbook</h4><p>Scenarios, holding statements, and escalation paths — before you need them.</p></div></div>
+      <div class="entry"><span class="no">036</span><div><h4>Repurposing System Design</h4><p>One pillar piece mapped into ten derivative assets.</p></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="cat">
+  <div class="wrap">
+    <div class="cat-head"><span class="cat-letter">D</span><h2>Content Production</h2><span class="cat-range">037–058</span></div>
+    <p class="cat-blurb">Batch production at senior quality, whoever hits Run — scripts, captions, articles, and full repurpose packs.</p>
+    <div class="entries">
+      <div class="entry ready"><span class="no">037</span><div><h4>Reels Script Batch<span class="tag">Top pick</span></h4><p>Ten scripts: three-second hook, body, CTA, shot directions.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>Reads your hook library, picks ten unused hooks that fit the audience — enforcing variety so no single psychological trigger dominates — and writes ten complete scripts. Each one has the 0–3 second hook with on-screen text, a scene-by-scene body, a save/share/follow CTA, shot directions detailed enough that a creator can film from them alone, and a first caption line. A validation pass checks every script has all four elements, no hook repeats, and each body stays within a 30-second read. Junior runs it, senior-level output comes out.</p>
+          <p class="io"><b>You provide:</b> client + hook library · <b>You get:</b> ten filmable scripts in one draft file</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">038</span><div><h4>Captions &amp; Hashtag Sets</h4><p>Captions and tag sets for a whole script batch.</p></div></div>
+      <div class="entry"><span class="no">039</span><div><h4>Carousel Copy Batch</h4><p>Three carousels with slide-by-slide copy.</p></div></div>
+      <div class="entry"><span class="no">040</span><div><h4>Story Interaction Series</h4><p>Seven days of polls, quizzes, and sliders.</p></div></div>
+      <div class="entry"><span class="no">041</span><div><h4>Threads Post Batch</h4><p>Ten conversation-starters built from the latest trend scan.</p></div></div>
+      <div class="entry"><span class="no">042</span><div><h4>X Thread Batch</h4><p>Three long-form storytelling threads.</p></div></div>
+      <div class="entry"><span class="no">043</span><div><h4>One-liner Hook Bank</h4><p>Thirty single-line hooks organized by psychological trigger.</p></div></div>
+      <div class="entry"><span class="no">044</span><div><h4>Shorts Script Batch</h4><p>Ten scripts with two-second hooks and loop endings.</p></div></div>
+      <div class="entry"><span class="no">045</span><div><h4>Long-form Video Script</h4><p>A full script with chapters, built from a reference-video analysis.</p></div></div>
+      <div class="entry"><span class="no">046</span><div><h4>Title &amp; Thumbnail Copy A/B</h4><p>Ten title variants plus thumbnail text per video.</p></div></div>
+      <div class="entry"><span class="no">047</span><div><h4>TikTok Script Batch</h4><p>Ten scripts mapped to current trends.</p></div></div>
+      <div class="entry ready"><span class="no">048</span><div><h4>LinkedIn Post Batch<span class="tag">Top pick</span></h4><p>Five posts written in the founder's voice.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>"Can you also do our founder's personal brand?" is the request every B2B-adjacent agency hears now. This workflow takes the founder's voice notes and brand context and writes five LinkedIn posts that read like the founder wrote them — hook-first openings, story-driven bodies, no corporate filler. The batch mixes formats (a lesson, a contrarian take, a behind-the-scenes) so the profile doesn't feel templated.</p>
+          <p class="io"><b>You provide:</b> the founder's voice in one line + topics · <b>You get:</b> five founder-voice posts</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">049</span><div><h4>LinkedIn Article Draft</h4><p>Thought-leadership long-form with a hook-first intro.</p></div></div>
+      <div class="entry"><span class="no">050</span><div><h4>Facebook Post Batch</h4><p>Five posts tuned for shares and comments.</p></div></div>
+      <div class="entry ready"><span class="no">051</span><div><h4>SEO Blog Post That Outranks<span class="tag">Top pick</span></h4><p>SERP teardown → winning outline → 1,500+ word draft.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>Three moves. First, Twixy opens the top 5–7 Google results for your target keyword and dissects them — title patterns, length, heading structure, keyword placement — and finds the content gaps none of them cover. Second, it designs an outline built to beat them: five title options, six to eight sections with target lengths, a keyword placement plan. Third, it writes the full 1,500+ word draft with image-slot directions and a meta description. Validation enforces length, heading count, and a keyword frequency in the healthy 5–15 range — no stuffing, no absence.</p>
+          <p class="io"><b>You provide:</b> the target keyword · <b>You get:</b> a publish-ready draft built to outrank</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">052</span><div><h4>Newsletter Issue Draft</h4><p>Five subject lines, a story-driven body, and a CTA.</p></div></div>
+      <div class="entry"><span class="no">053</span><div><h4>Press Release &amp; Journalist Pitch</h4><p>A release plus personalized pitch notes.</p></div></div>
+      <div class="entry"><span class="no">054</span><div><h4>UGC &amp; Testimonial Remix</h4><p>Customer reviews turned into video scripts.</p></div></div>
+      <div class="entry"><span class="no">055</span><div><h4>Review Mining → Social Proof</h4><p>Real reviews converted into persuasive copy.</p></div></div>
+      <div class="entry"><span class="no">056</span><div><h4>Landing Page Copy Set</h4><p>Ten headlines plus section copy from page analysis.</p></div></div>
+      <div class="entry ready"><span class="no">057</span><div><h4>Video → 10-Asset Repurpose Pack<span class="tag">Top pick</span></h4><p>One long video becomes posts, threads, and shorts ideas.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>Give it one YouTube link. Twixy pulls the video's transcript, maps its strongest moments and quotable lines, and plans ten derivative assets: Instagram posts, an X thread, Shorts concepts, a newsletter angle — each with its own hook and outline, referencing the exact part of the video it comes from. One long-form production becomes a month of channel content, and the repurposing logic your team applies ad-hoc becomes a repeatable system.</p>
+          <p class="io"><b>You provide:</b> one video URL · <b>You get:</b> a ten-asset plan with hooks and outlines</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">058</span><div><h4>Client-Voice Rewrite Batch</h4><p>Generic drafts adapted to the client's voice guide.</p></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="cat">
+  <div class="wrap">
+    <div class="cat-head"><span class="cat-letter">E</span><h2>Publishing &amp; Engagement</h2><span class="cat-range">059–070</span></div>
+    <p class="cat-blurb">Real posting and real engagement from the client's own accounts — capped rounds, transparent behavior, zero spam.</p>
+    <div class="entries">
+      <div class="entry"><span class="no">059</span><div><h4>Instagram Post Publish</h4><p>The approved draft published, post URL reported back.</p></div></div>
+      <div class="entry"><span class="no">060</span><div><h4>Threads Publish</h4><p>Publish from the approved draft, URL reported back.</p></div></div>
+      <div class="entry"><span class="no">061</span><div><h4>X Publish &amp; Engage</h4><p>Post, then join five to ten relevant conversations.</p></div></div>
+      <div class="entry ready"><span class="no">062</span><div><h4>Cross-posting Round<span class="tag">Top pick</span></h4><p>One piece adapted and posted to Instagram, Threads, and X.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>Reads one approved draft, then rewrites it per channel — Instagram, Threads, and X each get their own length, tone, and formatting rather than a copy-paste — and actually publishes to each one in sequence, working the browser like a person would. It finishes by reporting the three live URLs. The fifteen-minute "post it everywhere" chore that someone does every single day, gone.</p>
+          <p class="io"><b>You provide:</b> the approved draft · <b>You get:</b> three live, channel-adapted posts</p>
+        </div></details>
+      </div></div>
+      <div class="entry ready"><span class="no">063</span><div><h4>Targeted Comment Round<span class="tag">Top pick</span></h4><p>10–12 genuine value comments on top niche posts.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>A growth tactic with guardrails built in. From the client's own logged-in account, Twixy scouts 12 posts in niche hashtags with active comment sections, actually reads each post, and drafts a comment that responds to its specific content. A validation step then screens every draft: no copy-paste phrasing, no promotion, no links, no emoji walls — value comments only. Only then does it post, paced naturally, capped at 12 per round, reporting exactly what was posted where. Visibility for the client without the spam risk.</p>
+          <p class="io"><b>You provide:</b> hashtags + brand voice · <b>You get:</b> 10–12 posted comments with a full log</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">064</span><div><h4>Threads Conversation Round</h4><p>10–12 replies inside niche conversations.</p></div></div>
+      <div class="entry"><span class="no">065</span><div><h4>Creator DM Outreach</h4><p>10–15 personalized DMs from an approved shortlist.</p></div></div>
+      <div class="entry"><span class="no">066</span><div><h4>Mention &amp; Reply Round</h4><p>Brand mentions found and answered.</p></div></div>
+      <div class="entry ready"><span class="no">067</span><div><h4>Inbound Comment Replies<span class="tag">Top pick</span></h4><p>Comments on the client's own posts, answered in voice.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>The other direction of engagement — and the one that quietly eats the most account-manager hours. Twixy collects new comments on the client's recent posts, drafts replies in the client's voice (answers to questions, thanks for praise, a question back to keep threads alive), posts them, and reports the round. Community management, the retainer line item everyone underprices, becomes a daily fifteen-minute round instead of a standing distraction.</p>
+          <p class="io"><b>You provide:</b> the account + brand voice · <b>You get:</b> answered comments and a round report</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">068</span><div><h4>YouTube Community Post</h4><p>Polls and posts published to the community tab.</p></div></div>
+      <div class="entry"><span class="no">069</span><div><h4>Google Business Post</h4><p>Updates and offers published to the listing.</p></div></div>
+      <div class="entry"><span class="no">070</span><div><h4>UGC Thank-You Round</h4><p>Every campaign-tag poster thanked, personally.</p></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="cat">
+  <div class="wrap">
+    <div class="cat-head"><span class="cat-letter">F</span><h2>Monitoring &amp; Listening</h2><span class="cat-range">071–078</span></div>
+    <p class="cat-blurb">Problems surface in a morning report — not in an angry client call.</p>
+    <div class="entries">
+      <div class="entry ready"><span class="no">071</span><div><h4>Brand Mention Sweep<span class="tag">Top pick</span></h4><p>X, Threads, and Reddit mentions triaged with reply drafts.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>Twixy searches X and Threads for the brand and product names — including replies and quote posts — then sweeps Reddit for threads and comments, prioritizing questions and complaints. Every mention gets two labels: sentiment (positive / neutral / negative) and urgency (respond today / this week / no action). The report leads with the urgent items, each with a drafted reply ready to adapt, followed by sentiment counts per platform and recurring themes worth a content response. One morning read and the account manager knows exactly what needs a reply.</p>
+          <p class="io"><b>You provide:</b> brand + product names · <b>You get:</b> a triaged mention report with reply drafts</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">072</span><div><h4>Review Site Sweep</h4><p>New Google, Yelp, and Trustpilot reviews with response drafts.</p></div></div>
+      <div class="entry"><span class="no">073</span><div><h4>Competitor Activity Sweep</h4><p>What every competitor shipped this week, summarized.</p></div></div>
+      <div class="entry"><span class="no">074</span><div><h4>Multi-Client Trend Alerts</h4><p>One sweep — alerts routed to each client's niche.</p></div></div>
+      <div class="entry"><span class="no">075</span><div><h4>Comment Sentiment Analysis</h4><p>Recent comments classified, recurring themes surfaced.</p></div></div>
+      <div class="entry ready"><span class="no">076</span><div><h4>Negative-Signal Early Warning<span class="tag">Top pick</span></h4><p>Complaint spikes and brewing issues caught early.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>The defensive version of the mention sweep. It scans specifically for trouble: complaint clusters forming around the same issue, a thread gaining traction with negative sentiment, a review pattern shifting. Findings are ranked by blast radius, and the report leads with what should be defused <em>today</em>, with suggested first responses. The worst moment in agency life is the client calling first with "have you seen this?" — this flips it to "we caught something this morning; here's our response plan."</p>
+          <p class="io"><b>You provide:</b> the brand name · <b>You get:</b> an early-warning report, worst first</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">077</span><div><h4>Campaign Hashtag Tracker</h4><p>Participation counts and top UGC, tracked over time.</p></div></div>
+      <div class="entry"><span class="no">078</span><div><h4>Follower Growth Tracker</h4><p>Every client and competitor account, snapshotted weekly.</p></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="cat">
+  <div class="wrap">
+    <div class="cat-head"><span class="cat-letter">G</span><h2>Reporting &amp; Client Communication</h2><span class="cat-range">079–092</span></div>
+    <p class="cat-blurb">Client-ready reporting that doesn't consume your weekend — plus the sales assets that win the next client.</p>
+    <div class="entries">
+      <div class="entry"><span class="no">079</span><div><h4>Weekly Instagram Report</h4><p>Account insights turned into a client-ready spreadsheet.</p></div></div>
+      <div class="entry"><span class="no">080</span><div><h4>Weekly Multi-Channel Snapshot</h4><p>One page of status across every channel.</p></div></div>
+      <div class="entry"><span class="no">081</span><div><h4>Monthly YouTube Report</h4><p>Studio metrics, top videos, retention notes.</p></div></div>
+      <div class="entry ready"><span class="no">082</span><div><h4>Monthly Client Report Pack<span class="tag">Top pick</span></h4><p>The whole month merged into a client-ready pack with next steps.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>Reads everything the month produced — weekly reports, hashtag trackers, follower snapshots, trend briefs — and rolls it up per channel. Then it generates the pack: a one-page executive summary in plain client language (three-line takeaway plus the headline numbers), per-channel sections with metric tables, the winning content and <em>why</em> it worked, the misses and their lessons, what got validated this month (hooks, formats, posting times), and five prioritized actions for next month. Written for the client, not the team — no internal jargon. The month-end all-nighter becomes a review pass.</p>
+          <p class="io"><b>You provide:</b> client + month · <b>You get:</b> a send-ready monthly report pack</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">083</span><div><h4>Content Winners &amp; Learnings</h4><p>The top 10% of posts — and the why behind them.</p></div></div>
+      <div class="entry"><span class="no">084</span><div><h4>Best Posting Time Analysis</h4><p>Post-time × engagement correlation for the account.</p></div></div>
+      <div class="entry"><span class="no">085</span><div><h4>Share-of-Voice Report</h4><p>Client vs. competitor mention share, by channel.</p></div></div>
+      <div class="entry"><span class="no">086</span><div><h4>Campaign Wrap-Up Report</h4><p>Results vs. goals, learnings, and next steps.</p></div></div>
+      <div class="entry"><span class="no">087</span><div><h4>Creator Campaign ROI</h4><p>Per-creator reach, engagement, and conversion.</p></div></div>
+      <div class="entry"><span class="no">088</span><div><h4>GA4 Social Traffic Report</h4><p>Social-sourced sessions and conversions, explained.</p></div></div>
+      <div class="entry ready"><span class="no">089</span><div><h4>Client Weekly Email Draft<span class="tag">Top pick</span></h4><p>Reports turned into a friendly client update, ready to send.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>Reads the week's reports for one client and turns them into a short, warm update email: three highlights, the numbers that actually matter to this client, anything that needs their input, and next week's plan. The difference between an agency that attaches a spreadsheet and an agency that writes you three useful paragraphs every Friday is retention — this makes the second kind take five minutes.</p>
+          <p class="io"><b>You provide:</b> the client name · <b>You get:</b> a paste-and-send weekly email</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">090</span><div><h4>Quarterly Business Review Deck</h4><p>The quarter's results and next quarter's plan, as slides.</p></div></div>
+      <div class="entry ready"><span class="no">091</span><div><h4>Prospect Audit Teaser<span class="tag">Top pick</span></h4><p>A scored audit of any prospect, as a pitch-ready PDF.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>Your new-business weapon. Twixy quick-audits a prospect's profile and last ten posts, plus one web pass for their other channels. It scores five dimensions from 1–10 — profile optimization, consistency, format mix, hook quality, engagement — each with a one-line evidence note, then picks the three highest-impact opportunities, phrased so the prospect recognizes them as true ("Reels with question hooks are your best performers — you posted two last month"). A validation step kills any claim not grounded in observed data. Output: a two-to-three page PDF — scorecard, three opportunities, soft close inviting a 20-minute call. Attach it to cold outreach and watch reply rates change.</p>
+          <p class="io"><b>You provide:</b> the prospect's profile link · <b>You get:</b> a pitch-ready audit PDF</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">092</span><div><h4>Client Case Study Write-Up</h4><p>Results turned into a marketing asset for your agency.</p></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="cat">
+  <div class="wrap">
+    <div class="cat-head"><span class="cat-letter">H</span><h2>Agency Operations &amp; Knowledge</h2><span class="cat-range">093–100</span></div>
+    <p class="cat-blurb">Where individual know-how becomes company property.</p>
+    <div class="entries">
+      <div class="entry ready"><span class="no">093</span><div><h4>SOP From a Finished Run<span class="tag">Top pick</span></h4><p>A completed process turned into a step-by-step playbook.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>When a piece of work goes well, the knowledge usually evaporates. This workflow reads the notes and records of a finished process and rewrites it as a playbook anyone can follow: the steps in order, the checks at each stage, the pitfalls and how to avoid them. Good work stops being a one-time event and becomes part of the company manual — the direct answer to "our know-how lives in one person's head."</p>
+          <p class="io"><b>You provide:</b> the process notes · <b>You get:</b> a repeatable step-by-step playbook</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">094</span><div><h4>Prompt Library Consolidation</h4><p>Scattered prompts merged into one team library.</p></div></div>
+      <div class="entry"><span class="no">095</span><div><h4>New-Hire Onboarding Guide</h4><p>SOPs compiled into a first-two-weeks guide.</p></div></div>
+      <div class="entry ready"><span class="no">096</span><div><h4>Pre-Publish QA Checklist<span class="tag">Top pick</span></h4><p>Drafts checked against the voice guide before they ship.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>Before anything goes out, this workflow checks the draft against the client's voice guide and your QA rules: is the tone right, any banned words, required elements present, claims safe. It returns a pass/fix list, item by item, with suggested corrections. The founder stops being the first reviewer of everything — the machine does the first pass, the human does the final approval. New-hire output ships with confidence from week one.</p>
+          <p class="io"><b>You provide:</b> the draft + voice guide · <b>You get:</b> a pass/fix report per item</p>
+        </div></details>
+      </div></div>
+      <div class="entry ready"><span class="no">097</span><div><h4>Weekly All-Clients Digest<span class="tag">Top pick</span></h4><p>One founder-facing digest across every client.</p>
+        <details class="more"><summary>How it works</summary><div class="more-body">
+          <p>Scans every client's reports and outputs from the week and produces one page for the founder: a status line per client, what went well, and what needs attention — flagged, not buried. The hours spent piecing together the state of the agency from Slack threads and spreadsheets compress into one Monday-morning read. It's the workflow that lets the client count grow from five to fifteen without the founder's awareness breaking.</p>
+          <p class="io"><b>You provide:</b> nothing — it reads what's there · <b>You get:</b> a one-page founder digest</p>
+        </div></details>
+      </div></div>
+      <div class="entry"><span class="no">098</span><div><h4>Workload &amp; Capacity Snapshot</h4><p>Deliverables per client vs. team capacity, at a glance.</p></div></div>
+      <div class="entry"><span class="no">099</span><div><h4>Meeting Notes → Actions</h4><p>Raw notes structured into owners and deadlines.</p></div></div>
+      <div class="entry"><span class="no">100</span><div><h4>Knowledge Base Sync</h4><p>Validated learnings pushed to the team wiki.</p></div></div>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <h2>Playbooks: workflows that chain into outcomes</h2>
+    <p class="sec-intro">Single workflows save hours. Chained together, they replace entire operating routines.</p>
+    <div class="plays">
+      <div class="play">
+        <h3>New-Client Week 1</h3>
+        <p class="chain"><b>Intake Brief</b><span class="sep">→</span><b>IG Audit</b><span class="sep">→</span><b>Competitor Set</b><span class="sep">→</span><b>Teardown</b><span class="sep">→</span><b>Pillars</b><span class="sep">→</span><b>Calendar</b><span class="sep">→</span><b>Onboarding Pack</b> — a signed client to a kickoff-ready plan in days, not weeks.</p>
+      </div>
+      <div class="play">
+        <h3>Weekly Content Engine</h3>
+        <p class="chain"><b>Trend Scan</b><span class="sep">→</span><b>Reels Scripts</b><span class="sep">→</span><b>Captions</b><span class="sep">→</span><b>Publish</b><span class="sep">→</span><b>Comment Round</b><span class="sep">→</span><b>Weekly Report</b> — the full weekly loop for one client, on rails.</p>
+      </div>
+      <div class="play">
+        <h3>Founder-Bottleneck Killer</h3>
+        <p class="chain"><b>QA Checklist</b><span class="sep">→</span><b>Ops Digest</b><span class="sep">→</span><b>Client Email</b><span class="sep">→</span><b>Monthly Pack</b> — review outputs in minutes instead of chasing status all week.</p>
+      </div>
+      <div class="play">
+        <h3>New-Business Machine</h3>
+        <p class="chain"><b>Prospect Audit</b><span class="sep">→</span><b>Case Study</b><span class="sep">→</span><b>Press Release</b><span class="sep">→</span><b>Creator Shortlist</b> — sales assets produced with the same engine that serves clients.</p>
+      </div>
+      <div class="play">
+        <h3>Knowledge Flywheel</h3>
+        <p class="chain"><b>SOP Write-Up</b><span class="sep">→</span><b>Prompt Library</b><span class="sep">→</span><b>Onboarding Guide</b><span class="sep">→</span><b>Wiki Sync</b> — every good run makes the whole team permanently better.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <div class="wrap">
+    <div class="cta-box">
+      <h2 class="serif">See it run on one of your clients</h2>
+      <p>Pick any workflow in this catalog and we'll run it live on a real account of yours — a full audit, a content batch, or a client report, produced in front of you in a 20-minute walkthrough.</p>
+      <p class="fine">Every workflow is also a template: duplicate it, adjust it in plain-English chat, and it becomes your agency's own process — shareable with your whole team.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Twixy Marketing Copilot · Workflow Catalog · EN v3 (detailed)</p>
+    <p>100 workflows · 8 stages · updated monthly</p>
+  </div>
+</footer>
+
+<script>
+  // Open all expanders when printing so detail text lands in the PDF.
+  window.addEventListener('beforeprint', () => {
+    document.querySelectorAll('details.more').forEach(d => d.open = true);
+  });
+</script>

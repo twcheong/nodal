@@ -1,0 +1,71 @@
+{
+  "id": "wf_agency_engage_ig_comment_round",
+  "title": "Targeted Comment Engagement Round",
+  "description": "Scout top posts in the client's niche hashtags, draft one tailored comment per post, validate for quality and safety, then post 10–12 genuine value comments from the client's account.",
+  "outputDir": "data/reports",
+  "tags": ["social"],
+  "inputs": [
+    { "id": "hashtags", "kind": "list", "valueType": "text", "label": "2–3 target hashtags (without #)", "observed": "", "confidence": "low" },
+    { "id": "client_name", "kind": "scalar", "valueType": "text", "label": "Client name", "observed": "", "confidence": "low" },
+    { "id": "brand_voice", "kind": "scalar", "valueType": "text", "label": "Brand voice in one line (e.g. friendly expert, playful)", "observed": "", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "Scout posts and draft tailored comments",
+      "detail": "Using the client's logged-in account, browse each hashtag's recent and top posts and select 12 posts with active comment sections that fit the client's niche. Actually read each post and draft one tailored comment that responds to its specific content. Rules: no copy-paste phrasing, no emoji walls, no overt promotion, no links — only value comments (a question, genuine take, or added tip) that reference the post itself.",
+      "acceptance": "12 posts prepared with URL, gist, and a tailored comment draft each.",
+      "tool": "chrome",
+      "toolSkills": ["instagram"],
+      "subtasks": [
+        { "id": "s1", "title": "Scout candidate posts per hashtag", "purpose": "Active comment sections, niche fit" },
+        { "id": "s2", "title": "Read each post's content", "purpose": "The gist that grounds a tailored comment" },
+        { "id": "s3", "title": "Draft tailored comments", "purpose": "Unique per post, in the brand voice" }
+      ],
+      "inputScope": [
+        { "name": "hashtags", "type": "text[]", "description": "Hashtags to scout" },
+        { "name": "brand_voice", "type": "text", "description": "Tone for the comments" }
+      ],
+      "outputScope": [
+        { "name": "targets", "type": "json[]", "description": "12 of post_url, post_summary, draft_comment" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "validation",
+      "title": "Verify comment drafts are safe",
+      "detail": "Check that targets has 10+ entries, no two draft comments share phrasing (copy-paste detection), none contain promotion, links, or emoji walls, and each comment actually references its post's gist.",
+      "acceptance": "is_valid=true and issues is empty.",
+      "inputScope": [
+        { "name": "targets", "type": "json[]" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "Empty when valid" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "action",
+      "title": "Post 10–12 comments and report",
+      "detail": "Post the validated drafts in order: open each post, leave its comment, and pace the round naturally — never exceeding 12 comments. Skip failures (restricted comments, deleted posts) with the reason recorded; do not retry aggressively. Finish by reporting the posted list (post URL + comment) and the skipped list.",
+      "acceptance": "10+ comments posted; full posted and skipped lists reported.",
+      "tool": "chrome",
+      "toolSkills": ["instagram"],
+      "subtasks": [
+        { "id": "s1", "title": "Post drafts sequentially", "purpose": "Paced posting, max 12 per round" },
+        { "id": "s2", "title": "Handle failures gracefully", "purpose": "Skip with reason, no retry spam" },
+        { "id": "s3", "title": "Report round results", "purpose": "Self-report posted and skipped lists" }
+      ],
+      "inputScope": [
+        { "name": "targets", "type": "json[]", "description": "Validated comment drafts" }
+      ],
+      "outputScope": [
+        { "name": "posted", "type": "json[]", "description": "Successes: post_url, comment" },
+        { "name": "skipped", "type": "json[]", "description": "Failures: post_url, reason" },
+        { "name": "posted_count", "type": "number", "description": "Comments successfully posted" }
+      ]
+    }
+  ]
+}

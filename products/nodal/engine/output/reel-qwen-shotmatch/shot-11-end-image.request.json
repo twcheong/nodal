@@ -1,0 +1,97 @@
+{
+  "graph": {
+    "nodal_version": "1",
+    "id": "1e234012-0000-4000-8000-000000000000",
+    "nodes": {
+      "1e234012-0000-4000-8000-000000000001": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png"
+        }
+      },
+      "1e234012-0000-4000-8000-000000000002": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/woman.png"
+        }
+      },
+      "1e234012-0000-4000-8000-000000000003": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/man.png"
+        }
+      },
+      "1e234012-0000-4000-8000-000000000004": {
+        "type": "image.Load",
+        "inputs": {
+          "path": "C:/Users/nexta/Desktop/nodal/output/reel-DcvQpQfJ6EB/frame-033.0.png"
+        }
+      },
+      "1e234012-0000-4000-8000-000000000008": {
+        "type": "diffusion.QwenImage21",
+        "inputs": {
+          "model_path": "C:/Users/nexta/Desktop/nodal/models/Qwen-Image-2.1",
+          "prompt": "Produce the FINAL WIDE FRAME of a slow camera pull-back. IMAGE 1 is the approved movie cast and room; IMAGE 2 is the approved woman's exact face; IMAGE 3 is the approved man's exact face. IMAGE 4 controls ONLY the FINAL CAMERA FRAMING. Recreate image 4's distant wide view while preserving images 1-3's people and vintage room. Camera has moved back several meters from image 1, revealing the full living room, wood-paneled ceiling and left wall, full olive sofa, both characters' feet, rug, low carved table and more floor in the foreground. Man is seated left at x=29%, his head at y=53%; woman is standing right at x=65%, her head at y=28%. Both people are much SMALLER IN FRAME than in image 1, occupy the same depth plane. The large rectangular timber-framed window is centered behind them, with green branches and Korean roof outside. Antique cabinet and mirror right, hanging plants left and right, lived-in foreground details and sofa arm along bottom. Woman's approved ivory lace camisole, ruffled waist and dark jeans; man's plain navy polo and faded jeans. Preserve actual approved faces and black hairstyles, no tattoos or branded clothing from image 4. She has a lightly exasperated face with one relaxed explaining gesture toward him, exactly two arms. He looks up at her attentively. No extra people. Realistic warm soft daylight, same color grade as image 1. Horizontal 16:9. Remove ALL large central title and all subtitles from image 4; absolutely no lettering, watermark or captions. Critical: reproduce image 4's WIDE FINAL COMPOSITION with the approved cast; do not return image 1's closer view.",
+          "width": 1536,
+          "height": 864,
+          "steps": 40,
+          "seed": 923412,
+          "reference_resolution": 768,
+          "memory_profile": "group_offload",
+          "reference_1": {
+            "$link": [
+              "1e234012-0000-4000-8000-000000000001",
+              "image"
+            ]
+          },
+          "reference_2": {
+            "$link": [
+              "1e234012-0000-4000-8000-000000000002",
+              "image"
+            ]
+          },
+          "reference_3": {
+            "$link": [
+              "1e234012-0000-4000-8000-000000000003",
+              "image"
+            ]
+          },
+          "reference_4": {
+            "$link": [
+              "1e234012-0000-4000-8000-000000000004",
+              "image"
+            ]
+          }
+        }
+      },
+      "1e234012-0000-4000-8000-000000000009": {
+        "type": "image.Save",
+        "inputs": {
+          "image": {
+            "$link": [
+              "1e234012-0000-4000-8000-000000000008",
+              "image"
+            ]
+          },
+          "embed_workflow": true
+        }
+      }
+    },
+    "outputs": [
+      "1e234012-0000-4000-8000-000000000009"
+    ]
+  },
+  "save_outputs": {
+    "1e234012-0000-4000-8000-000000000009": "frames/shot-11-end.png"
+  },
+  "provenance": {
+    "purpose": "Explicit pullback ending reference; never replaces identity master.",
+    "references": [
+      "C:/Users/nexta/Desktop/nodal/output/original-couple-qwen21/01-first-frame.png",
+      "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/woman.png",
+      "C:/Users/nexta/Desktop/nodal/output/reel-qwen-shotmatch/references/man.png",
+      "C:/Users/nexta/Desktop/nodal/output/reel-DcvQpQfJ6EB/frame-033.0.png"
+    ],
+    "prompt": "Produce the FINAL WIDE FRAME of a slow camera pull-back. IMAGE 1 is the approved movie cast and room; IMAGE 2 is the approved woman's exact face; IMAGE 3 is the approved man's exact face. IMAGE 4 controls ONLY the FINAL CAMERA FRAMING. Recreate image 4's distant wide view while preserving images 1-3's people and vintage room. Camera has moved back several meters from image 1, revealing the full living room, wood-paneled ceiling and left wall, full olive sofa, both characters' feet, rug, low carved table and more floor in the foreground. Man is seated left at x=29%, his head at y=53%; woman is standing right at x=65%, her head at y=28%. Both people are much SMALLER IN FRAME than in image 1, occupy the same depth plane. The large rectangular timber-framed window is centered behind them, with green branches and Korean roof outside. Antique cabinet and mirror right, hanging plants left and right, lived-in foreground details and sofa arm along bottom. Woman's approved ivory lace camisole, ruffled waist and dark jeans; man's plain navy polo and faded jeans. Preserve actual approved faces and black hairstyles, no tattoos or branded clothing from image 4. She has a lightly exasperated face with one relaxed explaining gesture toward him, exactly two arms. He looks up at her attentively. No extra people. Realistic warm soft daylight, same color grade as image 1. Horizontal 16:9. Remove ALL large central title and all subtitles from image 4; absolutely no lettering, watermark or captions. Critical: reproduce image 4's WIDE FINAL COMPOSITION with the approved cast; do not return image 1's closer view."
+  }
+}

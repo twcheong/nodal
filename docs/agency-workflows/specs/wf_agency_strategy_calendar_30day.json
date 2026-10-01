@@ -1,0 +1,81 @@
+{
+  "id": "wf_agency_strategy_calendar_30day",
+  "title": "30-Day Content Calendar",
+  "description": "Combine client context and trend insights into a 30-row content calendar — date, channel, pillar, format, topic, hook draft, and CTA — ready for client approval.",
+  "outputDir": "strategies",
+  "tags": ["campaign"],
+  "inputs": [
+    { "id": "client_name", "kind": "scalar", "valueType": "text", "label": "Client name", "observed": "", "confidence": "low" },
+    { "id": "niche", "kind": "scalar", "valueType": "text", "label": "Client niche", "observed": "", "confidence": "low" },
+    { "id": "target_audience", "kind": "scalar", "valueType": "text", "label": "Target audience in one line", "observed": "", "confidence": "low" },
+    { "id": "insights_path", "kind": "scalar", "valueType": "path", "label": "Trend insights file path (leave empty if none)", "observed": "", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "Design pillars and channel rhythm",
+      "detail": "If insights_path points to a file, read it and fold recent trend formats and hooks into the plan; otherwise proceed from client, niche, and audience alone. Define 4–5 content pillars (e.g. educate / relate / prove / entertain / sell) with mix ratios, and set the weekly posting rhythm per channel (IG Reels, feed, Stories, Threads, etc.).",
+      "acceptance": "4+ pillars with ratios and a per-channel weekly rhythm are defined.",
+      "tool": "read",
+      "toolSkills": [],
+      "subtasks": [
+        { "id": "s1", "title": "Fold in trend insights", "purpose": "Reuse recent winning formats and hooks as calendar material" },
+        { "id": "s2", "title": "Define pillars and ratios", "purpose": "Pillars matched to the client's goals" },
+        { "id": "s3", "title": "Set channel rhythm", "purpose": "Days and frequency per channel as the calendar skeleton" }
+      ],
+      "inputScope": [
+        { "name": "client_name", "type": "text" },
+        { "name": "niche", "type": "text" },
+        { "name": "target_audience", "type": "text" },
+        { "name": "insights_path", "type": "path", "description": "Optional trend brief (md/csv)" }
+      ],
+      "outputScope": [
+        { "name": "pillars", "type": "json[]", "description": "Pillar name, purpose, mix ratio" },
+        { "name": "channel_rhythm", "type": "json", "description": "Per-channel weekly frequency and days" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "action",
+      "title": "Write the 30-day calendar CSV",
+      "detail": "Write a CSV with 30 rows — one per day. Columns: day offset, channel, pillar, format (reel/carousel/story/text), content topic, hook draft, CTA, and production effort (high/med/low). Respect the pillar ratios and channel rhythm, and leave at least one slot per week flagged as a trend-reactive slot (topic decided on the day).",
+      "acceptance": "All 30 rows filled; pillar mix within ±10 percentage points of the design.",
+      "tool": "write",
+      "toolSkills": ["csv"],
+      "subtasks": [
+        { "id": "s1", "title": "Lay out 30 slots", "purpose": "Dates and channels following the rhythm" },
+        { "id": "s2", "title": "Fill topics, hooks, CTAs", "purpose": "Each row concrete enough to brief a creator" },
+        { "id": "s3", "title": "Check the pillar mix", "purpose": "Verify actual ratios match the design" }
+      ],
+      "inputScope": [
+        { "name": "pillars", "type": "json[]" },
+        { "name": "channel_rhythm", "type": "json" },
+        { "name": "client_name", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "row_count", "type": "number", "description": "Data rows excluding header (must be 30)" },
+        { "name": "header_row", "type": "text[]", "description": "CSV headers" },
+        { "name": "pillar_distribution", "type": "json", "description": "Actual row count per pillar" },
+        { "name": "rows_written", "type": "json[]", "description": "The 30 rows written" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "validation",
+      "title": "Verify calendar completeness",
+      "detail": "Check that row_count is 30, no row has an empty hook or CTA, pillar_distribution stays within ±10 percentage points of the designed ratios, and no hook line repeats verbatim.",
+      "acceptance": "is_valid=true and issues is empty.",
+      "inputScope": [
+        { "name": "row_count", "type": "number" },
+        { "name": "rows_written", "type": "json[]" },
+        { "name": "pillar_distribution", "type": "json" },
+        { "name": "pillars", "type": "json[]" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "Empty when valid" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  // Vercel 이 api/*.ts 를 빌드할 때 읽는다. 레포 루트의 tsconfig 와는 별개 —
+  // 이 폴더만 따로 배포되기 때문이다 (Root Directory = products/nodal/backend).
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["api", "lib"]
+}

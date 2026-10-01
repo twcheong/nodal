@@ -1,0 +1,78 @@
+{
+  "id": "wf_agency_report_monthly_pack",
+  "title": "Monthly Client Report Pack",
+  "description": "Merge the month's reports and insights for one client into a client-ready pack: executive summary, per-channel results, learnings, and next month's plan.",
+  "outputDir": "data/reports",
+  "tags": ["reporting"],
+  "inputs": [
+    { "id": "client_name", "kind": "scalar", "valueType": "text", "label": "Client name", "observed": "", "confidence": "low" },
+    { "id": "month_label", "kind": "scalar", "valueType": "text", "label": "Reporting month (e.g. 2026-07)", "observed": "", "confidence": "low" },
+    { "id": "reports_dir", "kind": "scalar", "valueType": "path", "label": "Reports folder (default: data/reports)", "observed": "data/reports", "confidence": "low" }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "action",
+      "title": "Gather the month's reports and insights",
+      "detail": "Read files in reports_dir and data/insights matching month_label (weekly performance reports, hashtag trackers, follower snapshots, trend briefs). Summarize per channel (IG / Threads / YouTube / other): key metrics (follower change, total reach and engagement, posts published), the month's top 3 winning posts, and 1–2 underperformers. Mark channels with no data explicitly as 'no data'.",
+      "acceptance": "Every channel with data is summarized; missing channels are listed explicitly.",
+      "tool": "read",
+      "toolSkills": [],
+      "subtasks": [
+        { "id": "s1", "title": "Scan and load the month's files", "purpose": "Full inventory of this month's outputs" },
+        { "id": "s2", "title": "Summarize metrics per channel", "purpose": "Change, reach, engagement rolled up per channel" },
+        { "id": "s3", "title": "Pick winners and underperformers", "purpose": "Evidence for next month's direction" }
+      ],
+      "inputScope": [
+        { "name": "reports_dir", "type": "path", "description": "Folder to gather from" },
+        { "name": "month_label", "type": "text", "description": "Month filter" }
+      ],
+      "outputScope": [
+        { "name": "channel_summaries", "type": "json[]", "description": "Per-channel metrics, winners, underperformers" },
+        { "name": "missing_channels", "type": "text[]", "description": "Channels with no data this month" },
+        { "name": "files_read", "type": "text[]", "description": "Files used in the roll-up" }
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "validation",
+      "title": "Verify roll-up coverage",
+      "detail": "Check that channel_summaries has at least one entry, each summary contains metrics and winning posts, files_read is not empty, and missing-channel labeling is consistent.",
+      "acceptance": "is_valid=true and issues is empty.",
+      "inputScope": [
+        { "name": "channel_summaries", "type": "json[]" },
+        { "name": "files_read", "type": "text[]" },
+        { "name": "missing_channels", "type": "text[]" }
+      ],
+      "outputScope": [
+        { "name": "is_valid", "type": "boolean" },
+        { "name": "issues", "type": "string[]", "description": "Empty when valid" }
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "action",
+      "title": "Generate the client report pack",
+      "detail": "Generate the pack with: (1) a one-page executive summary — three-line takeaway and the headline numbers, in client-friendly language, (2) per-channel sections — metric tables, winning content and why it worked, misses and lessons, (3) what we learned — validated hooks, formats, and posting times, (4) next month's plan — five prioritized actions with owner channels. Tables and text only, no images. Write for the client, not the team: plain language, no internal jargon.",
+      "acceptance": "All four parts complete and written in client-facing language.",
+      "tool": "write",
+      "toolSkills": ["report-pack"],
+      "subtasks": [
+        { "id": "s1", "title": "Write the executive summary", "purpose": "Three-line conclusion a busy client reads first" },
+        { "id": "s2", "title": "Build per-channel sections", "purpose": "Tables, winners, and lessons per channel" },
+        { "id": "s3", "title": "Draft next month's plan", "purpose": "Turn learnings into five prioritized actions" }
+      ],
+      "inputScope": [
+        { "name": "channel_summaries", "type": "json[]" },
+        { "name": "missing_channels", "type": "text[]" },
+        { "name": "client_name", "type": "text" },
+        { "name": "month_label", "type": "text" }
+      ],
+      "outputScope": [
+        { "name": "sections_written", "type": "text[]", "description": "Pack sections written" },
+        { "name": "channel_count", "type": "number", "description": "Channels included in the pack" },
+        { "name": "action_items", "type": "json[]", "description": "Next month's five actions" }
+      ]
+    }
+  ]
+}
